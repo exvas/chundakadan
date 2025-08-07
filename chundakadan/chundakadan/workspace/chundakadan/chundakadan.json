@@ -1,0 +1,34 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"fvReuWIc12\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Chundakadan</span>\",\"col\":12}},{\"id\":\"3-tKtfX9fd\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Order\",\"col\":12}}]",
+ "creation": "2025-08-05 16:15:49.779233",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Sales Order",
+   "label": "Sales Order"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "projects",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "Chundakadan",
+ "links": [],
+ "modified": "2025-08-06 10:41:52.348332",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Chundakadan",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [],
+ "title": "Chundakadan"
+}
