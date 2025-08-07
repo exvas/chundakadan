@@ -43,7 +43,10 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    "Sales Order" : "public/js/sales_order.js",
+    "payment Entry" : "public/js/payment_entry.js"
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -81,7 +84,12 @@ app_license = "mit"
 
 # Installation
 # ------------
-
+doc_events = {
+    "Payment Entry": {
+        "before_save": "chundakadan.doc_events.payment_entry.set_custom_sales_person",
+        "validate": "chundakadan.doc_events.payment_entry.validate_sales_person"
+    }
+}
 # before_install = "chundakadan.install.before_install"
 # after_install = "chundakadan.install.after_install"
 
@@ -242,3 +250,4 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+fixtures = ["Custom Field","Workspace","Number Card","Custom HTML Block"]
