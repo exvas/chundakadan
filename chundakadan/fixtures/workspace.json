@@ -13634,11 +13634,11 @@
  },
  {
   "charts": [],
-  "content": "[{\"id\":\"fvReuWIc12\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Chundakadan</span>\",\"col\":12}},{\"id\":\"3-tKtfX9fd\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Order\",\"col\":12}}]",
+  "content": "[{\"id\":\"fvReuWIc12\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Chundakadan</span>\",\"col\":12}},{\"id\":\"3-tKtfX9fd\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Orderrssss\",\"col\":12}}]",
   "custom_blocks": [
    {
-    "custom_block_name": "Sales Order",
-    "label": "Sales Order",
+    "custom_block_name": "Sales Orderrssss",
+    "label": "Sales Orderrssss",
     "parent": "Chundakadan",
     "parentfield": "custom_blocks",
     "parenttype": "Workspace"
@@ -13653,7 +13653,7 @@
   "is_hidden": 0,
   "label": "Chundakadan",
   "links": [],
-  "modified": "2025-08-06 10:41:52.348332",
+  "modified": "2025-08-07 15:56:11.515261",
   "module": "Chundakadan",
   "name": "Chundakadan",
   "number_cards": [],
