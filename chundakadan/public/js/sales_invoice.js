@@ -4,7 +4,10 @@ frappe.ui.form.on('Sales Invoice', {
     },
     is_return(frm) {
       toggle_ui(frm);
-    }
+    },
+    onload(frm) {
+        toggle_ui(frm);
+    },
   });
   
   function toggle_ui(frm) {
@@ -13,8 +16,7 @@ frappe.ui.form.on('Sales Invoice', {
     frm.toggle_display('workflow_state', isReturn);
   
     if (isReturn) {
-  
-      if (frm.doc.workflow_state) {
+      if (!frm.is_new() && frm.doc.workflow_state) {
         frappe.workflow.setup(frm);
         if (frm.page && frm.page.set_indicator) {
           frm.page.clear_indicator();
