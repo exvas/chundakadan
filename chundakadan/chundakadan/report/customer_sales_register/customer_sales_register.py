@@ -58,8 +58,6 @@ def _execute(filters, additional_table_columns=None):
     mode_of_payments = get_mode_of_payments([inv.name for inv in invoice_list])
     customers = list(set(d.customer for d in invoice_list))
     customer_details = get_party_details("Customer", customers)
-    # Get customer district map
-    customer_district_map = get_customer_district_map(customers)
 
     res = []
     if include_payments:
@@ -94,7 +92,6 @@ def _execute(filters, additional_table_columns=None):
             "customer_group": inv_customer_details.get("customer_group"),
             "territory": inv_customer_details.get("territory"),
             "tax_id": inv_customer_details.get("tax_id"),
-            "district": customer_district_map.get(inv.customer, ""),
             "receivable_account": inv.debit_to,
             "mode_of_payment": ", ".join(mode_of_payments.get(inv.name, [])),
             "project": inv.project,
@@ -216,12 +213,6 @@ def get_columns(invoice_list, additional_table_columns, include_payments=False):
                 "width": 80,
             },
             {"label": _("Tax Id"), "fieldname": "tax_id", "fieldtype": "Data", "width": 80},
-            {
-                "label": _("District"),
-                "fieldname": "district",
-                "fieldtype": "Data",
-                "width": 100,
-            },
             {
                 "label": _("Receivable Account"),
                 "fieldname": "receivable_account",
@@ -345,53 +336,25 @@ def get_columns(invoice_list, additional_table_columns, include_payments=False):
     return columns, accounts[0], accounts[1], accounts[2]
 
 
-def get_customer_district_map(customers):
-    """Get district (city) for each customer from their primary address"""
+def get_customer_territory_map(customers):
+    """Get territory for each customer from customer doctype"""
     if not customers:
         return {}
     
-    customer_district_map = {}
+    customer_territory_map = {}
     
-    # Get primary addresses for customers
-    address_data = frappe.db.sql("""
+    customer_data = frappe.db.sql("""
         SELECT 
-            dl.parent as customer,
-            addr.city
-        FROM `tabDynamic Link` dl
-        INNER JOIN `tabAddress` addr ON dl.parent = addr.name
-        WHERE dl.link_doctype = 'Customer' 
-        AND dl.link_name IN %s
-        AND addr.is_primary_address = 1
-        AND addr.disabled = 0
-        ORDER BY dl.link_name, addr.creation DESC
+            name as customer,
+            territory
+        FROM `tabCustomer`
+        WHERE name IN %s
     """, [tuple(customers)], as_dict=1)
     
-    for row in address_data:
-        if row.customer not in customer_district_map and row.city:
-            customer_district_map[row.customer] = row.city
+    for row in customer_data:
+        customer_territory_map[row.customer] = row.territory or ""
     
-    # For customers without primary address, get any address
-    remaining_customers = [c for c in customers if c not in customer_district_map]
-    if remaining_customers:
-        fallback_address_data = frappe.db.sql("""
-            SELECT 
-                dl.link_name as customer,
-                addr.city
-            FROM `tabDynamic Link` dl
-            INNER JOIN `tabAddress` addr ON dl.parent = addr.name
-            WHERE dl.link_doctype = 'Customer' 
-            AND dl.link_name IN %s
-            AND addr.disabled = 0
-            AND addr.city IS NOT NULL
-            AND addr.city != ''
-            ORDER BY dl.link_name, addr.creation DESC
-        """, [tuple(remaining_customers)], as_dict=1)
-        
-        for row in fallback_address_data:
-            if row.customer not in customer_district_map:
-                customer_district_map[row.customer] = row.city
-    
-    return customer_district_map
+    return customer_territory_map
 
 
 def get_account_columns(invoice_list, include_payments):
@@ -508,6 +471,9 @@ def get_invoices(filters, additional_query_columns):
 
     if filters.get("customer_group"):
         query = query.where(si.customer_group == filters.customer_group)
+
+    if filters.get("territory"):
+        query = query.where(si.territory == filters.territory)
 
     query = get_conditions(filters, query, "Sales Invoice")
     query = apply_common_conditions(
