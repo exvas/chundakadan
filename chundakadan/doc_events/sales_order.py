@@ -11,5 +11,6 @@ def validate_item_qty_in_stock(doc, method=None):
                 if available_qty<item.qty:
                         frappe.throw(
                         f"Item {item.item_code} in warehouse {item.warehouse}: "
-                        f"Only {available_qty} available, but {item.qty} required."
+                        f"Only {available_qty} available, but {item.qty} required.",
+                        title="Insufficient Stock"
                     )
