@@ -41,6 +41,12 @@ frappe.query_reports["Customer Sales Register"] = {
             fieldtype: "Link",
             options: "Mode of Payment",
         },
+		{
+            fieldname: "territory",
+            label: __("Territory"),
+            fieldtype: "Link",
+            options: "Territory",
+        },
         {
             fieldname: "owner",
             label: __("Owner"),
