@@ -1,7 +1,8 @@
-// file: item_price_comparison.js
+// Copyright (c) 2025, Ashkar and contributors
+// For license information, please see license.txt
 
-frappe.query_reports["Item Price Comparison"] = {
-    "filters": [
+frappe.query_reports["Item Price Report"] = {
+	"filters": [
         {
             "fieldname": "item_code",
             "label": __("Item Code"),
