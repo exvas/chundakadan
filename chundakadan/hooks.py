@@ -90,6 +90,9 @@ doc_events = {
     "Payment Entry": {
         "before_save": "chundakadan.doc_events.payment_entry.set_custom_sales_person",
         "validate": "chundakadan.doc_events.payment_entry.validate_sales_person"
+    },
+     "Sales Order": {
+        "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
     }
 }
 # before_install = "chundakadan.install.before_install"
