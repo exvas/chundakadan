@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Ashkar and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Custom Sales Register"] = {
+frappe.query_reports["Customer Sales Register Report"] = {
 	filters: [
 		{
 			fieldname: "from_date",
