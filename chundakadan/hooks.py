@@ -255,4 +255,25 @@ doc_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
-# fixtures = [{"Custom Field","Workspace","Number Card","Custom HTML Block"}]
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            [
+                "module",
+                "in",
+                "Chundakadan"
+            ]
+        ]
+    },
+    {
+        "doctype": "Property Setter",
+        "filters": [
+            [
+                "module",
+                "in",
+                "Chundakadan"
+            ]
+        ]
+    },
+]
