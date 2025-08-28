@@ -1,5 +1,37 @@
 [
  {
+  "default_value": "SIN.-.YY.-.#####",
+  "doc_type": "Sales Invoice",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "naming_series",
+  "is_system_generated": 1,
+  "modified": "2025-08-28 14:54:24.261571",
+  "module": "Chundakadan",
+  "name": "Sales Invoice-naming_series-options",
+  "property": "options",
+  "property_type": "Select",
+  "row_name": null,
+  "value": "SIN.-.YY.-.#####\nSIN.-YY.-RTN-.#####"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Sales Invoice",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "naming_series",
+  "is_system_generated": 1,
+  "modified": "2025-08-28 15:06:12.858501",
+  "module": "Chundakadan",
+  "name": "Sales Invoice-naming_series-default",
+  "property": "default",
+  "property_type": "Text",
+  "row_name": null,
+  "value": "SIN.-.YY.-.#####"
+ },
+ {
   "default_value": null,
   "doc_type": "Customer",
   "docstatus": 0,
@@ -14,21 +46,5 @@
   "property_type": "Check",
   "row_name": null,
   "value": "1"
- },
- {
-  "default_value": "SIN.-.YY.-.#####",
-  "doc_type": "Sales Invoice",
-  "docstatus": 0,
-  "doctype": "Property Setter",
-  "doctype_or_field": "DocField",
-  "field_name": "naming_series",
-  "is_system_generated": 0,
-  "modified": "2025-08-28 10:59:44.417917",
-  "module": "Chundakadan",
-  "name": "Sales Invoice-naming_series-options",
-  "property": "options",
-  "property_type": "Select",
-  "row_name": null,
-  "value": "SIN.-.YY.-.#####\nSIN.-YY.-RTN-.#####"
  }
 ]
