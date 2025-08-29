@@ -318,7 +318,7 @@
    "property": "options",
    "property_type": "Text",
    "row_name": null,
-   "value": "ACC-SINV-.YYYY.-\nACC-SINV-RET-.YYYY.-"
+   "value": "SIN.-.YY.-.#####\nSIN.-YY.-RTN-.#####" 
   },
   {
    "_assign": null,
