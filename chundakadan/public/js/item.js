@@ -30,5 +30,14 @@ frappe.ui.form.on('Item', {
             frm.clear_table('taxes');
             frm.refresh_field('taxes');
         }
+    },
+    validate: function(frm) {
+
+        if (frm.doc.item_group && frm.doc.custom_size && frm.doc.custom_finish) {
+            let item_name = frm.doc.item_group + ' ' + frm.doc.custom_size + ' ' + frm.doc.custom_finish;
+            frm.set_value('item_name', item_name);
+        } else {
+            console.log("Some fields are missing, item name not set.");
+        }
     }
-})
+});
