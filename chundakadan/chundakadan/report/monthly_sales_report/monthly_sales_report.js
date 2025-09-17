@@ -25,7 +25,8 @@ frappe.query_reports["Monthly Sales Report"] = {
         {
             fieldname: "sales_executive",
             label: __("Sales Executive"),
-            fieldtype: "Data"
+            fieldtype: "Link",
+            options: "Sales Person"
         }
     ]
 };
