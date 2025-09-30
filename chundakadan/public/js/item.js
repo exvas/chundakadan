@@ -31,6 +31,22 @@ frappe.ui.form.on('Item', {
             frm.refresh_field('taxes');
         }
     },
+    setup: function (frm) {
+        frm.set_query("custom_size", function () {
+            return {
+                filters: {
+                    "item_group": frm.doc.item_group
+                }
+            };
+        });
+        frm.set_query("custom_finish", function () {
+            return {
+                filters: {
+                    "item_group": frm.doc.item_group
+                }
+            };
+        });
+    },
     validate: function(frm) {
 
         if (frm.doc.item_group && frm.doc.custom_size && frm.doc.custom_finish) {

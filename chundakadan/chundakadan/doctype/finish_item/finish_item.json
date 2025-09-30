@@ -6,7 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "finish"
+  "finish",
+  "item_group"
  ],
  "fields": [
   {
@@ -14,12 +15,18 @@
    "fieldtype": "Data",
    "label": "Finish",
    "unique": 1
+  },
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Link",
+   "label": "Item Group",
+   "options": "Item Group"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-15 15:58:15.776698",
+ "modified": "2025-09-29 11:10:31.630722",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Finish Item",
