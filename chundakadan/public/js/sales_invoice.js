@@ -12,6 +12,7 @@ frappe.ui.form.on('Sales Invoice', {
   onload(frm) {
       toggle_ui(frm);
   },
+  
 });
 
 function toggle_ui(frm) {
