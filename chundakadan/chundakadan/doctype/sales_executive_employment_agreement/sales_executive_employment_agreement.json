@@ -1,0 +1,312 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2025-10-21 10:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "agreement_date",
+  "employee_name",
+  "employee_address",
+  "column_break_1",
+  "status",
+  "start_date",
+  "end_date",
+  "section_break_2",
+  "purpose",
+  "section_break_4",
+  "min_new_leads_per_month",
+  "column_break_5",
+  "min_demos_per_month",
+  "roles_section",
+  "roles_and_responsibilities",
+  "performance_targets_section",
+  "cash_collection_target",
+  "cash_collection_amount",
+  "cash_target_penalty",
+  "column_break_6",
+  "sales_target_percentage",
+  "sales_target_penalty_70",
+  "sales_target_penalty_below_70",
+  "section_break_7",
+  "additional_terms",
+  "section_break_8",
+  "employer_signature",
+  "employer_name",
+  "employer_date",
+  "column_break_9",
+  "employee_signature",
+  "employee_signature_date",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "SEEA-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "agreement_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Agreement Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee_address",
+   "fieldtype": "Small Text",
+   "label": "Employee Address"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nActive\nCompleted\nTerminated\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "1. Purpose"
+  },
+  {
+   "default": "This agreement outlines the terms and conditions of employment for the Sales Executive at Chundakadan Agencies, specifying responsibilities, performance expectations, and workplace policies.",
+   "fieldname": "purpose",
+   "fieldtype": "Text Editor",
+   "label": "Purpose"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Lead & Demo Requirements"
+  },
+  {
+   "default": "3",
+   "description": "Minimum new leads required per month",
+   "fieldname": "min_new_leads_per_month",
+   "fieldtype": "Int",
+   "label": "Min New Leads Per Month"
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "4",
+   "description": "Minimum product demos/presentations required per month",
+   "fieldname": "min_demos_per_month",
+   "fieldtype": "Int",
+   "label": "Min Demos Per Month"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "roles_section",
+   "fieldtype": "Section Break",
+   "label": "2. Roles and Responsibilities"
+  },
+  {
+   "fieldname": "roles_and_responsibilities",
+   "fieldtype": "Text Editor",
+   "label": "Roles and Responsibilities"
+  },
+  {
+   "fieldname": "performance_targets_section",
+   "fieldtype": "Section Break",
+   "label": "3. Performance Targets"
+  },
+  {
+   "bold": 1,
+   "fieldname": "cash_collection_target",
+   "fieldtype": "Section Break",
+   "label": "3.1 Cash Collection Target"
+  },
+  {
+   "default": "1500000",
+   "description": "Minimum cash collection required per month (INR 15,00,000 - Fifteen Lakhs)",
+   "fieldname": "cash_collection_amount",
+   "fieldtype": "Currency",
+   "label": "Cash Collection Target (INR)",
+   "reqd": 1
+  },
+  {
+   "description": "Salary deduction if cash target is not met",
+   "fieldname": "cash_target_penalty",
+   "fieldtype": "Small Text",
+   "label": "Penalty for Missing Target"
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "sales_target_percentage",
+   "fieldtype": "Section Break",
+   "label": "3.2 Sales Target"
+  },
+  {
+   "default": "70",
+   "description": "Minimum 70% of assigned sales target each month",
+   "fieldname": "sales_target_penalty_70",
+   "fieldtype": "Percent",
+   "label": "Minimum Sales Target %"
+  },
+  {
+   "description": "Action if below 70% sales target",
+   "fieldname": "sales_target_penalty_below_70",
+   "fieldtype": "Small Text",
+   "label": "Penalty Below 70%"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "Additional Terms & Conditions"
+  },
+  {
+   "fieldname": "additional_terms",
+   "fieldtype": "Text Editor",
+   "label": "Additional Terms"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_8",
+   "fieldtype": "Section Break",
+   "label": "Signatures"
+  },
+  {
+   "fieldname": "employer_signature",
+   "fieldtype": "Signature",
+   "label": "Employer Signature"
+  },
+  {
+   "fieldname": "employer_name",
+   "fieldtype": "Data",
+   "label": "Employer Name"
+  },
+  {
+   "fieldname": "employer_date",
+   "fieldtype": "Date",
+   "label": "Employer Date"
+  },
+  {
+   "fieldname": "column_break_9",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_signature",
+   "fieldtype": "Signature",
+   "label": "Employee Signature"
+  },
+  {
+   "fieldname": "employee_signature_date",
+   "fieldtype": "Date",
+   "label": "Employee Signature Date"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Sales Executive Employment Agreement",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-21 10:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Sales Executive Employment Agreement",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

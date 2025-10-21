@@ -1,0 +1,496 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2025-10-21 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "report_date",
+  "version",
+  "column_break_1",
+  "status",
+  "company",
+  "section_break_2",
+  "employees_involved",
+  "section_break_3",
+  "supervisor_manager",
+  "supervisor_staff_id",
+  "supervisor_contact_no",
+  "supervisor_designation",
+  "section_break_4",
+  "place_of_incident",
+  "column_break_5",
+  "time_of_incident",
+  "shift",
+  "column_break_6",
+  "date_of_incident",
+  "section_break_7",
+  "description_of_incident",
+  "section_break_8",
+  "witnesses",
+  "section_break_9",
+  "attach_files",
+  "attachments_heading",
+  "evidence_prepared_by",
+  "section_break_10",
+  "root_cause_of_incident",
+  "column_break_11",
+  "action_taken",
+  "section_break_12",
+  "has_similar_incident",
+  "similar_incident_details",
+  "section_break_13",
+  "explanation_of_employee",
+  "section_break_14",
+  "employee_signature_name",
+  "employee_signature",
+  "employee_signature_date",
+  "section_break_15",
+  "preventive_recommendations",
+  "section_break_16",
+  "action_to_be_taken",
+  "written_warning",
+  "did_not_pass_probation",
+  "column_break_17",
+  "medically_unfit",
+  "suspension",
+  "column_break_18",
+  "termination",
+  "contract_completion",
+  "section_break_19",
+  "prepared_by",
+  "prepared_by_name",
+  "prepared_by_signature",
+  "prepared_by_date",
+  "column_break_20",
+  "verified_by",
+  "verified_by_name",
+  "verified_by_signature",
+  "verified_by_date",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HR/DIS-.YYYY.-\nCDN/DIS-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "report_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Report Date",
+   "reqd": 1
+  },
+  {
+   "default": "1.0",
+   "fieldname": "version",
+   "fieldtype": "Data",
+   "label": "Version",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nInvestigating\nCompleted\nAction Taken\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Name of Employee/s Involved"
+  },
+  {
+   "fieldname": "employees_involved",
+   "fieldtype": "Table",
+   "label": "Employees Involved",
+   "options": "Incident Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Name of Supervisor/Manager"
+  },
+  {
+   "fieldname": "supervisor_manager",
+   "fieldtype": "Link",
+   "label": "Supervisor/Manager",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "supervisor_manager.employee_number",
+   "fieldname": "supervisor_staff_id",
+   "fieldtype": "Data",
+   "label": "Staff ID No.",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "supervisor_manager.cell_number",
+   "fieldname": "supervisor_contact_no",
+   "fieldtype": "Data",
+   "label": "Contact No."
+  },
+  {
+   "fetch_from": "supervisor_manager.designation",
+   "fieldname": "supervisor_designation",
+   "fieldtype": "Data",
+   "label": "Designation/Position",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Incident Details"
+  },
+  {
+   "fieldname": "place_of_incident",
+   "fieldtype": "Data",
+   "label": "Place of Incident",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "time_of_incident",
+   "fieldtype": "Time",
+   "label": "Time of Incident"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift (please check the box)",
+   "options": "\nMorning\nAfternoon\nEvening"
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_of_incident",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date of Incident",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "Description of Incident"
+  },
+  {
+   "fieldname": "description_of_incident",
+   "fieldtype": "Text Editor",
+   "label": "Description of Incident",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_8",
+   "fieldtype": "Section Break",
+   "label": "Witnesses"
+  },
+  {
+   "fieldname": "witnesses",
+   "fieldtype": "Table",
+   "label": "Name of Witnesses",
+   "options": "Incident Witness"
+  },
+  {
+   "fieldname": "section_break_9",
+   "fieldtype": "Section Break",
+   "label": "Attached Photographs, Sketches, Files or Videos"
+  },
+  {
+   "fieldname": "attach_files",
+   "fieldtype": "Attach",
+   "label": "Attach Files"
+  },
+  {
+   "fieldname": "attachments_heading",
+   "fieldtype": "Heading",
+   "label": "Prepared/Taken by:"
+  },
+  {
+   "fieldname": "evidence_prepared_by",
+   "fieldtype": "Table",
+   "label": "Evidence Prepared By",
+   "options": "Incident Evidence"
+  },
+  {
+   "fieldname": "section_break_10",
+   "fieldtype": "Section Break",
+   "label": "Investigation"
+  },
+  {
+   "fieldname": "root_cause_of_incident",
+   "fieldtype": "Text Editor",
+   "label": "Root Cause of Incident"
+  },
+  {
+   "fieldname": "column_break_11",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_taken",
+   "fieldtype": "Text Editor",
+   "label": "Action Taken"
+  },
+  {
+   "fieldname": "section_break_12",
+   "fieldtype": "Section Break",
+   "label": "Previous Incidents"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_similar_incident",
+   "fieldtype": "Check",
+   "label": "Has a similar incident occurred before?"
+  },
+  {
+   "depends_on": "eval:doc.has_similar_incident==1",
+   "fieldname": "similar_incident_details",
+   "fieldtype": "Small Text",
+   "label": "(If yes, when and where did it happen?)"
+  },
+  {
+   "fieldname": "section_break_13",
+   "fieldtype": "Section Break",
+   "label": "Explanation of Employee/s Involved"
+  },
+  {
+   "fieldname": "explanation_of_employee",
+   "fieldtype": "Text Editor",
+   "label": "Explanation"
+  },
+  {
+   "fieldname": "section_break_14",
+   "fieldtype": "Section Break",
+   "label": "Employee's Signature"
+  },
+  {
+   "fieldname": "employee_signature_name",
+   "fieldtype": "Data",
+   "label": "Full Name"
+  },
+  {
+   "fieldname": "employee_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "employee_signature_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "section_break_15",
+   "fieldtype": "Section Break",
+   "label": "Preventive Recommendations"
+  },
+  {
+   "fieldname": "preventive_recommendations",
+   "fieldtype": "Text Editor",
+   "label": "Preventive Recommendations"
+  },
+  {
+   "fieldname": "section_break_16",
+   "fieldtype": "Section Break",
+   "label": "Action To Be Taken (please check the box)"
+  },
+  {
+   "fieldname": "action_to_be_taken",
+   "fieldtype": "Heading",
+   "label": "Action To Be Taken"
+  },
+  {
+   "default": "0",
+   "fieldname": "written_warning",
+   "fieldtype": "Check",
+   "label": "Written Warning"
+  },
+  {
+   "default": "0",
+   "fieldname": "did_not_pass_probation",
+   "fieldtype": "Check",
+   "label": "Did not pass probation"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "medically_unfit",
+   "fieldtype": "Check",
+   "label": "Medically Unfit"
+  },
+  {
+   "default": "0",
+   "fieldname": "suspension",
+   "fieldtype": "Check",
+   "label": "Suspension"
+  },
+  {
+   "fieldname": "column_break_18",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "termination",
+   "fieldtype": "Check",
+   "label": "Termination"
+  },
+  {
+   "default": "0",
+   "fieldname": "contract_completion",
+   "fieldtype": "Check",
+   "label": "Contract Completion"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_19",
+   "fieldtype": "Section Break",
+   "label": "Approvals"
+  },
+  {
+   "fieldname": "prepared_by",
+   "fieldtype": "Link",
+   "label": "Prepared By (Site Admin Officer)",
+   "options": "User"
+  },
+  {
+   "fieldname": "prepared_by_name",
+   "fieldtype": "Data",
+   "label": "Full Name"
+  },
+  {
+   "fieldname": "prepared_by_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "prepared_by_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "column_break_20",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By (Site Supervisor or Manager)",
+   "options": "User"
+  },
+  {
+   "fieldname": "verified_by_name",
+   "fieldtype": "Data",
+   "label": "Full Name"
+  },
+  {
+   "fieldname": "verified_by_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "verified_by_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Disciplinary Investigation Incident Report",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Disciplinary Investigation Incident Report",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

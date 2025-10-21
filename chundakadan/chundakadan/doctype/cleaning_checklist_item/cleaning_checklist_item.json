@@ -1,0 +1,108 @@
+{
+ "actions": [],
+ "creation": "2025-10-21 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "area",
+  "frequency",
+  "cleaning_type",
+  "column_break_1",
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat"
+ ],
+ "fields": [
+  {
+   "fieldname": "area",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Area",
+   "options": "Office Area\nDispatch & Ware house\nPantry & Washroom",
+   "reqd": 1
+  },
+  {
+   "fieldname": "frequency",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Frequency",
+   "options": "Daily\nWeekly",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cleaning_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Cleaning Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "mon",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Mon"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "tue",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Tue"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "wed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Wed"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "thu",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Thu"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "fri",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Fri"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "sat",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Sat"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-21 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Cleaning Checklist Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

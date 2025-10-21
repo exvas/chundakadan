@@ -1,0 +1,368 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2025-10-21 11:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "promotion_date",
+  "employee",
+  "employee_name",
+  "employee_id",
+  "column_break_1",
+  "status",
+  "effective_date",
+  "company",
+  "section_break_2",
+  "subject",
+  "letter_content",
+  "section_break_3",
+  "current_position",
+  "current_department",
+  "current_grade",
+  "column_break_4",
+  "new_position",
+  "new_department",
+  "new_grade",
+  "section_break_5",
+  "reporting_to",
+  "new_salary",
+  "salary_increment",
+  "section_break_6",
+  "reason_for_promotion",
+  "new_role_responsibilities",
+  "section_break_7",
+  "general_manager",
+  "gm_name",
+  "gm_signature",
+  "column_break_8",
+  "gm_signature_date",
+  "section_break_9",
+  "employee_acceptance",
+  "employee_acceptance_text",
+  "employee_signature",
+  "column_break_10",
+  "employee_signature_date",
+  "section_break_10",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PL-.YYYY.-\nCDN-PL-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "promotion_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Promotion Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_id",
+   "fieldtype": "Data",
+   "label": "ID No.",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nIssued\nAccepted\nRejected\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "Effective Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Letter Details"
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "label": "Subject",
+   "reqd": 1
+  },
+  {
+   "fieldname": "letter_content",
+   "fieldtype": "Text Editor",
+   "label": "Letter Content",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Current Position"
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fieldname": "current_position",
+   "fieldtype": "Link",
+   "label": "Current Position",
+   "options": "Designation"
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "current_department",
+   "fieldtype": "Link",
+   "label": "Current Department",
+   "options": "Department"
+  },
+  {
+   "fetch_from": "employee.grade",
+   "fieldname": "current_grade",
+   "fieldtype": "Link",
+   "label": "Current Grade",
+   "options": "Employee Grade"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "new_position",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "New Position",
+   "options": "Designation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "new_department",
+   "fieldtype": "Link",
+   "label": "New Department",
+   "options": "Department",
+   "reqd": 1
+  },
+  {
+   "fieldname": "new_grade",
+   "fieldtype": "Link",
+   "label": "New Grade",
+   "options": "Employee Grade"
+  },
+  {
+   "fieldname": "section_break_5",
+   "fieldtype": "Section Break",
+   "label": "Reporting & Compensation"
+  },
+  {
+   "fieldname": "reporting_to",
+   "fieldtype": "Link",
+   "label": "Reporting To",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "new_salary",
+   "fieldtype": "Currency",
+   "label": "New Salary"
+  },
+  {
+   "fieldname": "salary_increment",
+   "fieldtype": "Currency",
+   "label": "Salary Increment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break",
+   "label": "Promotion Details"
+  },
+  {
+   "fieldname": "reason_for_promotion",
+   "fieldtype": "Text Editor",
+   "label": "Reason for Promotion"
+  },
+  {
+   "fieldname": "new_role_responsibilities",
+   "fieldtype": "Text Editor",
+   "label": "New Role Responsibilities"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "General Manager Signature"
+  },
+  {
+   "fieldname": "general_manager",
+   "fieldtype": "Link",
+   "label": "General Manager",
+   "options": "User"
+  },
+  {
+   "fieldname": "gm_name",
+   "fieldtype": "Data",
+   "label": "GM Name"
+  },
+  {
+   "fieldname": "gm_signature",
+   "fieldtype": "Signature",
+   "label": "GM Signature"
+  },
+  {
+   "fieldname": "column_break_8",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gm_signature_date",
+   "fieldtype": "Date",
+   "label": "GM Signature Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_9",
+   "fieldtype": "Section Break",
+   "label": "Employee Acceptance"
+  },
+  {
+   "default": "1",
+   "fieldname": "employee_acceptance",
+   "fieldtype": "Check",
+   "label": "Employee Acceptance Required"
+  },
+  {
+   "fieldname": "employee_acceptance_text",
+   "fieldtype": "Small Text",
+   "label": "Acceptance Text"
+  },
+  {
+   "fieldname": "employee_signature",
+   "fieldtype": "Signature",
+   "label": "Employee Signature"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_signature_date",
+   "fieldtype": "Date",
+   "label": "Employee Signature Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_10",
+   "fieldtype": "Section Break",
+   "label": "Additional Information"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Text Editor",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Promotion Letter",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-21 11:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Promotion Letter",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

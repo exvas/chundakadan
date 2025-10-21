@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "creation": "2025-10-21 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_name",
+  "staff_id",
+  "contact_no",
+  "designation_position"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee ID",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee_name.employee_name",
+   "fieldname": "staff_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee_name.cell_number",
+   "fieldname": "contact_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Contact No."
+  },
+  {
+   "fetch_from": "employee_name.designation",
+   "fieldname": "designation_position",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Designation/Position",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Incident Employee",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,328 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2025-10-21 11:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "warning_date",
+  "employee",
+  "employee_name",
+  "employee_id",
+  "column_break_1",
+  "status",
+  "warning_type",
+  "company",
+  "company_address",
+  "section_break_2",
+  "subject",
+  "letter_content",
+  "section_break_3",
+  "violation_type",
+  "violation_details",
+  "column_break_4",
+  "penalty_type",
+  "salary_deduction_days",
+  "penalty_amount",
+  "section_break_5",
+  "next_consequence",
+  "acknowledgment_required",
+  "section_break_6",
+  "general_manager",
+  "gm_name",
+  "gm_signature",
+  "column_break_7",
+  "gm_signature_date",
+  "section_break_7",
+  "employee_acknowledgment",
+  "employee_signature",
+  "employee_signature_date",
+  "section_break_8",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "WL-.YYYY.-\nCDN-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "warning_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_id",
+   "fieldtype": "Data",
+   "label": "ID No.",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nIssued\nAcknowledged\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warning_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Warning Type",
+   "options": "First Warning\nSecond Warning\nFinal Warning\nShow Cause Notice",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "company_address",
+   "fieldtype": "Small Text",
+   "label": "Company Address"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Letter Details"
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "label": "Subject",
+   "reqd": 1
+  },
+  {
+   "fieldname": "letter_content",
+   "fieldtype": "Text Editor",
+   "label": "Letter Content",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Violation Details"
+  },
+  {
+   "fieldname": "violation_type",
+   "fieldtype": "Select",
+   "label": "Violation Type",
+   "options": "Negligence of Duty\nRoute Deviation\nUnauthorized Absence\nInsubordination\nPolicy Violation\nSafety Violation\nPerformance Issue\nMisconduct\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "violation_details",
+   "fieldtype": "Text Editor",
+   "label": "Violation Details"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "penalty_type",
+   "fieldtype": "Select",
+   "label": "Penalty Type",
+   "options": "\nSalary Deduction\nWarning Only\nSuspension\nTermination Notice"
+  },
+  {
+   "depends_on": "eval:doc.penalty_type=='Salary Deduction'",
+   "fieldname": "salary_deduction_days",
+   "fieldtype": "Int",
+   "label": "Salary Deduction (Days)"
+  },
+  {
+   "depends_on": "eval:doc.penalty_type=='Salary Deduction'",
+   "fieldname": "penalty_amount",
+   "fieldtype": "Currency",
+   "label": "Penalty Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_5",
+   "fieldtype": "Section Break",
+   "label": "Consequences"
+  },
+  {
+   "fieldname": "next_consequence",
+   "fieldtype": "Small Text",
+   "label": "Next Consequence"
+  },
+  {
+   "default": "1",
+   "fieldname": "acknowledgment_required",
+   "fieldtype": "Check",
+   "label": "Acknowledgment Required"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break",
+   "label": "General Manager Signature"
+  },
+  {
+   "fieldname": "general_manager",
+   "fieldtype": "Link",
+   "label": "General Manager",
+   "options": "User"
+  },
+  {
+   "fieldname": "gm_name",
+   "fieldtype": "Data",
+   "label": "GM Name"
+  },
+  {
+   "fieldname": "gm_signature",
+   "fieldtype": "Signature",
+   "label": "GM Signature"
+  },
+  {
+   "fieldname": "column_break_7",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gm_signature_date",
+   "fieldtype": "Date",
+   "label": "GM Signature Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "Employee Acknowledgment"
+  },
+  {
+   "fieldname": "employee_acknowledgment",
+   "fieldtype": "Small Text",
+   "label": "Employee Acknowledgment"
+  },
+  {
+   "fieldname": "employee_signature",
+   "fieldtype": "Signature",
+   "label": "Employee Signature"
+  },
+  {
+   "fieldname": "employee_signature_date",
+   "fieldtype": "Date",
+   "label": "Employee Signature Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_8",
+   "fieldtype": "Section Break",
+   "label": "Additional Information"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Text Editor",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Warning Letter",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-21 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Warning Letter",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

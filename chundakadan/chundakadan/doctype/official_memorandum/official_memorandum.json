@@ -1,0 +1,283 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2025-10-21 12:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "memo_date",
+  "column_break_1",
+  "status",
+  "company",
+  "section_break_2",
+  "recipients_to",
+  "subject",
+  "section_break_3",
+  "greeting",
+  "memo_content",
+  "section_break_4",
+  "effective_immediately",
+  "instructions",
+  "section_break_5",
+  "consequences",
+  "section_break_6",
+  "closing_message",
+  "clarification_contact",
+  "thank_you_message",
+  "section_break_7",
+  "general_manager",
+  "gm_signature",
+  "gm_signature_date",
+  "section_break_8",
+  "acknowledgment_required",
+  "acknowledged_by",
+  "section_break_9",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "MEMO-.YYYY.-\nCDN-MEMO-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "memo_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nIssued\nAcknowledged\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Memo Details"
+  },
+  {
+   "default": "All staff",
+   "fieldname": "recipients_to",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "To",
+   "reqd": 1
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Subject",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Memo Content"
+  },
+  {
+   "default": "Dear Team,",
+   "fieldname": "greeting",
+   "fieldtype": "Data",
+   "label": "Greeting"
+  },
+  {
+   "fieldname": "memo_content",
+   "fieldtype": "Text Editor",
+   "label": "Memo Content",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Instructions/Rules"
+  },
+  {
+   "fieldname": "effective_immediately",
+   "fieldtype": "Heading",
+   "label": "Effective Immediately:"
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Text Editor",
+   "label": "Instructions"
+  },
+  {
+   "fieldname": "section_break_5",
+   "fieldtype": "Section Break",
+   "label": "Consequences"
+  },
+  {
+   "fieldname": "consequences",
+   "fieldtype": "Text Editor",
+   "label": "Consequences for Non-Compliance"
+  },
+  {
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break",
+   "label": "Closing"
+  },
+  {
+   "fieldname": "closing_message",
+   "fieldtype": "Text Editor",
+   "label": "Closing Message"
+  },
+  {
+   "fieldname": "clarification_contact",
+   "fieldtype": "Small Text",
+   "label": "Clarification Contact"
+  },
+  {
+   "default": "Thank you for your cooperation.",
+   "fieldname": "thank_you_message",
+   "fieldtype": "Data",
+   "label": "Thank You Message"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "General Manager Signature"
+  },
+  {
+   "fieldname": "general_manager",
+   "fieldtype": "Link",
+   "label": "General Manager",
+   "options": "User"
+  },
+  {
+   "fieldname": "gm_signature",
+   "fieldtype": "Signature",
+   "label": "GM Signature"
+  },
+  {
+   "fieldname": "gm_signature_date",
+   "fieldtype": "Date",
+   "label": "Signature Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_8",
+   "fieldtype": "Section Break",
+   "label": "Acknowledgment"
+  },
+  {
+   "default": "1",
+   "fieldname": "acknowledgment_required",
+   "fieldtype": "Check",
+   "label": "Acknowledgment Required"
+  },
+  {
+   "fieldname": "acknowledged_by",
+   "fieldtype": "Long Text",
+   "label": "Acknowledged By (Employees)",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_9",
+   "fieldtype": "Section Break",
+   "label": "Additional Information"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Text Editor",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Official Memorandum",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-21 12:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Official Memorandum",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}
