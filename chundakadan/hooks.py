@@ -161,23 +161,16 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"chundakadan.tasks.all"
-# 	],
-# 	"daily": [
-# 		"chundakadan.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"chundakadan.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"chundakadan.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"chundakadan.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		"*/15 * * * *": [
+			"chundakadan.chundakadan.doctype.crosschex_settings.crosschex_settings.scheduled_attendance_sync"
+		],
+		"0 */6 * * *": [
+			"chundakadan.chundakadan.doctype.crosschex_settings.crosschex_settings.check_and_refresh_token"
+		]
+	}
+}
 
 # Testing
 # -------

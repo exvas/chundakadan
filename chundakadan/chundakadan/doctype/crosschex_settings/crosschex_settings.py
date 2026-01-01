@@ -438,7 +438,8 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
             try:
                 # Extract data from CrossChex record
                 employee_data = record.get('employee', {})
-                user_id = employee_data.get('workno') or record.get('emp_pin') or record.get('userid') or record.get('user_id')
+                # emp_code is the primary field used by CrossChex Cloud API
+                user_id = record.get('emp_code') or employee_data.get('workno') or record.get('emp_pin') or record.get('userid') or record.get('user_id')
                 check_time = record.get('checktime') or record.get('check_time')
 
                 # Handle both field names for checktype
@@ -494,16 +495,39 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
                     continue
 
                 # Create Employee Checkin
-                checkin_doc = frappe.new_doc('Employee Checkin')
-                checkin_doc.employee = employee.name
-                checkin_doc.log_type = frappe_log_type
-                checkin_doc.device_id = device_id
-                checkin_doc.time = check_datetime
-                checkin_doc.skip_auto_attendance = 1
+                try:
+                    checkin_doc = frappe.new_doc('Employee Checkin')
+                    checkin_doc.employee = employee.name
+                    checkin_doc.log_type = frappe_log_type
+                    checkin_doc.device_id = device_id
+                    checkin_doc.time = check_datetime
+                    checkin_doc.skip_auto_attendance = 1
 
-                checkin_doc.insert(ignore_permissions=True)
-                frappe.db.commit()
-                processed_count += 1
+                    # Log before insert
+                    frappe.logger().info(
+                        f"CrossChex: Creating checkin for {employee.employee_name} "
+                        f"at {check_datetime} ({frappe_log_type})"
+                    )
+
+                    checkin_doc.insert(ignore_permissions=True)
+                    frappe.db.commit()
+                    
+                    # Log after successful insert
+                    frappe.logger().info(
+                        f"CrossChex: Successfully created checkin {checkin_doc.name} "
+                        f"for {employee.employee_name}"
+                    )
+                    
+                    processed_count += 1
+
+                except Exception as insert_error:
+                    error_msg = f"Failed to create checkin for {employee.employee_name} at {check_datetime}: {str(insert_error)}"
+                    errors.append(error_msg)
+                    frappe.logger().error(f"CrossChex Insert Error: {error_msg}")
+                    # Log full traceback for debugging
+                    import traceback
+                    frappe.logger().error(f"CrossChex Traceback: {traceback.format_exc()}")
+                    continue
 
             except Exception as e:
                 errors.append(f"Error processing record: {str(e)}")
@@ -526,6 +550,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
             "success": True,
             "processed": processed_count,
             "errors": len(errors),
+            "error_details": errors[:10] if errors else [],  # Show first 10 errors
             "skipped_no_employee": skipped_no_employee,
             "skipped_duplicate": skipped_duplicate,
             "message": f"Successfully synced {processed_count} attendance records from {config_name or api_url}"
@@ -649,9 +674,10 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
         for record in records:
             try:
                 employee_data = record.get('employee', {})
-                user_id = employee_data.get('workno')
-                check_time = record.get('checktime')
-                log_type_raw = record.get('checktype', 0)
+                # emp_code is the primary field used by CrossChex Cloud API
+                user_id = record.get('emp_code') or employee_data.get('workno') or record.get('emp_pin') or record.get('userid') or record.get('user_id')
+                check_time = record.get('checktime') or record.get('check_time')
+                log_type_raw = record.get('checktype') if 'checktype' in record else record.get('check_type', 0)
 
                 device_data = record.get('device', {})
                 device_id = device_data.get('name') or config_name or 'CrossChex'
