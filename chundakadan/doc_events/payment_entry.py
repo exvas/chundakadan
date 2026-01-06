@@ -14,6 +14,5 @@ def set_custom_sales_person(doc, method):
                     frappe.log_error(f"Error fetching custom_sales_person: {e}")
 
 def validate_sales_person(doc, method):
-    if not doc.is_new() and not doc.custom_sales_person:
-        frappe.throw(_("The Sales Person is mandatory after saving the document. Please set it before submitting."))
+    pass
 
