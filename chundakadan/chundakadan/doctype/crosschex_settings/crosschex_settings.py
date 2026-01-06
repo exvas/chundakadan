@@ -471,14 +471,32 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
                     skipped_no_employee += 1
                     continue
 
-                # Parse check time
+                # Parse check time and convert from UTC to system timezone
                 try:
                     check_datetime = get_datetime(check_time)
-                    # Convert to naive datetime (remove timezone) for Frappe compatibility
-                    if check_datetime.tzinfo is not None:
-                        check_datetime = check_datetime.replace(tzinfo=None)
+                    original_check_time = check_time
+                    original_check_datetime = check_datetime
+                    
+                    # CrossChec sends times in UTC, convert to system timezone
+                    import pytz
+                    system_tz_name = frappe.utils.get_system_timezone()
+                    system_tz = pytz.timezone(system_tz_name)
+                    
+                    if check_datetime.tzinfo is None:
+                         # Assume UTC if naive
+                        utc_dt = pytz.UTC.localize(check_datetime)
+                    else:
+                        utc_dt = check_datetime.astimezone(pytz.UTC)
+                        
+                    # Convert to system timezone
+                    local_dt = utc_dt.astimezone(system_tz)
+                    
+                    # Make naive for database
+                    check_datetime = local_dt.replace(tzinfo=None)
+                    
                 except Exception as time_error:
                     errors.append(f"Invalid datetime format: {check_time}")
+                    frappe.logger().error(f"CrossChec time parsing error: {str(time_error)}")
                     continue
 
                 # Map checktype using logMap
@@ -700,8 +718,22 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
                     skipped_no_employee += 1
                     continue
 
+                # Parse check time and convert from UTC to system timezone
                 check_datetime = get_datetime(check_time)
+                
+                # CrossChec sends times in UTC, convert to system timezone
                 if check_datetime.tzinfo is not None:
+                    from frappe.utils import convert_utc_to_system_timezone
+                    check_datetime = convert_utc_to_system_timezone(check_datetime)
+                else:
+                    # If no timezone info, assume it's UTC and convert
+                    from frappe.utils import convert_utc_to_system_timezone
+                    import pytz
+                    utc_dt = pytz.UTC.localize(check_datetime)
+                    check_datetime = convert_utc_to_system_timezone(utc_dt)
+                
+                # Ensure it's a naive datetime for Frappe
+                if hasattr(check_datetime, 'tzinfo') and check_datetime.tzinfo is not None:
                     check_datetime = check_datetime.replace(tzinfo=None)
 
                 frappe_log_type = logMap.get(log_type_raw, 'IN')
