@@ -91,8 +91,15 @@ doc_events = {
         "before_save": "chundakadan.doc_events.payment_entry.set_custom_sales_person",
         "validate": "chundakadan.doc_events.payment_entry.validate_sales_person"
     },
-     "Sales Order": {
+    "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
+    },
+    "Leave Policy": {
+        "before_save": "chundakadan.doc_events.leave_policy.set_annual_allocation_from_leave_type",
+        "validate": "chundakadan.doc_events.leave_policy.validate_leave_policy_details"
+    },
+    "Leave Policy Assignment": {
+        "before_submit": "chundakadan.doc_events.leave_policy_assignment.update_new_leaves_from_max_allowed"
     }
 }
 # before_install = "chundakadan.install.before_install"
@@ -142,9 +149,9 @@ doc_events = {
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Leave Policy Assignment": "chundakadan.overrides.leave_policy_assignment.CustomLeavePolicyAssignment"
+}
 
 # Document Events
 # ---------------
