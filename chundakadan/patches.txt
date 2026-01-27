@@ -5,3 +5,4 @@
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 chundakadan.patches.update_leave_policy_annual_allocation
+chundakadan.patches.fix_leave_type_settings
