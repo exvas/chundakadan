@@ -14,6 +14,10 @@ def execute():
     - Employee Leave Balance reports show correct values
     - Employee Leave Balance Summary shows correct values
     - Leave balance calculations are accurate
+    
+    IMPORTANT: 
+    - Active allocation entries should have POSITIVE values (12.0)
+    - Expired entries should have NEGATIVE values (-12.0) to deduct expired leaves
     """
     
     # Get the max_leaves_allowed from Leave Type as the correct value
@@ -40,10 +44,10 @@ def execute():
     )
     
     ledger_updated_count = 0
+    expired_fixed_count = 0
     
     for alloc in allocations:
         # Find corresponding Leave Ledger Entry records for this allocation
-        # (allocation type, not carry forward, and not expired)
         ledger_entries = frappe.get_all(
             "Leave Ledger Entry",
             filters={
@@ -53,31 +57,41 @@ def execute():
                 "is_carry_forward": 0,
                 "docstatus": 1
             },
-            fields=["name", "leaves", "employee"]
+            fields=["name", "leaves", "employee", "is_expired"]
         )
         
         for entry in ledger_entries:
-            # Update only if the current leaves value is different from max_leaves_allowed
-            if flt(entry.leaves) != flt(max_leaves_allowed):
-                old_leaves = entry.leaves
-                
-                # Update Leave Ledger Entry directly in database
-                frappe.db.set_value(
-                    "Leave Ledger Entry",
-                    entry.name,
-                    "leaves",
-                    max_leaves_allowed,
-                    update_modified=False
-                )
-                
-                print(f"Updated Leave Ledger Entry {entry.name} for employee {entry.employee}: "
-                      f"leaves: {old_leaves} -> {max_leaves_allowed}")
-                
-                ledger_updated_count += 1
+            if entry.is_expired:
+                # Expired entries should have NEGATIVE value
+                correct_value = -flt(max_leaves_allowed)
+                if flt(entry.leaves) != correct_value:
+                    frappe.db.set_value(
+                        "Leave Ledger Entry",
+                        entry.name,
+                        "leaves",
+                        correct_value,
+                        update_modified=False
+                    )
+                    print(f"Fixed expired entry {entry.name} for {entry.employee}: {entry.leaves} -> {correct_value}")
+                    expired_fixed_count += 1
+            else:
+                # Active entries should have POSITIVE value
+                if flt(entry.leaves) != flt(max_leaves_allowed):
+                    frappe.db.set_value(
+                        "Leave Ledger Entry",
+                        entry.name,
+                        "leaves",
+                        max_leaves_allowed,
+                        update_modified=False
+                    )
+                    print(f"Updated entry {entry.name} for {entry.employee}: {entry.leaves} -> {max_leaves_allowed}")
+                    ledger_updated_count += 1
     
-    if ledger_updated_count > 0:
+    total_updated = ledger_updated_count + expired_fixed_count
+    
+    if total_updated > 0:
         frappe.db.commit()
-        print(f"\nSuccessfully updated {ledger_updated_count} Leave Ledger Entry records for Compassionate Leave.")
+        print(f"\nSuccessfully updated {ledger_updated_count} active and {expired_fixed_count} expired Leave Ledger Entry records.")
     else:
         print("\nNo Leave Ledger Entry records needed updating.")
     
