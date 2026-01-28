@@ -281,4 +281,14 @@ fixtures = [
             ]
         ]
     },
+    {
+        "doctype": "Client Script",
+        "filters": [
+            [
+                "module",
+                "in",
+                "Chundakadan"
+            ]
+        ]
+    },
 ]
