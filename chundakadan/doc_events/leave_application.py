@@ -71,7 +71,7 @@ def get_employee_role_profile(employee_name):
     return user.get("role_profile_name") if user else None
 
 
-def get_employee_category(role_profile):
+def get_employee_category(role_profile, employee_name=None):
     """
     Determine employee category based on role profile name.
     
@@ -80,7 +80,16 @@ def get_employee_category(role_profile):
     - hod_hr: For HOD or HR role profiles
     - gm: For GM / General Manager role profile
     - other: All other role profiles
+    
+    Special cases:
+    - Bindu T: Treated as hod_hr (HR) regardless of role profile, 
+               so her leaves go directly to GM for approval
     """
+    # Special case: Bindu T should be treated as HR (hod_hr category)
+    # Her leaves should go directly to GM for approval
+    if employee_name and employee_name.strip().lower() == "bindu t":
+        return "hod_hr"
+    
     if not role_profile:
         return "other"
     
@@ -149,7 +158,7 @@ def get_approver_for_employee(employee_name):
         return None
     
     role_profile = get_employee_role_profile(employee_name)
-    category = get_employee_category(role_profile)
+    category = get_employee_category(role_profile, employee_name)
     
     initial_config = INITIAL_CONFIG.get(category, INITIAL_CONFIG["other"])
     
@@ -174,7 +183,7 @@ def set_leave_approver(doc, method):
     if doc.is_new() or doc.status == "Open":
         employee_name = doc.employee_name
         role_profile = get_employee_role_profile(employee_name)
-        category = get_employee_category(role_profile)
+        category = get_employee_category(role_profile, employee_name)
         
         initial_config = INITIAL_CONFIG.get(category, INITIAL_CONFIG["other"])
         
@@ -221,7 +230,7 @@ def on_approval_update(doc, method):
     
     employee_name = doc.employee_name
     role_profile = get_employee_role_profile(employee_name)
-    category = get_employee_category(role_profile)
+    category = get_employee_category(role_profile, employee_name)
     
     current_status = doc.custom_approval_status
     
@@ -272,7 +281,7 @@ def approve_leave(doc_name, approval_action="approve"):
     
     employee_name = doc.employee_name
     role_profile = get_employee_role_profile(employee_name)
-    category = get_employee_category(role_profile)
+    category = get_employee_category(role_profile, employee_name)
     
     current_status = doc.custom_approval_status
     
