@@ -48,6 +48,7 @@ doctype_js = {
     "payment Entry" : "public/js/payment_entry.js",
     "Item" : "public/js/item.js",
     "Sales Invoice" : "public/js/sales_invoice.js",
+    "Leave Application" : "public/js/leave_application.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -100,6 +101,10 @@ doc_events = {
     },
     "Leave Policy Assignment": {
         "before_submit": "chundakadan.doc_events.leave_policy_assignment.update_new_leaves_from_max_allowed"
+    },
+    "Leave Application": {
+        "before_save": "chundakadan.doc_events.leave_application.set_leave_approver",
+        "on_update": "chundakadan.doc_events.leave_application.on_approval_update"
     }
 }
 # before_install = "chundakadan.install.before_install"
