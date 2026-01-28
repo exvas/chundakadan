@@ -3,6 +3,16 @@ frappe.ui.form.on('Leave Application', {
         // Add approval buttons based on current user and approval status
         if (!frm.is_new() && frm.doc.docstatus === 0) {
             add_approval_buttons(frm);
+
+            // Hide HRMS standard Approve/Reject buttons to avoid conflict
+            // when our custom approval flow is active
+            if (frm.doc.custom_approval_status && frm.doc.custom_approval_status.startsWith("Pending")) {
+                setTimeout(function () {
+                    // Remove HRMS Approve button from Actions menu
+                    frm.page.remove_inner_button('Approve', 'Actions');
+                    frm.page.remove_inner_button('Reject', 'Actions');
+                }, 100);
+            }
         }
 
         // Show approval status indicator
@@ -52,25 +62,22 @@ function add_approval_buttons(frm) {
     const leave_approver = frm.doc.leave_approver;
     const custom_approval_status = frm.doc.custom_approval_status;
 
-    // Check if current user is the designated approver
-    if (current_user === leave_approver && custom_approval_status && !custom_approval_status.startsWith("Approved") && custom_approval_status !== "Rejected") {
-        // Add Approve button
-        frm.add_custom_button(__('Approve'), function () {
+    // Check if current user is the designated approver and status is a "Pending" status
+    if (current_user === leave_approver && custom_approval_status && custom_approval_status.startsWith("Pending")) {
+        // Add Approve button (directly, not in a group to avoid duplicates)
+        frm.add_custom_button(__('Approve Leave'), function () {
             approve_leave_application(frm, 'approve');
-        }, __('Actions'));
+        }).addClass('btn-primary');
 
         // Add Reject button
-        frm.add_custom_button(__('Reject'), function () {
+        frm.add_custom_button(__('Reject Leave'), function () {
             frappe.confirm(
                 __('Are you sure you want to reject this leave application?'),
                 function () {
                     approve_leave_application(frm, 'reject');
                 }
             );
-        }, __('Actions'));
-
-        // Highlight the approve button
-        frm.page.set_inner_btn_group_as_primary(__('Actions'));
+        }).addClass('btn-danger');
     }
 }
 

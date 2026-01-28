@@ -179,8 +179,9 @@ def set_leave_approver(doc, method):
     Set initial leave approver and custom_approval_status based on employee category.
     Called on before_save/validate of Leave Application.
     """
-    # Only set on new documents or when status is Open
-    if doc.is_new() or doc.status == "Open":
+    # Only set on new documents that don't have custom_approval_status already set
+    # This prevents resetting the status when approver saves the document
+    if doc.is_new() and not doc.custom_approval_status:
         employee_name = doc.employee_name
         role_profile = get_employee_role_profile(employee_name)
         category = get_employee_category(role_profile, employee_name)
@@ -264,7 +265,8 @@ def on_approval_update(doc, method):
 def approve_leave(doc_name, approval_action="approve"):
     """
     API method to approve a leave application.
-    This moves the leave application to the next status in the approval chain.
+    This moves the leave application to the next pending status in the approval chain.
+    Uses db_set to directly update database, bypassing all permission checks.
     
     Args:
         doc_name: Name of the Leave Application document
@@ -272,10 +274,18 @@ def approve_leave(doc_name, approval_action="approve"):
     """
     doc = frappe.get_doc("Leave Application", doc_name)
     
+    # Verify current user is the designated approver
+    current_user = frappe.session.user
+    if doc.leave_approver and current_user != doc.leave_approver and current_user != "Administrator":
+        frappe.throw(_("Only the designated approver ({0}) can approve this leave application").format(doc.leave_approver))
+    
     if approval_action == "reject":
-        doc.status = "Rejected"
-        doc.custom_approval_status = "Rejected"
-        doc.save()
+        # Use db_set to bypass all permissions
+        frappe.db.set_value("Leave Application", doc_name, {
+            "status": "Rejected",
+            "custom_approval_status": "Rejected"
+        }, update_modified=True)
+        frappe.db.commit()
         frappe.msgprint(_("Leave Application rejected"), indicator="red")
         return {"success": True, "message": "Leave Application rejected"}
     
@@ -285,32 +295,139 @@ def approve_leave(doc_name, approval_action="approve"):
     
     current_status = doc.custom_approval_status
     
-    # Find the current step in the flow and move to next
-    next_info = get_next_approver_and_status(category, current_status)
+    # Get the flow for this category
+    flow = STATUS_FLOWS.get(category, STATUS_FLOWS["other"])
     
-    if next_info:
-        doc.custom_approval_status = next_info["next_status"]
-        
-        # If next status is another pending status, set the approver
-        if next_info["approver_email"]:
-            doc.leave_approver = next_info["approver_email"]
-            approver_name = frappe.db.get_value("User", next_info["approver_email"], "full_name")
-            doc.leave_approver_name = approver_name or next_info["approver"]
-        
-        # If final approval, set the standard status to Approved
-        if next_info["next_status"] == "Approved":
-            doc.status = "Approved"
-        
-        doc.save()
-        
-        if doc.custom_approval_status == "Approved":
+    # Find the current step and get the next pending status or Approved
+    next_pending_status = None
+    next_approver_key = None
+    is_final = False
+    
+    # Find current step index
+    current_step_index = None
+    for i, step in enumerate(flow):
+        if step["status"] == current_status:
+            current_step_index = i
+            break
+    
+    if current_step_index is not None:
+        # Move to next "Pending" status or "Approved"
+        for j in range(current_step_index, len(flow)):
+            step = flow[j]
+            next_status = step["next_status"]
+            
+            if next_status == "Approved":
+                next_pending_status = "Approved"
+                is_final = True
+                break
+            elif next_status.startswith("Pending"):
+                next_pending_status = next_status
+                # Find the approver for this pending status
+                for k in range(j + 1, len(flow)):
+                    if flow[k]["status"] == next_status:
+                        next_approver_key = flow[k].get("approver")
+                        break
+                break
+    
+    if next_pending_status:
+        if is_final:
+            # Final approval - use db_set to bypass all permissions
+            frappe.db.set_value("Leave Application", doc_name, {
+                "status": "Approved",
+                "custom_approval_status": "Approved"
+            }, update_modified=True)
+            frappe.db.commit()
             frappe.msgprint(_("Leave Application fully approved"), indicator="green")
             return {"success": True, "message": "Leave Application fully approved"}
         else:
+            # Set the next approver using db_set
+            update_values = {
+                "custom_approval_status": next_pending_status
+            }
+            
+            if next_approver_key and next_approver_key in APPROVERS:
+                update_values["leave_approver"] = APPROVERS[next_approver_key]
+                approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
+                update_values["leave_approver_name"] = approver_name or next_approver_key
+            
+            frappe.db.set_value("Leave Application", doc_name, update_values, update_modified=True)
+            frappe.db.commit()
+            
             frappe.msgprint(
-                _("Leave Application approved. Forwarded to {0}").format(next_info.get("approver", "next approver")),
+                _("Leave Application approved. Forwarded to {0}").format(next_approver_key or "next approver"),
                 indicator="blue"
             )
-            return {"success": True, "message": f"Forwarded to {next_info.get('approver', 'next approver')}"}
+            return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}"}
     else:
-        frappe.throw(_("Invalid status transition"))
+        frappe.throw(_("Invalid status transition from {0}").format(current_status))
+
+
+def on_hrms_submit(doc, method):
+    """
+    Handle when HRMS submits/approves the leave application using its standard workflow.
+    This ensures our custom_approval_status stays in sync.
+    """
+    # When HRMS submits/approves directly, update our custom_approval_status
+    if doc.status == "Approved" and doc.custom_approval_status != "Approved":
+        # HRMS approved directly, set our status to Approved
+        doc.db_set("custom_approval_status", "Approved", update_modified=False)
+
+
+def on_hrms_status_change(doc, method):
+    """
+    Handle when HRMS changes the status of a submitted leave application.
+    This captures the standard HRMS Approve/Reject button clicks.
+    """
+    # If the standard status changed to Approved
+    if doc.status == "Approved" and doc.custom_approval_status and doc.custom_approval_status.startswith("Pending"):
+        # HRMS approved, so we need to transition our custom status
+        employee_name = doc.employee_name
+        role_profile = get_employee_role_profile(employee_name)
+        category = get_employee_category(role_profile, employee_name)
+        
+        current_status = doc.custom_approval_status
+        
+        # Get the flow for this category
+        flow = STATUS_FLOWS.get(category, STATUS_FLOWS["other"])
+        
+        # Find the next pending status or Approved
+        next_pending_status = None
+        next_approver_key = None
+        
+        # Find current step index
+        current_step_index = None
+        for i, step in enumerate(flow):
+            if step["status"] == current_status:
+                current_step_index = i
+                break
+        
+        if current_step_index is not None:
+            # Move to next "Pending" status or "Approved"
+            for j in range(current_step_index, len(flow)):
+                step = flow[j]
+                next_status = step["next_status"]
+                
+                if next_status == "Approved":
+                    next_pending_status = "Approved"
+                    break
+                elif next_status.startswith("Pending"):
+                    next_pending_status = next_status
+                    # Find the approver for this pending status
+                    for k in range(j + 1, len(flow)):
+                        if flow[k]["status"] == next_status:
+                            next_approver_key = flow[k].get("approver")
+                            break
+                    break
+        
+        if next_pending_status:
+            doc.db_set("custom_approval_status", next_pending_status, update_modified=False)
+            
+            # Set next approver if not final
+            if next_pending_status != "Approved" and next_approver_key and next_approver_key in APPROVERS:
+                doc.db_set("leave_approver", APPROVERS[next_approver_key], update_modified=False)
+                approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
+                doc.db_set("leave_approver_name", approver_name or next_approver_key, update_modified=False)
+    
+    # If the standard status changed to Rejected
+    elif doc.status == "Rejected" and doc.custom_approval_status != "Rejected":
+        doc.db_set("custom_approval_status", "Rejected", update_modified=False)
