@@ -1,19 +1,9 @@
 //code written by niranjana
 frappe.ui.form.on('Leave Application', {
     refresh: function (frm) {
-        // Add approval buttons based on current user and approval status
+        // Add approval buttons in Actions menu based on current user and approval status
         if (!frm.is_new() && frm.doc.docstatus === 0) {
             add_approval_buttons(frm);
-
-            // Hide HRMS standard Approve/Reject buttons to avoid conflict
-            // when our custom approval flow is active
-            if (frm.doc.custom_approval_status && frm.doc.custom_approval_status.startsWith("Pending")) {
-                setTimeout(function () {
-                    // Remove HRMS Approve button from Actions menu
-                    frm.page.remove_inner_button('Approve', 'Actions');
-                    frm.page.remove_inner_button('Reject', 'Actions');
-                }, 100);
-            }
         }
 
         // Show approval status indicator
@@ -63,22 +53,36 @@ function add_approval_buttons(frm) {
     const leave_approver = frm.doc.leave_approver;
     const custom_approval_status = frm.doc.custom_approval_status;
 
-    // Check if current user is the designated approver and status is a "Pending" status
-    if (current_user === leave_approver && custom_approval_status && custom_approval_status.startsWith("Pending")) {
-        // Add Approve button (directly, not in a group to avoid duplicates)
-        frm.add_custom_button(__('Approve Leave'), function () {
-            approve_leave_application(frm, 'approve');
-        }).addClass('btn-primary');
+    // Only show Approve/Reject for the designated approver when status is pending
+    if (custom_approval_status && custom_approval_status.startsWith("Pending")) {
+        // Check if current user is the designated approver
+        if (current_user === leave_approver) {
+            // Clear all existing items in the Actions menu and add our options
+            setTimeout(function () {
+                // Remove all items from Actions menu
+                frm.page.clear_actions_menu();
 
-        // Add Reject button
-        frm.add_custom_button(__('Reject Leave'), function () {
-            frappe.confirm(
-                __('Are you sure you want to reject this leave application?'),
-                function () {
-                    approve_leave_application(frm, 'reject');
-                }
-            );
-        }).addClass('btn-danger');
+                // Add only Approve option
+                frm.page.add_action_item(__('Approve'), function () {
+                    approve_leave_application(frm, 'approve');
+                });
+
+                // Add only Reject option
+                frm.page.add_action_item(__('Reject'), function () {
+                    frappe.confirm(
+                        __('Are you sure you want to reject this leave application?'),
+                        function () {
+                            approve_leave_application(frm, 'reject');
+                        }
+                    );
+                });
+            }, 100);
+        } else {
+            // For non-approvers (employees), clear the Actions menu completely
+            setTimeout(function () {
+                frm.page.clear_actions_menu();
+            }, 100);
+        }
     }
 }
 
