@@ -14,7 +14,7 @@ const APPROVERS = {
 const STATUS_INFO = {
     "Approved HOD": { approver: APPROVERS.HOD, next_status: "Pending HR" },
     "Approved HR": { approver: APPROVERS.HR, next_status: "Pending GM" },
-    "Approved GM": { approver: APPROVERS.GM, next_status: "Approved" }
+    "Approved GM": { approver: APPROVERS.GM, next_status: "Pending GM" }
 };
 
 // Store original formatters
@@ -25,11 +25,17 @@ frappe.listview_settings['Leave Application'].formatters = Object.assign({}, ori
         if (!value) return '';
 
         const current_user = frappe.session.user;
+        const hrms_status = doc.status;  // HRMS standard status field
         let display_status = value;
         let indicator_color = 'blue';
 
-        // For intermediate "Approved X" statuses, show contextual status
-        if (value.startsWith("Approved") && value !== "Approved") {
+        // If HRMS status is "Approved", this is final approval - show green
+        if (hrms_status === "Approved") {
+            display_status = value;  // Keep showing "Approved GM" or "Approved HR"
+            indicator_color = 'green';
+        }
+        // For intermediate "Approved X" statuses (HRMS not yet Approved), show contextual status
+        else if (value.startsWith("Approved")) {
             const info = STATUS_INFO[value];
             if (info) {
                 if (current_user === info.approver) {
@@ -39,15 +45,9 @@ frappe.listview_settings['Leave Application'].formatters = Object.assign({}, ori
                 } else {
                     // All other users see the next pending status
                     display_status = info.next_status;
-                    if (info.next_status === "Approved") {
-                        indicator_color = 'green';
-                    } else {
-                        indicator_color = 'orange';
-                    }
+                    indicator_color = 'orange';
                 }
             }
-        } else if (value === 'Approved') {
-            indicator_color = 'green';
         } else if (value === 'Rejected') {
             indicator_color = 'red';
         } else if (value.startsWith('Pending')) {

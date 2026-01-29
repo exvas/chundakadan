@@ -55,16 +55,17 @@ function add_approval_buttons(frm) {
 
     // Check if buttons should be shown:
     // 1. For "Pending X" status - show to the designated approver
-    // 2. For "Approved X" status (intermediate) - show to the next approver (leave_approver field)
+    // 2. For "Approved X" status (intermediate, HRMS status not yet Approved) - show to the next approver
+    // Don't show if HRMS status is already "Approved" (final approval done)
 
     let should_show_buttons = false;
+    const hrms_status = frm.doc.status;
 
-    if (custom_approval_status) {
+    if (custom_approval_status && hrms_status !== "Approved") {
         if (custom_approval_status.startsWith("Pending") && current_user === leave_approver) {
             // Pending status - current user is the designated approver
             should_show_buttons = true;
         } else if (custom_approval_status.startsWith("Approved") &&
-            custom_approval_status !== "Approved" &&
             current_user === leave_approver) {
             // Intermediate "Approved X" status - current user is the next approver
             should_show_buttons = true;
@@ -127,6 +128,7 @@ function approve_leave_application(frm, action) {
 
 function show_approval_status_indicator(frm) {
     const status = frm.doc.custom_approval_status;
+    const hrms_status = frm.doc.status;
     const current_user = frappe.session.user;
     const leave_approver = frm.doc.leave_approver;
 
@@ -142,15 +144,18 @@ function show_approval_status_indicator(frm) {
     let display_status = status;
     let indicator_color = 'blue';
 
-    // For intermediate "Approved X" statuses, show contextual status
-    // Only the specific approver who approved sees "Approved X"
-    // Everyone else sees the next pending status
-    if (status.startsWith("Approved") && status !== "Approved") {
+    // If HRMS status is "Approved", this is final approval - show green for everyone
+    if (hrms_status === "Approved") {
+        display_status = status;  // Keep showing "Approved GM" or "Approved HR"
+        indicator_color = 'green';
+    }
+    // For intermediate "Approved X" statuses (HRMS not yet Approved), show contextual status
+    else if (status.startsWith("Approved")) {
         // Mapping: status -> {approver_email, next_pending_status}
         const status_info = {
             "Approved HOD": { approver: APPROVERS.HOD, next_status: "Pending HR" },
             "Approved HR": { approver: APPROVERS.HR, next_status: "Pending GM" },
-            "Approved GM": { approver: APPROVERS.GM, next_status: "Approved" }
+            "Approved GM": { approver: APPROVERS.GM, next_status: "Pending GM" }  // Shouldn't happen if is_final
         };
 
         const info = status_info[status];
@@ -162,15 +167,9 @@ function show_approval_status_indicator(frm) {
             } else {
                 // All other users see the next pending status
                 display_status = info.next_status;
-                if (info.next_status === "Approved") {
-                    indicator_color = 'green';
-                } else {
-                    indicator_color = 'orange';  // Pending color
-                }
+                indicator_color = 'orange';  // Pending color
             }
         }
-    } else if (status === 'Approved') {
-        indicator_color = 'green';
     } else if (status === 'Rejected') {
         indicator_color = 'red';
     } else if (status.startsWith('Pending')) {
