@@ -1,3 +1,4 @@
+//code written by niranjana
 frappe.ui.form.on('Leave Application', {
     refresh: function (frm) {
         // Add approval buttons based on current user and approval status
