@@ -6,7 +6,7 @@ frappe.ui.form.on('Leave Application', {
             add_approval_buttons(frm);
         }
 
-        // Show approval status indicator
+        // Show approval status indicator (contextual based on current user)
         show_approval_status_indicator(frm);
     },
 
@@ -53,36 +53,52 @@ function add_approval_buttons(frm) {
     const leave_approver = frm.doc.leave_approver;
     const custom_approval_status = frm.doc.custom_approval_status;
 
-    // Only show Approve/Reject for the designated approver when status is pending
-    if (custom_approval_status && custom_approval_status.startsWith("Pending")) {
-        // Check if current user is the designated approver
-        if (current_user === leave_approver) {
-            // Clear all existing items in the Actions menu and add our options
-            setTimeout(function () {
-                // Remove all items from Actions menu
-                frm.page.clear_actions_menu();
+    // Check if buttons should be shown:
+    // 1. For "Pending X" status - show to the designated approver
+    // 2. For "Approved X" status (intermediate) - show to the next approver (leave_approver field)
 
-                // Add only Approve option
-                frm.page.add_action_item(__('Approve'), function () {
-                    approve_leave_application(frm, 'approve');
-                });
+    let should_show_buttons = false;
 
-                // Add only Reject option
-                frm.page.add_action_item(__('Reject'), function () {
-                    frappe.confirm(
-                        __('Are you sure you want to reject this leave application?'),
-                        function () {
-                            approve_leave_application(frm, 'reject');
-                        }
-                    );
-                });
-            }, 100);
-        } else {
-            // For non-approvers (employees), clear the Actions menu completely
-            setTimeout(function () {
-                frm.page.clear_actions_menu();
-            }, 100);
+    if (custom_approval_status) {
+        if (custom_approval_status.startsWith("Pending") && current_user === leave_approver) {
+            // Pending status - current user is the designated approver
+            should_show_buttons = true;
+        } else if (custom_approval_status.startsWith("Approved") &&
+            custom_approval_status !== "Approved" &&
+            current_user === leave_approver) {
+            // Intermediate "Approved X" status - current user is the next approver
+            should_show_buttons = true;
         }
+    }
+
+    if (should_show_buttons) {
+        // Clear all existing items in the Actions menu and add our options
+        setTimeout(function () {
+            // Remove all items from Actions menu
+            frm.page.clear_actions_menu();
+
+            // Add only Approve option
+            frm.page.add_action_item(__('Approve'), function () {
+                approve_leave_application(frm, 'approve');
+            });
+
+            // Add only Reject option
+            frm.page.add_action_item(__('Reject'), function () {
+                frappe.confirm(
+                    __('Are you sure you want to reject this leave application?'),
+                    function () {
+                        approve_leave_application(frm, 'reject');
+                    }
+                );
+            });
+        }, 100);
+    } else if (custom_approval_status &&
+        (custom_approval_status.startsWith("Pending") ||
+            (custom_approval_status.startsWith("Approved") && custom_approval_status !== "Approved"))) {
+        // For non-approvers viewing pending/intermediate statuses, clear the Actions menu
+        setTimeout(function () {
+            frm.page.clear_actions_menu();
+        }, 100);
     }
 }
 
@@ -105,21 +121,63 @@ function approve_leave_application(frm, action) {
 
 function show_approval_status_indicator(frm) {
     const status = frm.doc.custom_approval_status;
+    const current_user = frappe.session.user;
+    const leave_approver = frm.doc.leave_approver;
 
     if (!status) return;
 
+    // Approver emails - should match the Python APPROVERS dict
+    const APPROVERS = {
+        "HOD": "chundakadannorthasm@gmail.com",
+        "HR": "binduudayan334@gmail.com",
+        "GM": "chundakadangm@gmail.com"
+    };
+
+    let display_status = status;
     let indicator_color = 'blue';
 
-    if (status === 'Approved') {
+    // For intermediate "Approved X" statuses, show contextual status
+    // Only the specific approver who approved sees "Approved X"
+    // Everyone else sees the next pending status
+    if (status.startsWith("Approved") && status !== "Approved") {
+        // Mapping: status -> {approver_email, next_pending_status}
+        const status_info = {
+            "Approved HOD": { approver: APPROVERS.HOD, next_status: "Pending HR" },
+            "Approved HR": { approver: APPROVERS.HR, next_status: "Pending GM" },
+            "Approved GM": { approver: APPROVERS.GM, next_status: "Approved" }
+        };
+
+        const info = status_info[status];
+        if (info) {
+            if (current_user === info.approver) {
+                // Current user is the one who approved - show "Approved X"
+                display_status = status;
+                indicator_color = 'blue';
+            } else {
+                // All other users see the next pending status
+                display_status = info.next_status;
+                if (info.next_status === "Approved") {
+                    indicator_color = 'green';
+                } else {
+                    indicator_color = 'orange';  // Pending color
+                }
+            }
+        }
+    } else if (status === 'Approved') {
         indicator_color = 'green';
     } else if (status === 'Rejected') {
         indicator_color = 'red';
     } else if (status.startsWith('Pending')) {
         indicator_color = 'orange';
-    } else if (status.startsWith('Approved')) {
-        indicator_color = 'blue';
     }
 
-    // Update the page indicator
-    frm.page.set_indicator(status, indicator_color);
+    // Update the page indicator with contextual status
+    frm.page.set_indicator(display_status, indicator_color);
+
+    // Also update the field display value for non-approvers
+    if (display_status !== status) {
+        // Show the contextual status in the field (display only, not saved)
+        frm.set_value('custom_approval_status', display_status);
+        frm.doc.custom_approval_status = display_status;
+    }
 }

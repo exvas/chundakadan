@@ -312,26 +312,37 @@ def approve_leave(doc_name, approval_action="approve"):
             break
     
     if current_step_index is not None:
-        # Move to next "Pending" status or "Approved"
-        for j in range(current_step_index, len(flow)):
-            step = flow[j]
-            next_status = step["next_status"]
-            
-            if next_status == "Approved":
-                next_pending_status = "Approved"
-                is_final = True
-                break
-            elif next_status.startswith("Pending"):
-                next_pending_status = next_status
-                # Find the approver for this pending status
-                for k in range(j + 1, len(flow)):
-                    if flow[k]["status"] == next_status:
-                        next_approver_key = flow[k].get("approver")
-                        break
-                break
+        # Get the current step's "Approved" status
+        current_step = flow[current_step_index]
+        approved_status = current_step["next_status"]  # e.g., "Approved HR"
+        
+        # Find the next pending status after this approval
+        next_pending_status = None
+        next_approver_key = None
+        is_final = False
+        
+        if approved_status == "Approved":
+            is_final = True
+            next_pending_status = "Approved"
+        elif approved_status.startswith("Approved"):
+            # Find the next step after approval
+            for j in range(current_step_index + 1, len(flow)):
+                next_step = flow[j]
+                if next_step["status"] == approved_status:
+                    # This step handles the transition from "Approved X" to next
+                    next_pending_status = next_step["next_status"]
+                    if next_pending_status == "Approved":
+                        is_final = True
+                    elif next_pending_status.startswith("Pending"):
+                        # Find approver for this pending status
+                        for k in range(j + 1, len(flow)):
+                            if flow[k]["status"] == next_pending_status:
+                                next_approver_key = flow[k].get("approver")
+                                break
+                    break
     
-    if next_pending_status:
-        if is_final:
+    if approved_status:
+        if is_final or approved_status == "Approved":
             # Final approval - use db_set to bypass all permissions
             frappe.db.set_value("Leave Application", doc_name, {
                 "status": "Approved",
@@ -341,11 +352,13 @@ def approve_leave(doc_name, approval_action="approve"):
             frappe.msgprint(_("Leave Application fully approved"), indicator="green")
             return {"success": True, "message": "Leave Application fully approved"}
         else:
-            # Set the next approver using db_set
+            # Set to "Approved X" status (e.g., "Approved HR")
+            # But also update leave_approver to the next approver
             update_values = {
-                "custom_approval_status": next_pending_status
+                "custom_approval_status": approved_status  # e.g., "Approved HR"
             }
             
+            # Set the next approver
             if next_approver_key and next_approver_key in APPROVERS:
                 update_values["leave_approver"] = APPROVERS[next_approver_key]
                 approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
@@ -358,7 +371,7 @@ def approve_leave(doc_name, approval_action="approve"):
                 _("Leave Application approved. Forwarded to {0}").format(next_approver_key or "next approver"),
                 indicator="blue"
             )
-            return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}"}
+            return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}", "new_status": approved_status}
     else:
         frappe.throw(_("Invalid status transition from {0}").format(current_status))
 
