@@ -415,10 +415,11 @@ def approve_leave(doc_name, approval_action="approve"):
                     next_approver_key = step.get("approver")
                     break
         
-        # Update the leave application - set directly to next pending status
-        # This ensures the next approver sees "Pending X" and can approve correctly
+        # Update the leave application - store the approved status (e.g., "Approved HR")
+        # JS contextual display will show "Pending X" to the next approver while showing
+        # "Approved X" to the approver who approved it
         update_values = {
-            "custom_approval_status": next_pending_status if next_pending_status else approved_status
+            "custom_approval_status": approved_status  # Store "Approved HR", JS shows contextually
         }
         
         # Set the next approver
@@ -434,7 +435,7 @@ def approve_leave(doc_name, approval_action="approve"):
             _("Leave Application approved. Forwarded to {0}").format(next_approver_key or "next approver"),
             indicator="blue"
         )
-        return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}", "new_status": next_pending_status or approved_status}
+        return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}", "new_status": approved_status}
 
 
 def on_hrms_submit(doc, method):
