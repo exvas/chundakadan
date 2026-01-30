@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-#code written by niranjana
+#code written by niranjana nir
 
 # Approver configuration - Email addresses for each approver role
 APPROVERS = {
