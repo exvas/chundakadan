@@ -316,6 +316,7 @@ def approve_leave(doc_name, approval_action="approve"):
     # Find current step - handle both "Pending X" and "Approved X" (intermediate) statuses
     current_step = None
     current_step_index = None
+    is_transition_step = False  # Flag to indicate if this is a transition step (Approved X -> Pending X)
     
     for i, step in enumerate(flow):
         if step["status"] == current_status:
@@ -324,39 +325,58 @@ def approve_leave(doc_name, approval_action="approve"):
             break
     
     # If current status is intermediate "Approved X" (transition step with approver=None),
-    # find the next "Pending X" step which is what the current approver should be approving
-    # This handles the case where status is "Approved HR" and GM needs to approve
+    # this means we need to transition to the next "Pending X" status
+    # This is NOT the final approval - GM needs to click again on "Pending GM" for final
     if current_step and current_step.get("approver") is None and current_status.startswith("Approved"):
-        # This is a transition step from "Approved X" to "Pending X"
-        next_pending = current_step["next_status"]
-        # Find the actual Pending X step
-        for j, pending_step in enumerate(flow):
-            if pending_step["status"] == next_pending:
-                current_step = pending_step
-                current_step_index = j
-                current_status = next_pending  # Update current_status to match
-                break
+        # This is a transition step - mark it so we handle it correctly below
+        is_transition_step = True
     elif current_step is None and current_status.startswith("Approved"):
-        # Fallback: Find the step that has current_status as its status (transition step)
+        # Fallback: status is "Approved X" but not found - try to find it
         for i, step in enumerate(flow):
             if step["status"] == current_status:
-                # This is the transition step - get the next status (should be Pending X)
-                next_pending = step["next_status"]
-                # Now find the Pending X step
-                for j, pending_step in enumerate(flow):
-                    if pending_step["status"] == next_pending:
-                        current_step = pending_step
-                        current_step_index = j
-                        current_status = next_pending  # Update current_status to match
-                        break
+                current_step = step
+                current_step_index = i
+                is_transition_step = True
                 break
     
     if current_step is None:
         frappe.throw(_("Invalid status transition from {0}").format(doc.custom_approval_status))
     
-    # Get the approved status (what happens after current approver approves)
-    approved_status = current_step["next_status"]  # e.g., "Approved HR" or "Approved GM"
+    # Get the next status from current step
+    next_status = current_step["next_status"]  # e.g., "Pending GM" for transition or "Approved GM" for approval
     is_final = current_step.get("is_final", False)
+    
+    # Handle transition step (Approved X -> Pending X)
+    # This is when GM clicks approve on "Approved HR" - it should change to "Pending GM"
+    if is_transition_step:
+        # Just transition to the next pending status
+        next_pending_status = next_status  # e.g., "Pending GM"
+        
+        # Find the approver for the next pending status
+        next_approver_key = None
+        for step in flow:
+            if step["status"] == next_pending_status:
+                next_approver_key = step.get("approver")
+                break
+        
+        update_values = {
+            "custom_approval_status": next_pending_status
+        }
+        
+        # Set the approver (same user for GM since they're the next approver)
+        if next_approver_key and next_approver_key in APPROVERS:
+            update_values["leave_approver"] = APPROVERS[next_approver_key]
+            approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
+            update_values["leave_approver_name"] = approver_name or next_approver_key
+        
+        frappe.db.set_value("Leave Application", doc_name, update_values, update_modified=True)
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            _("Status updated to {0}. Click Approve again to complete approval.").format(next_pending_status),
+            indicator="blue"
+        )
+        return {"success": True, "message": f"Status updated to {next_pending_status}", "new_status": next_pending_status}
     
     if is_final:
         # This is the final approval step
@@ -365,7 +385,7 @@ def approve_leave(doc_name, approval_action="approve"):
         
         # First update the custom_approval_status and status in database
         frappe.db.set_value("Leave Application", doc_name, {
-            "custom_approval_status": approved_status,  # e.g., "Approved GM" or "Approved HR"
+            "custom_approval_status": next_status,  # e.g., "Approved GM" or "Approved HR"
             "status": "Approved"
         }, update_modified=True)
         frappe.db.commit()
@@ -405,9 +425,10 @@ def approve_leave(doc_name, approval_action="approve"):
             doc.create_leave_ledger_entry()
         
         frappe.msgprint(_("Leave Application fully approved"), indicator="green")
-        return {"success": True, "message": "Leave Application fully approved", "new_status": approved_status}
+        return {"success": True, "message": "Leave Application fully approved", "new_status": next_status}
     else:
         # Not final - find the next step to get the next approver
+        approved_status = next_status  # e.g., "Approved HR"
         next_pending_status = None
         next_approver_key = None
         
@@ -427,10 +448,9 @@ def approve_leave(doc_name, approval_action="approve"):
                     break
         
         # Update the leave application - store the approved status (e.g., "Approved HR")
-        # JS contextual display will show "Pending X" to the next approver while showing
-        # "Approved X" to the approver who approved it
+        # Everyone sees "Approved HR", GM will see it and click approve to transition
         update_values = {
-            "custom_approval_status": approved_status  # Store "Approved HR", JS shows contextually
+            "custom_approval_status": approved_status  # Store "Approved HR"
         }
         
         # Set the next approver

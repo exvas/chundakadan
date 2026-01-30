@@ -122,61 +122,21 @@ function approve_leave_application(frm, action) {
 function show_approval_status_indicator(frm) {
     const status = frm.doc.custom_approval_status;
     const hrms_status = frm.doc.status;
-    const current_user = frappe.session.user;
-    const leave_approver = frm.doc.leave_approver;
 
     if (!status) return;
 
-    // Approver emails - should match the Python APPROVERS dict
-    const APPROVERS = {
-        "HOD": "chundakadannorthasm@gmail.com",
-        "HR": "binduudayan334@gmail.com",
-        "GM": "chundakadangm@gmail.com"
-    };
-
-    let display_status = status;
     let indicator_color = 'blue';
 
-    // If HRMS status is "Approved", this is final approval - show green for everyone
-    if (hrms_status === "Approved") {
-        display_status = status;  // Keep showing "Approved GM" or "Approved HR"
-        indicator_color = 'green';
-    }
-    // For intermediate "Approved X" statuses (HRMS not yet Approved), show contextual status
-    else if (status.startsWith("Approved")) {
-        // Mapping: status -> {approver_email, next_pending_status}
-        const status_info = {
-            "Approved HOD": { approver: APPROVERS.HOD, next_status: "Pending HR" },
-            "Approved HR": { approver: APPROVERS.HR, next_status: "Pending GM" },
-            "Approved GM": { approver: APPROVERS.GM, next_status: "Pending GM" }  // Shouldn't happen if is_final
-        };
-
-        const info = status_info[status];
-        if (info) {
-            if (current_user === info.approver) {
-                // Current user is the one who approved - show "Approved X"
-                display_status = status;
-                indicator_color = 'blue';
-            } else {
-                // All other users see the next pending status
-                display_status = info.next_status;
-                indicator_color = 'orange';  // Pending color
-            }
-        }
+    // Determine indicator color based on status
+    if (hrms_status === "Approved" || status.startsWith("Approved")) {
+        // For final approval (HRMS Approved) or intermediate approval statuses
+        indicator_color = hrms_status === "Approved" ? 'green' : 'blue';
     } else if (status === 'Rejected') {
         indicator_color = 'red';
     } else if (status.startsWith('Pending')) {
         indicator_color = 'orange';
     }
 
-    // Update the page indicator with contextual status
-    frm.page.set_indicator(display_status, indicator_color);
-
-    // Update the field display value without marking form as dirty
-    if (display_status !== status) {
-        // Directly update the displayed value without triggering change events
-        // This updates the display only, not the actual saved value
-        frm.doc.custom_approval_status = display_status;
-        frm.refresh_field('custom_approval_status');
-    }
+    // Update the page indicator with actual status
+    frm.page.set_indicator(status, indicator_color);
 }
