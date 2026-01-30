@@ -212,6 +212,10 @@ def on_approval_update(doc, method):
     When the current approver approves (changes custom_approval_status to Approved X),
     this function sets the next approver and updates the status accordingly.
     """
+    # Skip if being called from approve_leave (to avoid duplicate processing)
+    if getattr(doc.flags, 'skip_approval_update', False):
+        return
+    
     # Get custom_approval_status, return if not set
     if not doc.custom_approval_status:
         return
@@ -220,11 +224,8 @@ def on_approval_update(doc, method):
     if doc.status in ["Cancelled", "Rejected"]:
         return
     
-    # Skip if already fully approved
-    if doc.custom_approval_status == "Approved":
-        # Also set the standard status to Approved
-        if doc.status != "Approved":
-            doc.db_set("status", "Approved")
+    # Skip if already fully approved (HRMS status is Approved or document is submitted)
+    if doc.custom_approval_status == "Approved" or doc.status == "Approved" or doc.docstatus == 1:
         return
     
     employee_name = doc.employee_name
@@ -236,6 +237,22 @@ def on_approval_update(doc, method):
     # Check if current status is an "Approved" intermediate status
     # that needs to transition to next "Pending" status
     if current_status.startswith("Approved") and current_status != "Approved":
+        # First check if this is a final approval status for this category
+        # by checking the flow - if no step has this as a status, it's a final approval
+        flow = STATUS_FLOWS.get(category, STATUS_FLOWS["other"])
+        is_final_approval = True
+        
+        for step in flow:
+            if step["status"] == current_status:
+                # This status has a next step, so it's not final
+                is_final_approval = False
+                break
+        
+        # If this is a final approval status (like "Approved GM" for most employees),
+        # skip the forwarding logic - the approve_leave function handles this
+        if is_final_approval:
+            return
+        
         next_info = get_next_approver_and_status(category, current_status)
         
         if next_info:
@@ -296,17 +313,35 @@ def approve_leave(doc_name, approval_action="approve"):
     # Get the flow for this category
     flow = STATUS_FLOWS.get(category, STATUS_FLOWS["other"])
     
-    # Find current step
+    # Find current step - handle both "Pending X" and "Approved X" (intermediate) statuses
     current_step = None
     current_step_index = None
+    
     for i, step in enumerate(flow):
         if step["status"] == current_status:
             current_step = step
             current_step_index = i
             break
     
+    # If current status is intermediate "Approved X", find the next "Pending X" step
+    # The next "Pending X" step is what the current approver should be approving
+    if current_step is None and current_status.startswith("Approved"):
+        # Find the step that has current_status as its status (transition step)
+        for i, step in enumerate(flow):
+            if step["status"] == current_status:
+                # This is the transition step - get the next status (should be Pending X)
+                next_pending = step["next_status"]
+                # Now find the Pending X step
+                for j, pending_step in enumerate(flow):
+                    if pending_step["status"] == next_pending:
+                        current_step = pending_step
+                        current_step_index = j
+                        current_status = next_pending  # Update current_status to match
+                        break
+                break
+    
     if current_step is None:
-        frappe.throw(_("Invalid status transition from {0}").format(current_status))
+        frappe.throw(_("Invalid status transition from {0}").format(doc.custom_approval_status))
     
     # Get the approved status (what happens after current approver approves)
     approved_status = current_step["next_status"]  # e.g., "Approved HR" or "Approved GM"
@@ -314,13 +349,50 @@ def approve_leave(doc_name, approval_action="approve"):
     
     if is_final:
         # This is the final approval step
-        # Set HRMS status to "Approved" (for leave deduction)
-        # But keep custom_approval_status as "Approved GM" or "Approved HR"
+        # Set custom_approval_status and status to "Approved", then submit the document
+        # Submitting will trigger HRMS to create Leave Ledger Entry and update leave balance
+        
+        # First update the custom_approval_status and status in database
         frappe.db.set_value("Leave Application", doc_name, {
-            "status": "Approved",
-            "custom_approval_status": approved_status  # e.g., "Approved GM" or "Approved HR"
+            "custom_approval_status": approved_status,  # e.g., "Approved GM" or "Approved HR"
+            "status": "Approved"
         }, update_modified=True)
         frappe.db.commit()
+        
+        # Reload the document with updated values
+        doc.reload()
+        
+        # Ensure status is "Approved" in memory (in case validate hooks try to change it)
+        doc.status = "Approved"
+        doc.flags.ignore_permissions = True
+        doc.flags.ignore_validate = True  # Skip validation that might reset status
+        doc.flags.skip_approval_update = True  # Skip on_approval_update hook to avoid duplicate messages
+        
+        # Submit the document - this sets docstatus to 1
+        # HRMS on_submit hook will call create_leave_ledger_entry()
+        doc.submit()
+        
+        # Ensure status is still "Approved" after submit
+        if doc.status != "Approved":
+            frappe.db.set_value("Leave Application", doc_name, "status", "Approved", update_modified=False)
+            frappe.db.commit()
+        
+        # Verify leave ledger entry was created, if not create it manually
+        leave_ledger_exists = frappe.db.exists(
+            "Leave Ledger Entry",
+            {
+                "transaction_type": "Leave Application",
+                "transaction_name": doc_name,
+                "docstatus": 1
+            }
+        )
+        
+        if not leave_ledger_exists:
+            # Leave ledger entry was not created, create it manually
+            doc.reload()
+            doc.status = "Approved"  # Ensure status is Approved for ledger creation
+            doc.create_leave_ledger_entry()
+        
         frappe.msgprint(_("Leave Application fully approved"), indicator="green")
         return {"success": True, "message": "Leave Application fully approved", "new_status": approved_status}
     else:
@@ -332,7 +404,7 @@ def approve_leave(doc_name, approval_action="approve"):
         for j in range(current_step_index + 1, len(flow)):
             next_step = flow[j]
             if next_step["status"] == approved_status:
-                # This step handles the transition from "Approved X" to next
+                # This step handles the transition from "Approved X" to next "Pending X"
                 next_pending_status = next_step["next_status"]
                 break
         
@@ -343,9 +415,10 @@ def approve_leave(doc_name, approval_action="approve"):
                     next_approver_key = step.get("approver")
                     break
         
-        # Update the leave application
+        # Update the leave application - set directly to next pending status
+        # This ensures the next approver sees "Pending X" and can approve correctly
         update_values = {
-            "custom_approval_status": approved_status  # e.g., "Approved HR"
+            "custom_approval_status": next_pending_status if next_pending_status else approved_status
         }
         
         # Set the next approver
@@ -361,7 +434,7 @@ def approve_leave(doc_name, approval_action="approve"):
             _("Leave Application approved. Forwarded to {0}").format(next_approver_key or "next approver"),
             indicator="blue"
         )
-        return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}", "new_status": approved_status}
+        return {"success": True, "message": f"Forwarded to {next_approver_key or 'next approver'}", "new_status": next_pending_status or approved_status}
 
 
 def on_hrms_submit(doc, method):
@@ -369,10 +442,16 @@ def on_hrms_submit(doc, method):
     Handle when HRMS submits/approves the leave application using its standard workflow.
     This ensures our custom_approval_status stays in sync.
     """
-    # When HRMS submits/approves directly, update our custom_approval_status
-    if doc.status == "Approved" and doc.custom_approval_status != "Approved":
-        # HRMS approved directly, set our status to Approved
-        doc.db_set("custom_approval_status", "Approved", update_modified=False)
+    # When HRMS submits/approves directly (not through our custom approve_leave function),
+    # update our custom_approval_status. But preserve existing "Approved X" values.
+    if doc.status == "Approved":
+        # Don't overwrite if already has a proper final approval status like "Approved GM" or "Approved HR"
+        if doc.custom_approval_status and doc.custom_approval_status.startswith("Approved "):
+            # Already has a proper approval status (e.g., "Approved GM"), keep it
+            pass
+        elif doc.custom_approval_status != "Approved":
+            # HRMS approved directly without going through our flow, set to generic Approved
+            doc.db_set("custom_approval_status", "Approved", update_modified=False)
 
 
 def on_hrms_status_change(doc, method):

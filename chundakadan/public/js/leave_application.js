@@ -72,40 +72,33 @@ function add_approval_buttons(frm) {
         }
     }
 
-    // Function to setup action buttons
-    function setup_action_buttons() {
-        // Remove all items from Actions menu
-        frm.page.clear_actions_menu();
-
-        if (should_show_buttons) {
-            // Add Approve option
-            frm.page.add_action_item(__('Approve'), function () {
-                approve_leave_application(frm, 'approve');
-            });
-
-            // Add Reject option
-            frm.page.add_action_item(__('Reject'), function () {
-                frappe.confirm(
-                    __('Are you sure you want to reject this leave application?'),
-                    function () {
-                        approve_leave_application(frm, 'reject');
-                    }
-                );
-            });
-        }
-    }
-
     // Only proceed if there's a status to handle
     if (custom_approval_status &&
         (custom_approval_status.startsWith("Pending") ||
-            (custom_approval_status.startsWith("Approved") && custom_approval_status !== "Approved"))) {
+            (custom_approval_status.startsWith("Approved") && hrms_status !== "Approved"))) {
 
-        // Setup buttons with multiple delays to ensure they appear
-        // First attempt - immediate after short delay
-        setTimeout(setup_action_buttons, 300);
+        // Use a single timeout with frappe.after_ajax to ensure page is ready
+        frappe.after_ajax(function () {
+            // Clear existing action items first
+            frm.page.clear_actions_menu();
 
-        // Second attempt - backup after page is more likely to be fully loaded
-        setTimeout(setup_action_buttons, 800);
+            if (should_show_buttons) {
+                // Add Approve option
+                frm.page.add_action_item(__('Approve'), function () {
+                    approve_leave_application(frm, 'approve');
+                });
+
+                // Add Reject option
+                frm.page.add_action_item(__('Reject'), function () {
+                    frappe.confirm(
+                        __('Are you sure you want to reject this leave application?'),
+                        function () {
+                            approve_leave_application(frm, 'reject');
+                        }
+                    );
+                });
+            }
+        });
     }
 }
 
