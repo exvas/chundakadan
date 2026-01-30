@@ -323,10 +323,21 @@ def approve_leave(doc_name, approval_action="approve"):
             current_step_index = i
             break
     
-    # If current status is intermediate "Approved X", find the next "Pending X" step
-    # The next "Pending X" step is what the current approver should be approving
-    if current_step is None and current_status.startswith("Approved"):
-        # Find the step that has current_status as its status (transition step)
+    # If current status is intermediate "Approved X" (transition step with approver=None),
+    # find the next "Pending X" step which is what the current approver should be approving
+    # This handles the case where status is "Approved HR" and GM needs to approve
+    if current_step and current_step.get("approver") is None and current_status.startswith("Approved"):
+        # This is a transition step from "Approved X" to "Pending X"
+        next_pending = current_step["next_status"]
+        # Find the actual Pending X step
+        for j, pending_step in enumerate(flow):
+            if pending_step["status"] == next_pending:
+                current_step = pending_step
+                current_step_index = j
+                current_status = next_pending  # Update current_status to match
+                break
+    elif current_step is None and current_status.startswith("Approved"):
+        # Fallback: Find the step that has current_status as its status (transition step)
         for i, step in enumerate(flow):
             if step["status"] == current_status:
                 # This is the transition step - get the next status (should be Pending X)
