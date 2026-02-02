@@ -10,7 +10,8 @@ APPROVERS = {
 }
 
 # Status flow definitions for each employee category
-# is_final=True means this is the last approval step - set HRMS status to Approved
+# Each step defines the current custom_approval_status and what it transitions to
+# approver=None means it's a transition step (e.g. Approved HOD -> Pending HR)
 STATUS_FLOWS = {
     "sales_executive": [
         {"status": "Pending HOD", "next_status": "Approved HOD", "approver": "HOD"},
@@ -20,17 +21,16 @@ STATUS_FLOWS = {
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "other": [
-        {"status": "Approved Employee", "next_status": "Pending HR", "approver": None},
+        {"status": "Pending HOD", "next_status": "Approved HOD", "approver": "HOD"},
+        {"status": "Approved HOD", "next_status": "Pending HR", "approver": None},
         {"status": "Pending HR", "next_status": "Approved HR", "approver": "HR"},
         {"status": "Approved HR", "next_status": "Pending GM", "approver": None},
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "hod_hr": [
-        {"status": "Approved HOD", "next_status": "Pending GM", "approver": None},
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "gm": [
-        {"status": "Approved GM", "next_status": "Pending HR", "approver": None},
         {"status": "Pending HR", "next_status": "Approved HR", "approver": "HR", "is_final": True},
     ]
 }
@@ -38,9 +38,9 @@ STATUS_FLOWS = {
 # Initial status and approver for each category
 INITIAL_CONFIG = {
     "sales_executive": {"status": "Pending HOD", "approver": "HOD"},
-    "other": {"status": "Approved Employee", "approver": "HR"},
-    "hod_hr": {"status": "Approved HOD", "approver": "GM"},
-    "gm": {"status": "Approved GM", "approver": "HR"}
+    "other": {"status": "Pending HOD", "approver": "HOD"},
+    "hod_hr": {"status": "Pending GM", "approver": "GM"},
+    "gm": {"status": "Pending HR", "approver": "HR"}
 }
 
 
@@ -274,6 +274,11 @@ def approve_leave(doc_name, approval_action="approve"):
     category = get_employee_category(role_profile, employee_name)
     
     current_status = doc.custom_approval_status
+    
+    # Fallback for generic "Pending" status (default value in database)
+    if current_status == "Pending":
+        initial_config = INITIAL_CONFIG.get(category, INITIAL_CONFIG["other"])
+        current_status = initial_config["status"]
     
     # Get the flow for this category
     flow = STATUS_FLOWS.get(category, STATUS_FLOWS["other"])
