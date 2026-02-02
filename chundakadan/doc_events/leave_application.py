@@ -21,16 +21,16 @@ STATUS_FLOWS = {
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "other": [
-        {"status": "Pending HOD", "next_status": "Approved HOD", "approver": "HOD"},
-        {"status": "Approved HOD", "next_status": "Pending HR", "approver": None},
         {"status": "Pending HR", "next_status": "Approved HR", "approver": "HR"},
         {"status": "Approved HR", "next_status": "Pending GM", "approver": None},
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "hod_hr": [
+        {"status": "Approved HR", "next_status": "Pending GM", "approver": None},
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "gm": [
+        {"status": "Approved GM", "next_status": "Pending HR", "approver": None},
         {"status": "Pending HR", "next_status": "Approved HR", "approver": "HR", "is_final": True},
     ]
 }
@@ -38,9 +38,9 @@ STATUS_FLOWS = {
 # Initial status and approver for each category
 INITIAL_CONFIG = {
     "sales_executive": {"status": "Pending HOD", "approver": "HOD"},
-    "other": {"status": "Pending HOD", "approver": "HOD"},
-    "hod_hr": {"status": "Pending GM", "approver": "GM"},
-    "gm": {"status": "Pending HR", "approver": "HR"}
+    "other": {"status": "Pending HR", "approver": "HR"},
+    "hod_hr": {"status": "Approved HR", "approver": "GM"},
+    "gm": {"status": "Approved GM", "approver": "HR"}
 }
 
 
