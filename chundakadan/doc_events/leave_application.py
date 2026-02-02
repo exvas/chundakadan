@@ -209,8 +209,10 @@ def on_approval_update(doc, method):
     Handle status transitions when leave application is approved.
     Called on on_update of Leave Application.
     
-    When the current approver approves (changes custom_approval_status to Approved X),
-    this function sets the next approver and updates the status accordingly.
+    NOTE: Auto-transition from "Approved X" intermediate statuses is DISABLED.
+    The next approver (e.g., GM) must manually click approve to transition
+    from "Approved HR" to "Pending GM" and then to "Approved GM".
+    This ensures everyone sees the actual stored status at each step.
     """
     # Skip if being called from approve_leave (to avoid duplicate processing)
     if getattr(doc.flags, 'skip_approval_update', False):
@@ -228,52 +230,12 @@ def on_approval_update(doc, method):
     if doc.custom_approval_status == "Approved" or doc.status == "Approved" or doc.docstatus == 1:
         return
     
-    employee_name = doc.employee_name
-    role_profile = get_employee_role_profile(employee_name)
-    category = get_employee_category(role_profile, employee_name)
-    
-    current_status = doc.custom_approval_status
-    
-    # Check if current status is an "Approved" intermediate status
-    # that needs to transition to next "Pending" status
-    if current_status.startswith("Approved") and current_status != "Approved":
-        # First check if this is a final approval status for this category
-        # by checking the flow - if no step has this as a status, it's a final approval
-        flow = STATUS_FLOWS.get(category, STATUS_FLOWS["other"])
-        is_final_approval = True
-        
-        for step in flow:
-            if step["status"] == current_status:
-                # This status has a next step, so it's not final
-                is_final_approval = False
-                break
-        
-        # If this is a final approval status (like "Approved GM" for most employees),
-        # skip the forwarding logic - the approve_leave function handles this
-        if is_final_approval:
-            return
-        
-        next_info = get_next_approver_and_status(category, current_status)
-        
-        if next_info:
-            # Update custom_approval_status to next pending status
-            doc.db_set("custom_approval_status", next_info["next_status"])
-            
-            # Set next approver if exists
-            if next_info["approver_email"]:
-                doc.db_set("leave_approver", next_info["approver_email"])
-                approver_name = frappe.db.get_value("User", next_info["approver_email"], "full_name")
-                doc.db_set("leave_approver_name", approver_name or next_info["approver"])
-                
-                frappe.msgprint(
-                    _("Leave Application forwarded to {0} for approval").format(next_info["approver"]),
-                    indicator="blue",
-                    alert=True
-                )
-            
-            # If final approval, set the standard status to Approved
-            if next_info["next_status"] == "Approved":
-                doc.db_set("status", "Approved")
+    # NOTE: Auto-transition from intermediate "Approved X" statuses is DISABLED
+    # The GM must manually click approve to transition:
+    # 1. First click: "Approved HR" -> "Pending GM"
+    # 2. Second click: "Pending GM" -> "Approved GM"
+    # This ensures all users see the correct status at each stage.
+    # The approve_leave() function handles the manual transitions.
 
 
 @frappe.whitelist()

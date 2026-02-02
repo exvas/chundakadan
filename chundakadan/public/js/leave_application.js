@@ -122,24 +122,14 @@ function approve_leave_application(frm, action) {
 function show_approval_status_indicator(frm) {
     const status = frm.doc.custom_approval_status;
     const hrms_status = frm.doc.status;
-    const current_user = frappe.session.user;
 
     if (!status) return;
 
-    // GM email - should match the Python APPROVERS dict
-    const GM_EMAIL = "chundakadangm@gmail.com";
-
-    let display_status = status;
     let indicator_color = 'blue';
 
-    // Contextual display: When status is "Approved HR", show "Approved GM" to non-GM users
-    // GM sees actual "Approved HR" so they can click approve
-    if (status === "Approved HR" && current_user !== GM_EMAIL && hrms_status !== "Approved") {
-        display_status = "Approved GM";
-        indicator_color = 'green';
-    }
     // Determine indicator color based on status
-    else if (hrms_status === "Approved") {
+    // Everyone sees the actual stored status value
+    if (hrms_status === "Approved") {
         indicator_color = 'green';
     } else if (status.startsWith("Approved")) {
         indicator_color = 'blue';
@@ -149,12 +139,6 @@ function show_approval_status_indicator(frm) {
         indicator_color = 'orange';
     }
 
-    // Update the page indicator
-    frm.page.set_indicator(display_status, indicator_color);
-
-    // Update the field display value without marking form as dirty
-    if (display_status !== status) {
-        frm.doc.custom_approval_status = display_status;
-        frm.refresh_field('custom_approval_status');
-    }
+    // Update the page indicator with actual status
+    frm.page.set_indicator(status, indicator_color);
 }
