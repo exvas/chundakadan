@@ -26,11 +26,9 @@ STATUS_FLOWS = {
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "hod_hr": [
-        {"status": "Approved HR", "next_status": "Pending GM", "approver": None},
         {"status": "Pending GM", "next_status": "Approved GM", "approver": "GM", "is_final": True},
     ],
     "gm": [
-        {"status": "Approved GM", "next_status": "Pending HR", "approver": None},
         {"status": "Pending HR", "next_status": "Approved HR", "approver": "HR", "is_final": True},
     ]
 }
@@ -39,8 +37,8 @@ STATUS_FLOWS = {
 INITIAL_CONFIG = {
     "sales_executive": {"status": "Pending HOD", "approver": "HOD"},
     "other": {"status": "Pending HR", "approver": "HR"},
-    "hod_hr": {"status": "Approved HR", "approver": "GM"},
-    "gm": {"status": "Approved GM", "approver": "HR"}
+    "hod_hr": {"status": "Pending GM", "approver": "GM"},
+    "gm": {"status": "Pending HR", "approver": "HR"}
 }
 
 
@@ -90,6 +88,11 @@ def get_employee_category(role_profile, employee_name=None):
     # Her leaves should go directly to GM for approval
     if employee_name and employee_name.strip().lower() == "bindu t":
         return "hod_hr"
+    
+    # Special case: Najeeb Sulaiman (GM) should be treated as gm category
+    # His leaves should only go to HR for approval
+    if employee_name and ("najeeb" in employee_name.lower() and "sulaiman" in employee_name.lower()):
+        return "gm"
     
     if not role_profile:
         return "other"
