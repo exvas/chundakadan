@@ -42,13 +42,22 @@ INITIAL_CONFIG = {
 }
 
 
-def get_employee_role_profile(employee_name):
+def get_employee_role_profile(employee_name, employee=None):
     """
     Get role_profile_name from User linked to employee.
-    First tries to match by full_name, then by User docname.
+    First tries to match by linked User field in Employee,
+    then by full_name, then by User docname.
     """
-    if not employee_name:
+    if not employee_name and not employee:
         return None
+
+    # Try matching with linked User field in Employee first
+    if employee:
+        user_id = frappe.db.get_value("Employee", employee, "user_id")
+        if user_id:
+            role_profile = frappe.db.get_value("User", user_id, "role_profile_name")
+            if role_profile:
+                return role_profile
     
     # Try matching with User full_name
     user = frappe.db.get_value(
@@ -70,20 +79,46 @@ def get_employee_role_profile(employee_name):
     return user.get("role_profile_name") if user else None
 
 
-def get_employee_category(role_profile, employee_name=None):
+def get_employee_category(role_profile, employee_name=None, employee=None):
     """
-    Determine employee category based on role profile name.
+    Determine employee category based on Employee designation or role profile name.
     
     Categories:
-    - sales_executive: For Sales Executive role profile
-    - hod_hr: For HOD or HR role profiles
-    - gm: For GM / General Manager role profile
+    - sales_executive: For Sales Executive designation or role profile
+    - hod_hr: For Coordinator (HR) or Area Sales Manager (HOD) designations, or HOD/HR role profiles
+    - gm: For General Manager designation or GM role profile
     - other: All other role profiles
-    
-    Special cases:
-    - Bindu T: Treated as hod_hr (HR) regardless of role profile, 
-               so her leaves go directly to GM for approval
     """
+    # Fetch Employee data for designation check
+    emp_data = None
+    if employee or employee_name:
+        emp_filters = {"name": employee} if employee else {"employee_name": employee_name}
+        emp_data = frappe.db.get_value("Employee", emp_filters, ["designation", "employee_name"], as_dict=True)
+
+    if emp_data:
+        designation = emp_data.designation
+        
+        # 1. Check for GM (General Manager)
+        if designation == "General Manager":
+            return "gm"
+        
+        # 2. Check for HR (Coordinator / HR Coordinator)
+        # Leaves go directly to GM for approval
+        if designation in ["Coordinator", "HR Coordinator"]:
+            return "hod_hr"
+
+        # 3. Check for HOD (Area Sales Manager)
+        # Leaves go to HR first, then GM
+        if designation == "Area Sales Manager":
+            return "other"
+            
+        # 4. Check for Sales Executive
+        # Leaves go to HOD -> HR -> GM
+        if designation == "Sales Executive":
+            # As requested, also verify employee_name matches
+            if not employee_name or emp_data.employee_name == employee_name:
+                return "sales_executive"
+
     # Special case: Bindu T should be treated as HR (hod_hr category)
     # Her leaves should go directly to GM for approval
     if employee_name and employee_name.strip().lower() == "bindu t":
@@ -99,7 +134,7 @@ def get_employee_category(role_profile, employee_name=None):
     
     role_profile_lower = role_profile.lower().strip()
     
-    # Check for Sales Executive (partial match)
+    # Check for Sales Executive (partial match from role profile)
     if "sales executive" in role_profile_lower or role_profile_lower == "sales executive":
         return "sales_executive"
     
@@ -111,7 +146,7 @@ def get_employee_category(role_profile, employee_name=None):
     if role_profile_lower == "hod" or "head of department" in role_profile_lower:
         return "hod_hr"
     
-    # Check for HR (partial match) - but not if it's part of another word
+    # Check for HR (partial match)
     if role_profile_lower == "hr" or "human resource" in role_profile_lower:
         return "hod_hr"
     
@@ -142,13 +177,14 @@ def get_next_approver_and_status(category, current_status):
 
 
 @frappe.whitelist()
-def get_approver_for_employee(employee_name):
+def get_approver_for_employee(employee_name, employee=None):
     """
     API method to get the initial approver and status for a given employee.
     Called from client-side when employee is selected.
     
     Args:
         employee_name: Name of the employee
+        employee: Employee ID (optional but recommended)
         
     Returns:
         dict: {
@@ -158,11 +194,11 @@ def get_approver_for_employee(employee_name):
             "approver_role": HOD/HR/GM
         }
     """
-    if not employee_name:
+    if not employee_name and not employee:
         return None
     
-    role_profile = get_employee_role_profile(employee_name)
-    category = get_employee_category(role_profile, employee_name)
+    role_profile = get_employee_role_profile(employee_name, employee)
+    category = get_employee_category(role_profile, employee_name, employee)
     
     initial_config = INITIAL_CONFIG.get(category, INITIAL_CONFIG["other"])
     
@@ -187,8 +223,9 @@ def set_leave_approver(doc, method):
     # This prevents resetting the status when approver saves the document
     if doc.is_new() and not doc.custom_approval_status:
         employee_name = doc.employee_name
-        role_profile = get_employee_role_profile(employee_name)
-        category = get_employee_category(role_profile, employee_name)
+        employee = doc.employee
+        role_profile = get_employee_role_profile(employee_name, employee)
+        category = get_employee_category(role_profile, employee_name, employee)
         
         initial_config = INITIAL_CONFIG.get(category, INITIAL_CONFIG["other"])
         
@@ -273,8 +310,9 @@ def approve_leave(doc_name, approval_action="approve"):
         return {"success": True, "message": "Leave Application rejected"}
     
     employee_name = doc.employee_name
-    role_profile = get_employee_role_profile(employee_name)
-    category = get_employee_category(role_profile, employee_name)
+    employee = doc.employee
+    role_profile = get_employee_role_profile(employee_name, employee)
+    category = get_employee_category(role_profile, employee_name, employee)
     
     current_status = doc.custom_approval_status
     
@@ -468,8 +506,9 @@ def on_hrms_status_change(doc, method):
     if doc.status == "Approved" and doc.custom_approval_status and doc.custom_approval_status.startswith("Pending"):
         # HRMS approved, so we need to transition our custom status
         employee_name = doc.employee_name
-        role_profile = get_employee_role_profile(employee_name)
-        category = get_employee_category(role_profile, employee_name)
+        employee = doc.employee
+        role_profile = get_employee_role_profile(employee_name, employee)
+        category = get_employee_category(role_profile, employee_name, employee)
         
         current_status = doc.custom_approval_status
         

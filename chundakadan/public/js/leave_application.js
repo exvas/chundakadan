@@ -36,7 +36,8 @@ function set_approver_for_employee(frm) {
     frappe.call({
         method: 'chundakadan.doc_events.leave_application.get_approver_for_employee',
         args: {
-            employee_name: frm.doc.employee_name
+            employee_name: frm.doc.employee_name,
+            employee: frm.doc.employee
         },
         callback: function (r) {
             if (r.message) {
