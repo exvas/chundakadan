@@ -136,6 +136,7 @@ def get_data(filters):
         return []
     
     to_date = lp_details.to_date
+    from_date = lp_details.from_date
 
     # Get Encashable Leave Types
     lt_filters = {"allow_encashment": 1}
@@ -154,7 +155,19 @@ def get_data(filters):
         return []
 
     # Build Filter Conditions for Leave Allocation
-    conditions = {"leave_period": leave_period, "leave_type": ["in", list(encashable_lt_map.keys())]}
+    # Support both: allocations with leave_period AND allocations created by Leave Policy Assignment
+    conditions = {
+        "leave_type": ["in", list(encashable_lt_map.keys())],
+        "docstatus": 1  # Only submitted allocations
+    }
+    
+    # Add date range filter to catch allocations created by Leave Policy Assignment
+    # that might not have leave_period set
+    date_conditions = f"""
+        (leave_period = '{leave_period}' 
+         OR (from_date <= '{to_date}' AND to_date >= '{from_date}'))
+    """
+    
     if employee:
         conditions["employee"] = employee
     if department:
@@ -162,15 +175,31 @@ def get_data(filters):
     if company:
         conditions["company"] = company
 
-    # Fetch Leave Allocations
-    allocations = frappe.get_all(
-        "Leave Allocation",
-        filters=conditions,
-        fields=[
-            "employee", "employee_name", "department", "leave_type",
-            "total_leaves_allocated", "total_leaves_encashed"
-        ]
+    # Fetch Leave Allocations using SQL to handle complex date conditions
+    allocation_query = """
+        SELECT 
+            employee, employee_name, department, leave_type,
+            total_leaves_allocated, total_leaves_encashed
+        FROM `tabLeave Allocation`
+        WHERE docstatus = 1
+        AND leave_type IN %(leave_types)s
+        AND (leave_period = %(leave_period)s 
+             OR (from_date <= %(to_date)s AND to_date >= %(from_date)s))
+        {employee_filter}
+        {department_filter}
+        {company_filter}
+    """.format(
+        employee_filter=f"AND employee = '{employee}'" if employee else "",
+        department_filter=f"AND department = '{department}'" if department else "",
+        company_filter=f"AND company = '{company}'" if company else ""
     )
+    
+    allocations = frappe.db.sql(allocation_query, {
+        "leave_types": tuple(encashable_lt_map.keys()),
+        "leave_period": leave_period,
+        "from_date": from_date,
+        "to_date": to_date
+    }, as_dict=True)
 
     if not allocations:
         frappe.msgprint(_("No leave allocations found for the selected criteria"))
