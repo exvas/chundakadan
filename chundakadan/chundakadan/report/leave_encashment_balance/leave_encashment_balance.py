@@ -437,12 +437,14 @@ def create_additional_salary(employee, leave_type, pending_leaves, amount, salar
         "employee": employee,
         "salary_component": salary_component,
         "payroll_date": getdate(payroll_date),
+        "ref_doctype": "Leave Type",
+        "ref_docname": leave_type,
         "docstatus": ["<", 2]  # Not cancelled
     })
     
     if existing:
         frappe.msgprint(
-            _("Additional Salary {0} already exists for this employee and payroll date. Please check and update if needed.").format(
+            _("Additional Salary {0} already exists for this employee, leave type, and payroll date. Please check and update if needed.").format(
                 '<a href="/app/additional-salary/{0}">{0}</a>'.format(existing)
             ),
             indicator="orange",
@@ -573,11 +575,13 @@ def bulk_create_additional_salary(employees_data, salary_component, payroll_date
                 )
                 continue
             
-            # Check if Additional Salary already exists
+            # Check if Additional Salary already exists for this employee, leave type, and payroll date
             existing = frappe.db.exists("Additional Salary", {
                 "employee": employee,
                 "salary_component": salary_component,
                 "payroll_date": payroll_date,
+                "ref_doctype": "Leave Type",
+                "ref_docname": leave_type,
                 "docstatus": ["<", 2]  # Not cancelled
             })
             
