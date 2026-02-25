@@ -224,15 +224,11 @@ function bulk_create_additional_salary(report) {
 					'reqd': 1,
 					'default': frappe.datetime.get_today(),
 					'description': __('This date will be used for all Additional Salary entries')
-				},
-				{
-					'fieldname': 'overwrite_salary_structure_amount',
-					'fieldtype': 'Check',
-					'label': __('Overwrite Salary Structure Amount'),
-					'default': 1
 				}
 			],
 			function(values) {
+				// Set overwrite_salary_structure_amount to 0 (unchecked) by default
+				values.overwrite_salary_structure_amount = 0;
 				// Prepare employee data - use unique entries
 				let employees_data = unique_employees.map(e => ({
 					employee: e.employee,
@@ -680,12 +676,6 @@ function show_selection_dialog(employee_options, salary_component) {
 				reqd: 1,
 				default: frappe.datetime.get_today(),
 				description: __('This date will be used for all Additional Salary entries')
-			},
-			{
-				fieldtype: 'Check',
-				fieldname: 'overwrite_salary_structure_amount',
-				label: __('Overwrite Salary Structure Amount'),
-				default: 1
 			}
 		],
 		size: 'extra-large',
@@ -717,7 +707,7 @@ function show_selection_dialog(employee_options, salary_component) {
 					employees_data: selected,
 					salary_component: salary_component,
 					payroll_date: values.payroll_date,
-					overwrite_salary_structure_amount: values.overwrite_salary_structure_amount
+					overwrite_salary_structure_amount: 0  // Set to 0 (unchecked)
 				},
 				freeze: true,
 				freeze_message: __('Creating Additional Salary entries...'),
