@@ -49,6 +49,7 @@ doctype_js = {
     "Item" : "public/js/item.js",
     "Sales Invoice" : "public/js/sales_invoice.js",
     "Leave Application" : "public/js/leave_application.js",
+    "Exit Interview Form" : "public/js/exit_interview_form.js",
 }
 doctype_list_js = {"Leave Application" : "public/js/leave_application_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -263,6 +264,13 @@ scheduler_events = {
 # }
 
 fixtures = [
+
+    {
+    "dt": "DocType",
+    "filters": [
+        ["module", "=", "Chundakadan"]
+    ]
+    },
     {
         "doctype": "Custom Field",
         "filters": [
@@ -293,4 +301,5 @@ fixtures = [
             ]
         ]
     },
+    
 ]
