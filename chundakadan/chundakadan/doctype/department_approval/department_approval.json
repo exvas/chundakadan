@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "allow_auto_repeat": 0,
+ "allow_copy": 0,
+ "allow_events_in_timeline": 0,
+ "allow_guest_to_view": 0,
+ "allow_import": 0,
+ "allow_rename": 1,
+ "creation": "2026-02-25 12:56:33.250251",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "department_approval",
+   "fieldtype": "Data",
+   "label": "Department Approval"
+  },
+  {
+   "fieldname": "column_break_ssqv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "remarks_if_any",
+   "fieldtype": "Data",
+   "label": "Remarks if any"
+  },
+  {
+   "fieldname": "column_break_gwwn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "signature_and_date",
+   "fieldtype": "Data",
+   "label": "Signature and Date"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-25 12:56:33.250251",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Department Approval",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,12 +1,12 @@
 // Custom JS for Exit Interview Form - V24 - PURE JS VERSION
 console.log("Exit Interview Form JS V24 STARTING");
 
-// HARD ALERT TO CONFIRM LOADING
-frappe.msgprint({
-    title: __('System Message'),
-    indicator: 'blue',
-    message: __('Exit Interview Script V24 Loaded Successfully. Triggering logic now.')
-});
+// HARD ALERT TO CONFIRM LOADING REMOVED
+// frappe.msgprint({
+//     title: __('System Message'),
+//     indicator: 'blue',
+//     message: __('Exit Interview Script V24 Loaded Successfully. Triggering logic now.')
+// });
 
 frappe.ui.form.on("Exit Interview Form", {
     refresh: function(frm) {
