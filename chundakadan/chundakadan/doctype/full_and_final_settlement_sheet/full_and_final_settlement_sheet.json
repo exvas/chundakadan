@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-25 16:06:24.283502",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_m3s3",
+  "amended_from",
+  "employee_details",
+  "section_break_kqed",
+  "earnings_breakdown",
+  "section_break_vsyi",
+  "deduction",
+  "section_break_tavt",
+  "net_settlement_amount",
+  "section_break_hbfy",
+  "hr_approval"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_m3s3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Full and Final Settlement Sheet",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "employee_details",
+   "fieldtype": "Table",
+   "label": "Employee Details",
+   "options": "Employee Details"
+  },
+  {
+   "fieldname": "section_break_kqed",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "(Gross Payables)",
+   "fieldname": "earnings_breakdown",
+   "fieldtype": "Table",
+   "label": "Earnings Breakdown",
+   "options": "Earnings Breakdown"
+  },
+  {
+   "fieldname": "section_break_vsyi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "deduction",
+   "fieldtype": "Table",
+   "label": "Deduction",
+   "options": "Deductions"
+  },
+  {
+   "fieldname": "section_break_tavt",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "net_settlement_amount",
+   "fieldtype": "Table",
+   "label": "Net Settlement Amount",
+   "options": "Net Settlement Amount"
+  },
+  {
+   "fieldname": "section_break_hbfy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "hr_approval",
+   "fieldtype": "Table",
+   "label": "HR Approval",
+   "options": "HR Approval"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-07 14:55:56.214224",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Full and Final Settlement Sheet",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

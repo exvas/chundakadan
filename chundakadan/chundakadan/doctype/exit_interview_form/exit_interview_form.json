@@ -1,0 +1,216 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-05 15:56:53.163898",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_3tlw",
+  "amended_from",
+  "section_break_nbet",
+  "name1",
+  "department",
+  "position",
+  "column_break_aegk",
+  "hire_date",
+  "separation_date",
+  "manager__hod",
+  "section_break_mydv",
+  "alternative_employeement",
+  "section_break_yepf",
+  "rate_supervisor",
+  "section_break_jzti",
+  "rate_employment",
+  "section_break_zadj",
+  "rate_compensation",
+  "what_did_you_like_most_about_your_job_andor_this_company_section",
+  "small_text_pzgq",
+  "section_break_yxcl",
+  "what_did_you_like_least_about_your_job_andor_this_company",
+  "section_break_mkpz",
+  "additional_comments",
+  "section_break_sykd",
+  "html_yrxs",
+  "section_break_uiyk",
+  "comments_if_any",
+  "survey_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_3tlw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Exit Interview Form",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_nbet",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "name1",
+   "fieldtype": "Link",
+   "label": "Name",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "position",
+   "fieldtype": "Link",
+   "label": "Position",
+   "options": "Designation"
+  },
+  {
+   "fieldname": "column_break_aegk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hire_date",
+   "fieldtype": "Date",
+   "label": "Hire Date"
+  },
+  {
+   "fieldname": "separation_date",
+   "fieldtype": "Date",
+   "label": "Separation Date"
+  },
+  {
+   "fieldname": "manager__hod",
+   "fieldtype": "Link",
+   "label": "Manager / HOD",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "section_break_mydv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "alternative_employeement",
+   "fieldtype": "HTML",
+   "label": "Alternative Employeement",
+   "options": "<style>\n    .exit-survey-container { \n        padding: 10px; \n        background: #fff; \n        font-family: 'Times New Roman', Times, serif; \n    }\n    .exit-survey-title { \n        font-weight: bold; \n        font-size: 1.1em; \n        margin-bottom: 20px; \n        color: #333; \n    }\n    .survey-grid { \n        display: flex; \n        flex-wrap: wrap; \n        width: 100%; \n        gap: 15px 40px; \n    }\n    .survey-col { \n        flex: 1; \n        min-width: 280px; \n    }\n    .cb-row { \n        display: flex; \n        align-items: center; \n        margin-bottom: 12px; \n    }\n    /* Standard Checkbox Styling */\n    .exit-cb { \n        width: 18px; \n        height: 18px; \n        margin-right: 12px; \n        cursor: pointer;\n        flex-shrink: 0;\n    }\n    .cb-label { \n        font-weight: bold; \n        font-size: 16px; \n        color: #444; \n        cursor: pointer;\n    }\n    .others-underline { \n        border: none; \n        border-bottom: 1px solid #666; \n        flex-grow: 1; \n        margin-left: 8px; \n        outline: none; \n        background: transparent; \n        font-size: 16px; \n    }\n</style>\n\n<div class=\"exit-survey-container\">\n    <div class=\"exit-survey-title\">What prompted you to seek alternative employment? (Check all that apply)</div>\n    \n    <div class=\"survey-grid\">\n        <!-- Column 1 -->\n        <div class=\"survey-col\">\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"work_type\"><label class=\"cb-label\" for=\"work_type\">Type of work</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"recognition\"><label class=\"cb-label\" for=\"recognition\">Lack of recognition</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"conditions\"><label class=\"cb-label\" for=\"conditions\">Working conditions</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"culture\"><label class=\"cb-label\" for=\"culture\">Company culture</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"direction\"><label class=\"cb-label\" for=\"direction\">Business direction</label></div>\n        </div>\n        \n        <!-- Column 2 -->\n        <div class=\"survey-col\">\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"comp\"><label class=\"cb-label\" for=\"comp\">Compensation</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"supervisor\"><label class=\"cb-label\" for=\"supervisor\">Relationship with supervisor</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"family\"><label class=\"cb-label\" for=\"family\">Family circumstances</label></div>\n            <div class=\"cb-row\"><input type=\"checkbox\" class=\"exit-cb\" id=\"career\"><label class=\"cb-label\" for=\"career\">Career advancement opportunity</label></div>\n            <div class=\"cb-row\">\n                <input type=\"checkbox\" class=\"exit-cb\" id=\"others\">\n                <label class=\"cb-label\" for=\"others\">Others:</label>\n                <input type=\"text\" class=\"others-underline\">\n            </div>\n        </div>\n    </div>\n</div>\n"
+  },
+  {
+   "fieldname": "section_break_yepf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rate_supervisor",
+   "fieldtype": "HTML",
+   "label": "Rate Supervisor",
+   "options": "\n<style>\n.q-section{\n    padding:20px;\n    background:#fff;\n    border:1px solid #d1d8dd;\n    border-radius:4px;\n    font-family:\"Times New Roman\", serif;\n    color:#000;\n    box-shadow:0 2px 4px rgba(0,0,0,0.05);\n}\n\n.rating-cell{\n    text-align:center;\n    border:1px solid #eee;\n}\n\n.rating-radio{\n    width:18px;\n    height:18px;\n    cursor:pointer;\n}\n\n.question{\n    padding:15px 12px;\n    border:1px solid #eee;\n    font-weight:bold;\n    font-size:15px;\n}\n</style>\n\n<div class=\"q-section\">\n\n<p style=\"font-size:16px;font-weight:bold;margin-bottom:25px;line-height:1.5;color:#333;\">\nPlease rate your supervisor at CDN below using a scale of 1-5, with 5 being strongly agree and 1 being strongly disagree. Please select one response for each statement.\n</p>\n\n<table style=\"width:100%;border-collapse:collapse;margin-bottom:20px;table-layout:fixed;\">\n\n<thead>\n<tr style=\"background:#f2f2f2;\">\n<th style=\"padding:12px;text-align:left;border:1px solid #eee;width:45%;font-size:16px;\">Supervisor / Manager</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">5</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">4</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">3</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">2</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">1</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">N/A</th>\n</tr>\n</thead>\n\n<tbody>\n\n<tr>\n<td class=\"question\">Demonstrated fair and equal treatment</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Provided recognition on the job</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Developed cooperation and teamwork</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Encouraged / listened to suggestions</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Resolved complaints and problems</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Followed policies and practices</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Communicated well</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n</tr>\n\n</tbody>\n</table>\n\n<div style=\"background:#f2f2f2;padding:15px;border:1px solid #eee;\">\n<p style=\"font-weight:bold;margin-bottom:5px;font-size:15px;\">Comments or suggestions for improvement:</p>\n<textarea style=\"width:100%;height:80px;border:none;border-bottom:2px solid #000;padding:10px;font-family:inherit;font-size:15px;background:#fff;\"></textarea>\n</div>\n\n</div>\n\n"
+  },
+  {
+   "fieldname": "section_break_jzti",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rate_employment",
+   "fieldtype": "HTML",
+   "label": "Rate Employment",
+   "options": "\n<style>\n.q-section{\n    padding:20px;\n    background:#fff;\n    border:1px solid #d1d8dd;\n    border-radius:4px;\n    font-family:\"Times New Roman\", serif;\n    color:#000;\n    box-shadow:0 2px 4px rgba(0,0,0,0.05);\n}\n\n.rating-cell{\n    text-align:center;\n    border:1px solid #eee;\n}\n\n.rating-radio{\n    width:18px;\n    height:18px;\n    cursor:pointer;\n}\n\n.question{\n    padding:15px 12px;\n    border:1px solid #eee;\n    font-weight:bold;\n    font-size:15px;\n}\n</style>\n\n<div class=\"q-section\">\n\n<p style=\"font-size:16px;font-weight:bold;margin-bottom:25px;line-height:1.5;color:#333;\">\nPlease rate your employment at CDN below using a scale of 1-5, with 5 being highly satisfied and 1\nbeing highly dissatisfied. Please select one response for each statement.\n</p>\n\n<table style=\"width:100%;border-collapse:collapse;margin-bottom:20px;table-layout:fixed;\">\n\n<thead>\n<tr style=\"background:#f2f2f2;\">\n<th style=\"padding:12px;text-align:left;border:1px solid #eee;width:45%;font-size:16px;\">Employment Experience</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">5</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">4</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">3</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">2</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">1</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">N/A</th>\n</tr>\n</thead>\n\n<tbody>\n\n<tr>\n<td class=\"question\">Cooperation within your department</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Cooperation with other departments</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Communication with the company as a\nwhole</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Communication within your\ndepartment</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Training opportunities provided</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Morale in your department</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Advancement opportunities</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q7\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Workload</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q8\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q8\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q8\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q8\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q8\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q8\" class=\"rating-radio\"></td>\n</tr>\n\n\n</tbody>\n</table>\n\n<div style=\"background:#f2f2f2;padding:15px;border:1px solid #eee;\">\n<p style=\"font-weight:bold;margin-bottom:5px;font-size:15px;\">Comments or suggestions for improvement:</p>\n<textarea style=\"width:100%;height:80px;border:none;border-bottom:2px solid #000;padding:10px;font-family:inherit;font-size:15px;background:#fff;\"></textarea>\n</div>\n\n</div>\n\n"
+  },
+  {
+   "fieldname": "section_break_zadj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rate_compensation",
+   "fieldtype": "HTML",
+   "label": "Rate Compensation",
+   "options": "Second\u2028\u2028\n<style>\n.q-section{\n    padding:20px;\n    background:#fff;\n    border:1px solid #d1d8dd;\n    border-radius:4px;\n    font-family:\"Times New Roman\", serif;\n    color:#000;\n    box-shadow:0 2px 4px rgba(0,0,0,0.05);\n}\n\n.rating-cell{\n    text-align:center;\n    border:1px solid #eee;\n}\n\n.rating-radio{\n    width:18px;\n    height:18px;\n    cursor:pointer;\n}\n\n.question{\n    padding:15px 12px;\n    border:1px solid #eee;\n    font-weight:bold;\n    font-size:15px;\n}\n</style>\n\n<div class=\"q-section\">\n\n<p style=\"font-size:16px;font-weight:bold;margin-bottom:25px;line-height:1.5;color:#333;\">\nPlease rate the compensation and benefits at CDN below using a scale of 1-5, with 5 being highly satisfied and 1 being highly dissatisfied. Please select one response for each statement.\n</p>\n\n<table style=\"width:100%;border-collapse:collapse;margin-bottom:20px;table-layout:fixed;\">\n\n<thead>\n<tr style=\"background:#f2f2f2;\">\n<th style=\"padding:12px;text-align:left;border:1px solid #eee;width:45%;font-size:16px;\">Compensation and Benefits</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">5</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">4</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">3</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">2</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">1</th>\n<th style=\"padding:12px;text-align:center;border:1px solid #eee;\">N/A</th>\n</tr>\n</thead>\n\n<tbody>\n\n<tr>\n<td class=\"question\">Base salary</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q1\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">Incentive pay</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q2\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">ESI</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q3\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">EPF</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q4\" class=\"rating-radio\"></td>\n</tr>\n\n<tr>\n<td class=\"question\">Life insurance</td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q5\" class=\"rating-radio\"></td>\n</tr>\n\n<tr style=\"background:#f9f9f9;\">\n<td class=\"question\">\n<label class=\"cb-label\">Others:</label>\n<input type=\"text\" class=\"others-underline\">\n</td>\n\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n<td class=\"rating-cell\"><input type=\"radio\" name=\"q6\" class=\"rating-radio\"></td>\n</tr>\n\n\n\n\n\n\n</tbody>\n</table>\n\n<div style=\"background:#f2f2f2;padding:15px;border:1px solid #eee;\">\n<p style=\"font-weight:bold;margin-bottom:5px;font-size:15px;\">Comments or suggestions for improvement:</p>\n<textarea style=\"width:100%;height:80px;border:none;border-bottom:2px solid #000;padding:10px;font-family:inherit;font-size:15px;background:#fff;\"></textarea>\n</div>\n\n</div>\n\n\u2028"
+  },
+  {
+   "fieldname": "what_did_you_like_most_about_your_job_andor_this_company_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "small_text_pzgq",
+   "fieldtype": "Small Text",
+   "label": "What did you like most about your job and/or this company?"
+  },
+  {
+   "fieldname": "section_break_yxcl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "what_did_you_like_least_about_your_job_andor_this_company",
+   "fieldtype": "Small Text",
+   "label": "What did you like least about your job and/or this company?"
+  },
+  {
+   "fieldname": "section_break_mkpz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "additional_comments",
+   "fieldtype": "Small Text",
+   "label": "Additional comments"
+  },
+  {
+   "fieldname": "section_break_sykd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "html_yrxs",
+   "fieldtype": "HTML",
+   "options": "\n<style>\n.recommend-section{\n    padding:10px 0;\n    font-family:\"Times New Roman\", serif;\n    color:#444;\n}\n\n.recommend-title{\n    font-size:18px;\n    font-weight:bold;\n    margin-bottom:10px;\n}\n\n.recommend-options{\n    display:flex;\n    gap:50px;\n    margin-bottom:10px;\n    align-items:center;\n}\n\n.recommend-options label{\n    font-size:16px;\n    font-weight:bold;\n    cursor:pointer;\n}\n\n.recommend-options input{\n    width:16px;\n    height:16px;\n    margin-right:8px;\n    cursor:pointer;\n}\n\n.reason-row{\n    font-size:16px;\n    font-weight:bold;\n}\n\n.reason-input{\n    border:none;\n    border-bottom:1px solid #444;\n    width:60%;\n    margin-left:10px;\n    outline:none;\n    background:transparent;\n    font-size:16px;\n}\n</style>\n\n<div class=\"recommend-section\">\n\n<div class=\"recommend-title\">\nWould you recommend this company to a friend as a place to work?\n</div>\n\n<div class=\"recommend-options\">\n<label>\n<input type=\"checkbox\"> Yes, without reservations\n</label>\n\n<label>\n<input type=\"checkbox\"> Yes, with reservations\n</label>\n\n<label>\n<input type=\"checkbox\"> No\n</label>\n</div>\n\n<div class=\"reason-row\">\nIf no, why not?\n<input type=\"text\" class=\"reason-input\">\n</div>\n\n</div>\n\n"
+  },
+  {
+   "fieldname": "section_break_uiyk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "comments_if_any",
+   "fieldtype": "Small Text",
+   "label": "Comments If Any"
+  },
+  {
+   "fieldname": "survey_data",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Survey Data"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-07 14:55:07.308625",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Exit Interview Form",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
