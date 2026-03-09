@@ -93,10 +93,9 @@
    "fieldtype": "Section Break"
   },
   {
-   "description": "towards Resignation/Termination/Promotion/Transfer from the employment .The main reason is (Please specify)",
    "fieldname": "please_accept_the_request",
    "fieldtype": "Long Text",
-   "label": "Please accept the request "
+   "label": "Please accept the request towards Resignation/Termination/Promotion/Transfer from the employment .The main reason is (Please specify)"
   },
   {
    "fieldname": "please_list_out_the_mkc_properties_handed_over",
