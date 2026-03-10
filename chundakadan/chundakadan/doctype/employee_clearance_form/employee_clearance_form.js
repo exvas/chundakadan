@@ -31,15 +31,33 @@ frappe.ui.form.on("Employee Clearance Form", {
     },
     employee_name: function(frm) {
         if (frm.doc.employee_name) {
-            frappe.db.get_value('Employee', frm.doc.employee_name, ['designation', 'department'], (r) => {
-                if (r) {
-                    frm.set_value('designation', r.designation);
-                    frm.set_value('department', r.department);
+            frappe.db.get_value('Employee', frm.doc.employee_name, 
+                ['employee_name', 'designation', 'department', 'relieving_date', 'reports_to'], 
+                (r) => {
+                    if (r) {
+                        frm.set_value('id_no', r.employee_name);
+                        frm.set_value('designation', r.designation);
+                        frm.set_value('department', r.department);
+                        frm.set_value('date_of_exit_transfer__rotation_effective_from', r.relieving_date);
+                        
+                        if (r.reports_to) {
+                            frappe.db.get_value('Employee', r.reports_to, 'employee_name', (res) => {
+                                if (res) {
+                                    frm.set_value('name_of_reporting_officer', res.employee_name);
+                                }
+                            });
+                        } else {
+                            frm.set_value('name_of_reporting_officer', "");
+                        }
+                    }
                 }
-            });
+            );
         } else {
+            frm.set_value('id_no', "");
             frm.set_value('designation', "");
             frm.set_value('department', "");
+            frm.set_value('date_of_exit_transfer__rotation_effective_from', "");
+            frm.set_value('name_of_reporting_officer', "");
         }
     }
 });

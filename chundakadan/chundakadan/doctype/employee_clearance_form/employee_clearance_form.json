@@ -55,19 +55,22 @@
    "fieldname": "employee_name",
    "fieldtype": "Link",
    "label": "Employee Name",
-   "options": "Employee"
+   "options": "Employee",
+   "show_title_field_in_link": 1
   },
   {
    "fieldname": "designation",
    "fieldtype": "Link",
    "label": "Designation",
-   "options": "Designation"
+   "options": "Designation",
+   "read_only": 1
   },
   {
    "fieldname": "department",
    "fieldtype": "Link",
    "label": "Department",
-   "options": "Department"
+   "options": "Department",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_xwfz",
@@ -76,7 +79,8 @@
   {
    "fieldname": "id_no",
    "fieldtype": "Data",
-   "label": "ID No"
+   "label": "ID No",
+   "read_only": 1
   },
   {
    "fieldname": "name_of_reporting_officer",
@@ -86,7 +90,8 @@
   {
    "fieldname": "date_of_exit_transfer__rotation_effective_from",
    "fieldtype": "Date",
-   "label": "Date of Exit/ Transfer / Rotation effective from"
+   "label": "Date of Exit/ Transfer / Rotation effective from",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_ihmt",
