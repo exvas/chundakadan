@@ -54,9 +54,9 @@
   {
    "fieldname": "employee_name",
    "fieldtype": "Link",
-   "label": "Employee Name",
+   "label": "ID No",
    "options": "Employee",
-   "show_title_field_in_link": 1
+   "show_title_field_in_link": 0
   },
   {
    "fieldname": "designation",
@@ -79,7 +79,7 @@
   {
    "fieldname": "id_no",
    "fieldtype": "Data",
-   "label": "ID No",
+   "label": "Employee Name",
    "read_only": 1
   },
   {

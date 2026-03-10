@@ -133,8 +133,9 @@ frappe.ui.form.on("Exit Interview Form", {
     },
 
     // AUTOMATIC FETCHING Logic for Employee Details
-    name1: function (frm) {
-        if (!frm.doc.name1) {
+    custom_id_nos: function (frm) {
+        if (!frm.doc.custom_id_nos) {
+            frm.set_value('name1', '');
             frm.set_value('department', '');
             frm.set_value('position', '');
             frm.set_value('hire_date', '');
@@ -142,20 +143,17 @@ frappe.ui.form.on("Exit Interview Form", {
             return;
         }
 
-        console.log("V24: name1 changed to", frm.doc.name1);
-        // frappe.show_alert({message: __('Fetching Employee Details...'), indicator: 'blue'});
+        console.log("Exit Form: custom_id_nos changed to", frm.doc.custom_id_nos);
 
-        frappe.db.get_value('Employee', frm.doc.name1, ['department', 'designation', 'date_of_joining', 'date_of_retirement', 'relieving_date'], (r) => {
+        frappe.db.get_value('Employee', frm.doc.custom_id_nos, 
+            ['employee_name', 'department', 'designation', 'date_of_joining', 'relieving_date'], (r) => {
             if (r) {
-                console.log("V24 Data Received:", r);
+                console.log("Employee Data Received:", r);
+                frm.set_value('name1', r.employee_name);
                 frm.set_value('department', r.department);
                 frm.set_value('position', r.designation);
                 frm.set_value('hire_date', r.date_of_joining);
-
-                // Set separation date from relieving_date
                 frm.set_value('separation_date', r.relieving_date);
-
-                // frappe.show_alert({ message: __('Employee data updated'), indicator: 'green' });
             }
         });
     }
