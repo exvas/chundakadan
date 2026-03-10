@@ -135,36 +135,37 @@ frappe.ui.form.on("Exit Interview Form", {
     // AUTOMATIC FETCHING Logic for Employee Details
     custom_id_nos: function (frm) {
         if (!frm.doc.custom_id_nos) {
-            frm.set_value('name1', '');
-            frm.set_value('department', '');
-            frm.set_value('position', '');
-            frm.set_value('hire_date', '');
-            frm.set_value('separation_date', '');
+            frm.set_value({
+                'name1': '',
+                'department': '',
+                'position': '',
+                'hire_date': '',
+                'separation_date': ''
+            });
             return;
         }
 
-        console.log("Exit Form: custom_id_nos changed to", frm.doc.custom_id_nos);
+        console.log("Exit Form: Fetching details for", frm.doc.custom_id_nos);
+        // frappe.show_alert({message: __('Fetching Employee Details...'), indicator: 'blue'});
 
         frappe.db.get_value('Employee', frm.doc.custom_id_nos, 
             ['employee_name', 'department', 'designation', 'date_of_joining', 'relieving_date'], (r) => {
             if (r) {
-                console.log("Employee Data Received:", r);
-                frm.set_value('name1', r.employee_name);
-                frm.set_value('department', r.department);
-                frm.set_value('position', r.designation);
-                frm.set_value('hire_date', r.date_of_joining);
-                frm.set_value('separation_date', r.relieving_date);
+                console.log("Employee Data Object:", r);
+                
+                // Set primary fields
+                frm.set_value({
+                    'name1': r.employee_name || '',
+                    'department': r.department || '',
+                    'position': r.designation || '',
+                    'hire_date': r.date_of_joining || '',
+                    'separation_date': r.relieving_date || ''
+                });
+
+                // frappe.show_alert({ message: __('Employee details populated'), indicator: 'green' });
+            } else {
+                console.log("No data found for employee:", frm.doc.custom_id_nos);
             }
         });
     }
 });
-
-
-
-
-
-
-
-
-
-
