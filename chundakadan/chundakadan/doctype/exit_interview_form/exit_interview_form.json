@@ -57,9 +57,8 @@
         },
         {
             "fieldname": "name1",
-            "fieldtype": "Link",
-            "label": "Name",
-            "options": "Employee"
+            "fieldtype": "Data",
+            "label": "Name"
         },
         {
             "fieldname": "department",
