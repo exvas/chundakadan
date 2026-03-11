@@ -6,4 +6,6 @@ from frappe.model.document import Document
 
 
 class EmployeeClearanceForm(Document):
-	pass
+	def autoname(self):
+		from frappe.model.naming import make_autoname
+		self.name = make_autoname('CDN/EC/.###./.YY.')
