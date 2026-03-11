@@ -14,7 +14,8 @@
   {
    "fieldname": "approved_by",
    "fieldtype": "Data",
-   "label": "Approved by"
+   "label": "Approved by",
+   "in_list_view": 1
   },
   {
    "fieldname": "column_break_fari",
@@ -23,7 +24,8 @@
   {
    "fieldname": "remarks_if_any",
    "fieldtype": "Data",
-   "label": "Remarks if any"
+   "label": "Remarks if any",
+   "in_list_view": 1
   },
   {
    "fieldname": "column_break_yebc",
@@ -32,7 +34,8 @@
   {
    "fieldname": "sign_and_date",
    "fieldtype": "Data",
-   "label": "Sign and Date"
+   "label": "Sign and Date",
+   "in_list_view": 1
   }
  ],
  "index_web_pages_for_search": 1,

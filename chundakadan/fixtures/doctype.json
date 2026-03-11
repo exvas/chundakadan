@@ -2428,7 +2428,7 @@
     "role": "HR User",
     "select": 0,
     "share": 1,
-    "submit": 0,
+    "submit": 1,
     "write": 1
    },
    {
@@ -5299,7 +5299,7 @@
     "role": "HR User",
     "select": 0,
     "share": 1,
-    "submit": 0,
+    "submit": 1,
     "write": 1
    },
    {
@@ -10488,7 +10488,7 @@
     "role": "HR User",
     "select": 0,
     "share": 1,
-    "submit": 0,
+    "submit": 1,
     "write": 1
    },
    {
@@ -12591,7 +12591,7 @@
     "role": "HR User",
     "select": 0,
     "share": 1,
-    "submit": 0,
+    "submit": 1,
     "write": 1
    },
    {
