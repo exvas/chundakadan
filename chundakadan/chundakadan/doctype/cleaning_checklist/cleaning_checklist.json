@@ -17,8 +17,7 @@
   "column_break_4",
   "supervisor",
   "column_break_5",
-  "hr",
-  "amended_from"
+  "hr"
  ],
  "fields": [
   {
@@ -94,15 +93,6 @@
    "fieldtype": "Link",
    "label": "HR",
    "options": "User"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Cleaning Checklist",
-   "print_hide": 1,
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

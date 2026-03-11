@@ -34,8 +34,7 @@
   "acknowledgment_required",
   "acknowledged_by",
   "section_break_9",
-  "remarks",
-  "amended_from"
+  "remarks"
  ],
  "fields": [
   {
@@ -207,15 +206,6 @@
    "fieldname": "remarks",
    "fieldtype": "Text Editor",
    "label": "Remarks"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Official Memorandum",
-   "print_hide": 1,
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

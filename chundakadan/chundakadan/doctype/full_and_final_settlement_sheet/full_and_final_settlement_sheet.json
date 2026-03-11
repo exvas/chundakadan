@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_m3s3",
-  "amended_from",
   "employee_details",
   "section_break_kqed",
   "earnings_breakdown",
@@ -21,16 +20,6 @@
   {
    "fieldname": "section_break_m3s3",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Full and Final Settlement Sheet",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
   },
   {
    "fieldname": "employee_details",

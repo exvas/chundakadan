@@ -40,8 +40,7 @@
   "employee_signature",
   "employee_signature_date",
   "section_break_8",
-  "remarks",
-  "amended_from"
+  "remarks"
  ],
  "fields": [
   {
@@ -252,15 +251,6 @@
    "fieldname": "remarks",
    "fieldtype": "Text Editor",
    "label": "Remarks"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Warning Letter",
-   "print_hide": 1,
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

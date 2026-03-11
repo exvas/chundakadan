@@ -1,6 +1,6 @@
 frappe.ui.form.on("Employee Clearance Form", {
-    onload: function(frm) {
-        if (frm.is_new() && (!frm.doc.department_approval || frm.doc.department_approval.length === 0)) {
+    refresh: function(frm) {
+        if (!frm.doc.department_approval || frm.doc.department_approval.length === 0) {
             const static_rows = [
                 "Reporting officer",
                 "Accounts /Finance",
@@ -15,7 +15,7 @@ frappe.ui.form.on("Employee Clearance Form", {
             frm.refresh_field("department_approval");
         }
 
-        if (frm.is_new() && (!frm.doc.table_vmjo || frm.doc.table_vmjo.length === 0)) {
+        if (!frm.doc.table_vmjo || frm.doc.table_vmjo.length === 0) {
             const mgmt_rows = [
                 "GM",
                 "MD"

@@ -68,8 +68,7 @@
   "verified_by",
   "verified_by_name",
   "verified_by_signature",
-  "verified_by_date",
-  "amended_from"
+  "verified_by_date"
  ],
  "fields": [
   {
@@ -420,15 +419,6 @@
    "fieldname": "verified_by_date",
    "fieldtype": "Date",
    "label": "Date"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Disciplinary Investigation Incident Report",
-   "print_hide": 1,
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

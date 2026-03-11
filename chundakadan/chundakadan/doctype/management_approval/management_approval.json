@@ -1,21 +1,23 @@
 {
  "actions": [],
- "allow_auto_repeat": 0,
- "allow_copy": 0,
- "allow_events_in_timeline": 0,
- "allow_guest_to_view": 0,
- "allow_import": 0,
  "allow_rename": 1,
- "creation": "2026-03-05 15:45:38.581758",
+ "creation": "2026-03-11 11:52:08.701175",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
+ "field_order": [
+  "approved_by",
+  "column_break_fari",
+  "remarks_if_any",
+  "column_break_yebc",
+  "sign_and_date"
+ ],
  "fields": [
   {
    "fieldname": "approved_by",
    "fieldtype": "Data",
-   "label": "Approved by",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "label": "Approved by"
   },
   {
    "fieldname": "column_break_fari",
@@ -24,8 +26,8 @@
   {
    "fieldname": "remarks_if_any",
    "fieldtype": "Data",
-   "label": "Remarks if any",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "label": "Remarks if any"
   },
   {
    "fieldname": "column_break_yebc",
@@ -34,14 +36,14 @@
   {
    "fieldname": "sign_and_date",
    "fieldtype": "Data",
-   "label": "Sign and Date",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "label": "Sign and Date"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-05 15:45:38.581758",
+ "modified": "2026-03-11 11:58:56.867795",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Management Approval",

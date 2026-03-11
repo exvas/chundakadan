@@ -7,7 +7,6 @@
  "field_order": [
   "employee_details_tab",
   "section_break_m5ek",
-  "amended_from",
   "employee_name",
   "designation",
   "department",
@@ -40,16 +39,6 @@
   {
    "fieldname": "section_break_m5ek",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Employee Clearance Form",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
   },
   {
    "fieldname": "employee_name",

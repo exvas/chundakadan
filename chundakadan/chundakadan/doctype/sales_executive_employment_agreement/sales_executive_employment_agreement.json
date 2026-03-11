@@ -38,8 +38,7 @@
   "employer_date",
   "column_break_9",
   "employee_signature",
-  "employee_signature_date",
-  "amended_from"
+  "employee_signature_date"
  ],
  "fields": [
   {
@@ -235,15 +234,6 @@
    "fieldname": "employee_signature_date",
    "fieldtype": "Date",
    "label": "Employee Signature Date"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Sales Executive Employment Agreement",
-   "print_hide": 1,
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
