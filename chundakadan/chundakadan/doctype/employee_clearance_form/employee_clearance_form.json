@@ -51,15 +51,13 @@
             "fieldname": "designation",
             "fieldtype": "Link",
             "label": "Designation",
-            "options": "Designation",
-            "read_only": 1
+            "options": "Designation"
         },
         {
             "fieldname": "department",
             "fieldtype": "Link",
             "label": "Department",
-            "options": "Department",
-            "read_only": 1
+            "options": "Department"
         },
         {
             "fieldname": "column_break_xwfz",
@@ -68,8 +66,7 @@
         {
             "fieldname": "id_no",
             "fieldtype": "Data",
-            "label": "Employee Name",
-            "read_only": 1
+            "label": "Employee Name"
         },
         {
             "fieldname": "name_of_reporting_officer",

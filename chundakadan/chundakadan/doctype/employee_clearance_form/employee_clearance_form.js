@@ -1,5 +1,9 @@
 frappe.ui.form.on("Employee Clearance Form", {
     refresh: function(frm) {
+        frm.set_df_property('designation', 'read_only', 1);
+        frm.set_df_property('department', 'read_only', 1);
+        frm.set_df_property('id_no', 'read_only', 1);
+
         if (!frm.doc.department_approval || frm.doc.department_approval.length === 0) {
             const static_rows = [
                 "Reporting officer",
@@ -9,7 +13,7 @@ frappe.ui.form.on("Employee Clearance Form", {
             
             static_rows.forEach(row_name => {
                 let row = frm.add_child("department_approval");
-                row.department_approval = row_name;
+                frappe.model.set_value(row.doctype, row.name, "department_approval", row_name);
             });
             
             frm.refresh_field("department_approval");
@@ -23,7 +27,7 @@ frappe.ui.form.on("Employee Clearance Form", {
             
             mgmt_rows.forEach(row_name => {
                 let row = frm.add_child("table_vmjo");
-                row.approved_by = row_name;
+                frappe.model.set_value(row.doctype, row.name, "approved_by", row_name);
             });
             
             frm.refresh_field("table_vmjo");
