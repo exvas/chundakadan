@@ -1,186 +1,185 @@
 {
- "actions": [],
- "allow_rename": 1,
- "creation": "2026-02-25 12:30:17.525934",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "employee_details_tab",
-  "section_break_m5ek",
-  "employee_name",
-  "designation",
-  "department",
-  "column_break_xwfz",
-  "id_no",
-  "name_of_reporting_officer",
-  "date_of_exit_transfer__rotation_effective_from",
-  "section_break_ihmt",
-  "please_accept_the_request",
-  "please_list_out_the_mkc_properties_handed_over",
-  "section_break_tdmu",
-  "handed_over_by",
-  "column_break_cufw",
-  "date",
-  "column_break_jrjp",
-  "handed_over_to",
-  "column_break_lrxu",
-  "todate",
-  "section_break_pfag",
-  "department_approval",
-  "section_break_otnc",
-  "table_vmjo"
- ],
- "fields": [
-  {
-   "fieldname": "employee_details_tab",
-   "fieldtype": "Tab Break",
-   "label": "Employee Details"
-  },
-  {
-   "fieldname": "section_break_m5ek",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "employee_name",
-   "fieldtype": "Link",
-   "label": "ID No",
-   "options": "Employee",
-   "show_title_field_in_link": 0
-  },
-  {
-   "fieldname": "designation",
-   "fieldtype": "Link",
-   "label": "Designation",
-   "options": "Designation",
-   "read_only": 1
-  },
-  {
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "label": "Department",
-   "options": "Department",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_xwfz",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "id_no",
-   "fieldtype": "Data",
-   "label": "Employee Name",
-   "read_only": 1
-  },
-  {
-   "fieldname": "name_of_reporting_officer",
-   "fieldtype": "Data",
-   "label": "Name of Reporting Officer"
-  },
-  {
-   "fieldname": "date_of_exit_transfer__rotation_effective_from",
-   "fieldtype": "Date",
-   "label": "Date of Exit/ Transfer / Rotation effective from",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_ihmt",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "please_accept_the_request",
-   "fieldtype": "Long Text",
-   "label": "Please accept the request towards Resignation/Termination/Promotion/Transfer from the employment .The main reason is (Please specify)"
-  },
-  {
-   "fieldname": "please_list_out_the_mkc_properties_handed_over",
-   "fieldtype": "Table",
-   "label": "Please list out the MKC Properties handed over",
-   "options": "MKC Properties"
-  },
-  {
-   "fieldname": "section_break_tdmu",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "handed_over_by",
-   "fieldtype": "Data",
-   "label": "Handed over By"
-  },
-  {
-   "fieldname": "column_break_cufw",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "label": "Date"
-  },
-  {
-   "fieldname": "column_break_jrjp",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "handed_over_to",
-   "fieldtype": "Data",
-   "label": "Handed over to"
-  },
-  {
-   "fieldname": "column_break_lrxu",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "todate",
-   "fieldtype": "Date",
-   "label": "Date"
-  },
-  {
-   "fieldname": "section_break_pfag",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "department_approval",
-   "fieldtype": "Table",
-   "label": "Department Approval",
-   "options": "Department Approval"
-  },
-  {
-   "fieldname": "section_break_otnc",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "table_vmjo",
-   "fieldtype": "Table",
-   "label": "Management Approval",
-   "options": "Management Approval"
-  }
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "is_submittable": 1,
- "links": [],
- "modified": "2026-03-07 14:55:37.713106",
- "modified_by": "Administrator",
- "module": "Chundakadan",
- "name": "Employee Clearance Form",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "submit": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": []
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2026-02-25 12:30:17.525934",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "employee_details_tab",
+        "section_break_m5ek",
+        "employee_name",
+        "designation",
+        "department",
+        "column_break_xwfz",
+        "id_no",
+        "name_of_reporting_officer",
+        "date_of_exit_transfer__rotation_effective_from",
+        "section_break_ihmt",
+        "please_accept_the_request",
+        "please_list_out_the_mkc_properties_handed_over",
+        "section_break_tdmu",
+        "handed_over_by",
+        "column_break_cufw",
+        "date",
+        "column_break_jrjp",
+        "handed_over_to",
+        "column_break_lrxu",
+        "todate",
+        "section_break_pfag",
+        "department_approval",
+        "section_break_otnc",
+        "table_vmjo"
+    ],
+    "fields": [
+        {
+            "fieldname": "employee_details_tab",
+            "fieldtype": "Tab Break",
+            "label": "Employee Details"
+        },
+        {
+            "fieldname": "section_break_m5ek",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "employee_name",
+            "fieldtype": "Link",
+            "label": "ID No",
+            "options": "Employee",
+            "show_title_field_in_link": 0
+        },
+        {
+            "fieldname": "designation",
+            "fieldtype": "Link",
+            "label": "Designation",
+            "options": "Designation",
+            "read_only": 1
+        },
+        {
+            "fieldname": "department",
+            "fieldtype": "Link",
+            "label": "Department",
+            "options": "Department",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_xwfz",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "id_no",
+            "fieldtype": "Data",
+            "label": "Employee Name",
+            "read_only": 1
+        },
+        {
+            "fieldname": "name_of_reporting_officer",
+            "fieldtype": "Data",
+            "label": "Name of Reporting Officer"
+        },
+        {
+            "fieldname": "date_of_exit_transfer__rotation_effective_from",
+            "fieldtype": "Date",
+            "label": "Date of Exit/ Transfer / Rotation effective from"
+        },
+        {
+            "fieldname": "section_break_ihmt",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "please_accept_the_request",
+            "fieldtype": "Long Text",
+            "label": "Please accept the request towards Resignation/Termination/Promotion/Transfer from the employment .The main reason is (Please specify)"
+        },
+        {
+            "fieldname": "please_list_out_the_mkc_properties_handed_over",
+            "fieldtype": "Table",
+            "label": "Please list out the MKC Properties handed over",
+            "options": "MKC Properties"
+        },
+        {
+            "fieldname": "section_break_tdmu",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "handed_over_by",
+            "fieldtype": "Data",
+            "label": "Handed over By"
+        },
+        {
+            "fieldname": "column_break_cufw",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "date",
+            "fieldtype": "Date",
+            "label": "Date"
+        },
+        {
+            "fieldname": "column_break_jrjp",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "handed_over_to",
+            "fieldtype": "Data",
+            "label": "Handed over to"
+        },
+        {
+            "fieldname": "column_break_lrxu",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "todate",
+            "fieldtype": "Date",
+            "label": "Date"
+        },
+        {
+            "fieldname": "section_break_pfag",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "department_approval",
+            "fieldtype": "Table",
+            "label": "Department Approval",
+            "options": "Department Approval"
+        },
+        {
+            "fieldname": "section_break_otnc",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "table_vmjo",
+            "fieldtype": "Table",
+            "label": "Management Approval",
+            "options": "Management Approval"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "is_submittable": 1,
+    "links": [],
+    "modified": "2026-03-07 14:55:37.713106",
+    "modified_by": "Administrator",
+    "module": "Chundakadan",
+    "name": "Employee Clearance Form",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "rows_threshold_for_grid_search": 20,
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
 }
