@@ -264,13 +264,6 @@ scheduler_events = {
 # }
 
 fixtures = [
-
-    {
-    "dt": "DocType",
-    "filters": [
-        ["module", "=", "Chundakadan"]
-    ]
-    },
     {
         "doctype": "Custom Field",
         "filters": [

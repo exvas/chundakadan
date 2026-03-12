@@ -1,6 +1,6 @@
 frappe.ui.form.on("Full and Final Settlement Sheet", {
-    onload: function(frm) {
-        if (frm.is_new() && (!frm.doc.employee_details || frm.doc.employee_details.length === 0)) {
+    refresh: function(frm) {
+        if (!frm.doc.employee_details || frm.doc.employee_details.length === 0) {
             const employee_rows = [
                 "Employee Name",
                 "Employee ID",
@@ -13,13 +13,13 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             employee_rows.forEach(label_name => {
                 let row = frm.add_child("employee_details");
-                row.details = label_name;
+                frappe.model.set_value(row.doctype, row.name, "details", label_name);
             });
 
             frm.refresh_field("employee_details");
         }
 
-        if (frm.is_new() && (!frm.doc.earnings_breakdown || frm.doc.earnings_breakdown.length === 0)) {
+        if (!frm.doc.earnings_breakdown || frm.doc.earnings_breakdown.length === 0) {
             const earnings_rows = [
                 { properties: "Last Month Salary", description: "Basic + Allowances for [Month/Year]" },
                 { properties: "Pending Salaries", description: "Unpaid wages from previous months" },
@@ -33,14 +33,14 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             earnings_rows.forEach(item => {
                 let row = frm.add_child("earnings_breakdown");
-                row.properties = item.properties;
-                row.description = item.description;
+                frappe.model.set_value(row.doctype, row.name, "properties", item.properties);
+                frappe.model.set_value(row.doctype, row.name, "description", item.description);
             });
 
             frm.refresh_field("earnings_breakdown");
         }
 
-        if (frm.is_new() && (!frm.doc.deduction || frm.doc.deduction.length === 0)) {
+        if (!frm.doc.deduction || frm.doc.deduction.length === 0) {
             const deduction_rows = [
                 { component: "Advance Salary/Loans", descriptionformula: "Outstanding loans or salary advances" },
                 { component: "Tax Deductions (TDS)", descriptionformula: "Income tax on final payout" },
@@ -53,14 +53,14 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             deduction_rows.forEach(item => {
                 let row = frm.add_child("deduction");
-                row.component = item.component;
-                row.descriptionformula = item.descriptionformula;
+                frappe.model.set_value(row.doctype, row.name, "component", item.component);
+                frappe.model.set_value(row.doctype, row.name, "descriptionformula", item.descriptionformula);
             });
 
             frm.refresh_field("deduction");
         }
 
-        if (frm.is_new() && (!frm.doc.net_settlement_amount || frm.doc.net_settlement_amount.length === 0)) {
+        if (!frm.doc.net_settlement_amount || frm.doc.net_settlement_amount.length === 0) {
             const net_rows = [
                 "Total Earnings",
                 "Less: Total Deductions",
@@ -69,13 +69,13 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             net_rows.forEach(entry_name => {
                 let row = frm.add_child("net_settlement_amount");
-                row.entries = entry_name;
+                frappe.model.set_value(row.doctype, row.name, "entries", entry_name);
             });
 
             frm.refresh_field("net_settlement_amount");
         }
 
-        if (frm.is_new() && (!frm.doc.hr_approval || frm.doc.hr_approval.length === 0)) {
+        if (!frm.doc.hr_approval || frm.doc.hr_approval.length === 0) {
             const hr_rows = [
                 "Prepared By (HR Executive)",
                 "Approved By (Manager)",
@@ -84,7 +84,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             hr_rows.forEach(role_name => {
                 let row = frm.add_child("hr_approval");
-                row.role = role_name;
+                frappe.model.set_value(row.doctype, row.name, "role", role_name);
             });
 
             frm.refresh_field("hr_approval");
