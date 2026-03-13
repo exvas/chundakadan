@@ -1,5 +1,5 @@
 frappe.ui.form.on("Full and Final Settlement Sheet", {
-    refresh: function(frm) {
+    refresh: function (frm) {
         if (!frm.doc.employee_details || frm.doc.employee_details.length === 0) {
             const employee_rows = [
                 "Employee Name",
@@ -89,5 +89,156 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             frm.refresh_field("hr_approval");
         }
+    },
+    custom_employee: async function (frm) {
+
+        if (!frm.doc.custom_employee) return;
+
+        // Get Employee
+        let emp = await frappe.db.get_doc("Employee", frm.doc.custom_employee);
+
+        /* ---------------- EMPLOYEE DETAILS TABLE ---------------- */
+
+        frm.doc.employee_details.forEach(row => {
+
+            if (row.details === "Employee Name") {
+                frappe.model.set_value(row.doctype, row.name, "data", emp.employee_name);
+            }
+
+            if (row.details === "Employee ID") {
+                frappe.model.set_value(row.doctype, row.name, "data", emp.name);
+            }
+
+            if (row.details === "Department") {
+                frappe.model.set_value(row.doctype, row.name, "data", emp.department);
+            }
+
+            if (row.details === "Designation") {
+                frappe.model.set_value(row.doctype, row.name, "data", emp.designation);
+            }
+
+            if (row.details === "Date of Joining") {
+                frappe.model.set_value(row.doctype, row.name, "data", emp.date_of_joining);
+            }
+
+            if (row.details === "Last Working Day") {
+                frappe.model.set_value(row.doctype, row.name, "data", emp.relieving_date || "");
+            }
+
+            if (row.details === "Total Service Period") {
+
+                if (emp.date_of_joining) {
+
+                    let start = frappe.datetime.str_to_obj(emp.date_of_joining);
+                    let end = emp.relieving_date
+                        ? frappe.datetime.str_to_obj(emp.relieving_date)
+                        : new Date();
+
+                    let diff = frappe.datetime.get_day_diff(end, start);
+
+                    let years = Math.floor(diff / 365);
+                    let months = Math.floor((diff % 365) / 30);
+
+                    let service = years + " Years " + months + " Months";
+
+                    frappe.model.set_value(row.doctype, row.name, "data", service);
+                }
+            }
+
+        });
+
+        frm.refresh_field("employee_details");
+
+
+        /* ---------------- LAST MONTH SALARY FROM SALARY SLIP ---------------- */
+
+        if (!emp.relieving_date) return;
+
+        let date = frappe.datetime.str_to_obj(emp.relieving_date);
+        let month = date.getMonth() + 1;
+        let year = date.getFullYear();
+
+        let salary_slips = await frappe.db.get_list("Salary Slip", {
+            filters: {
+                employee: emp.name,
+                docstatus: 1
+            },
+            fields: ["name", "net_pay", "end_date"],
+            limit: 12
+        });
+
+        // Fetch latest salary slip before relieving date
+        let slips = await frappe.db.get_list("Salary Slip", {
+            filters: [
+                ["employee", "=", emp.name],
+                ["end_date", "<=", emp.relieving_date],
+                ["docstatus", "=", 1]
+            ],
+            fields: ["name", "net_pay", "end_date"],
+            order_by: "end_date desc",
+            limit: 1
+        });
+
+        if (slips.length > 0) {
+
+            let slip = slips[0];
+
+            frm.doc.earnings_breakdown.forEach(row => {
+
+                if (row.properties === "Last Month Salary") {
+
+                    frappe.model.set_value(
+                        row.doctype,
+                        row.name,
+                        "remarks",
+                        slip.net_pay
+                    );
+
+                }
+
+            });
+            frm.refresh_field("earnings_breakdown");
+        }
+
+        // Fetch Leave Encashment Balance Report
+        let report = await frappe.call({
+            method: "frappe.desk.query_report.run",
+            args: {
+                report_name: "Leave Encashment Balance",
+                filters: {
+                    company: frm.doc.company || "Chundakadan Agencies",
+                    employee: emp.name
+                }
+            }
+        });
+
+        if (report.message && report.message.result) {
+
+            let total = 0;
+
+            report.message.result.forEach(row => {
+                total += row.total_payable_amount || 0;
+            });
+
+            frm.doc.earnings_breakdown.forEach(row => {
+
+                if (row.properties === "Leave Encashment") {
+
+                    frappe.model.set_value(
+                        row.doctype,
+                        row.name,
+                        "remarks",
+                        total
+                    );
+
+                }
+
+            });
+
+
+            frm.refresh_field("earnings_breakdown");
+        }
     }
+
+
 });

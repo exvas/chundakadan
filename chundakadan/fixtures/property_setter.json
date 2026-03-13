@@ -2814,5 +2814,21 @@
   "property_type": "Data",
   "row_name": null,
   "value": "[\"section_break_3tlw\", \"amended_from\", \"section_break_nbet\", \"custom_id_nos\", \"name1\", \"department\", \"position\", \"column_break_aegk\", \"hire_date\", \"separation_date\", \"manager__hod\", \"section_break_mydv\", \"alternative_employeement\", \"section_break_yepf\", \"rate_supervisor\", \"section_break_jzti\", \"rate_employment\", \"section_break_zadj\", \"rate_compensation\", \"what_did_you_like_most_about_your_job_andor_this_company_section\", \"small_text_pzgq\", \"section_break_yxcl\", \"what_did_you_like_least_about_your_job_andor_this_company\", \"section_break_mkpz\", \"additional_comments\", \"section_break_sykd\", \"html_yrxs\", \"section_break_uiyk\", \"comments_if_any\", \"survey_data\", \"custom_approved_by\"]"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Full and Final Settlement Sheet",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": null,
+  "is_system_generated": 0,
+  "modified": "2026-03-12 15:17:49.425523",
+  "module": "Chundakadan",
+  "name": "Full and Final Settlement Sheet-main-field_order",
+  "property": "field_order",
+  "property_type": "Data",
+  "row_name": null,
+  "value": "[\"section_break_m3s3\", \"custom_employee\", \"employee_details\", \"section_break_kqed\", \"earnings_breakdown\", \"section_break_vsyi\", \"deduction\", \"section_break_tavt\", \"net_settlement_amount\", \"section_break_hbfy\", \"hr_approval\", \"amended_from\"]"
  }
 ]
