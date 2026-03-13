@@ -8,9 +8,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                 "Designation",
                 "Date of Joining",
                 "Last Working Day",
-                "Total Service Period",
-                "Payment Days",
-                "Per Day Rate"
+                "Total Service Period"
             ];
 
             employee_rows.forEach(label_name => {
@@ -225,14 +223,8 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                 total += row.total_payable_amount || 0;
             });
 
-            frm.doc.employee_details.forEach(row => {
-                if (row.details === "Payment Days") {
-                    frappe.model.set_value(row.doctype, row.name, "data", payment_days);
-                }
-                if (row.details === "Per Day Rate") {
-                    frappe.model.set_value(row.doctype, row.name, "data", per_day_rate);
-                }
-            });
+            // Removed Payment Days and Per Day Rate from employee_details table as requested
+            
             frm.refresh_field("employee_details");
 
             frm.doc.earnings_breakdown.forEach(row => {
