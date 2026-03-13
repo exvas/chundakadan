@@ -109,8 +109,16 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                 });
             }
 
+            // Clear Deduction table
+            if (frm.doc.deduction) {
+                frm.doc.deduction.forEach(row => {
+                    frappe.model.set_value(row.doctype, row.name, "amount", "");
+                });
+            }
+
             frm.refresh_field("employee_details");
             frm.refresh_field("earnings_breakdown");
+            frm.refresh_field("deduction");
             return;
         }
 
@@ -172,52 +180,55 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
         /* ---------------- LAST MONTH SALARY FROM SALARY SLIP ---------------- */
 
-        if (!emp.relieving_date) return;
+        let reference_date = emp.relieving_date || frappe.datetime.get_today();
 
-        let date = frappe.datetime.str_to_obj(emp.relieving_date);
+        let date = frappe.datetime.str_to_obj(reference_date);
         let month = date.getMonth() + 1;
         let year = date.getFullYear();
 
-        let salary_slips = await frappe.db.get_list("Salary Slip", {
-            filters: {
-                employee: emp.name,
-                docstatus: 1
-            },
-            fields: ["name", "net_pay", "end_date"],
-            limit: 12
-        });
-
-        // Fetch latest salary slip before relieving date
+        // Fetch salary slip specifically for the relieving month (defined by reference_date)
         let slips = await frappe.db.get_list("Salary Slip", {
             filters: [
                 ["employee", "=", emp.name],
-                ["end_date", "<=", emp.relieving_date],
-                ["docstatus", "=", 1]
+                ["start_date", "<=", reference_date],
+                ["end_date", ">=", reference_date],
+                ["docstatus", "!=", 2]
             ],
             fields: ["name", "net_pay", "end_date"],
-            order_by: "end_date desc",
             limit: 1
         });
 
         if (slips.length > 0) {
-
             let slip = slips[0];
 
+            // 1. Set Last Month Salary
             frm.doc.earnings_breakdown.forEach(row => {
-
                 if (row.properties === "Last Month Salary") {
-
-                    frappe.model.set_value(
-                        row.doctype,
-                        row.name,
-                        "remarks",
-                        slip.net_pay
-                    );
-
+                    frappe.model.set_value(row.doctype, row.name, "remarks", slip.net_pay);
                 }
-
             });
+
+            // 2. Fetch the full Salary Slip to get all deduction details
+            let slip_doc = await frappe.db.get_doc("Salary Slip", slip.name);
+            let advance_recovery = 0;
+
+            if (slip_doc && slip_doc.deductions) {
+                slip_doc.deductions.forEach(detail => {
+                    if (detail.salary_component === "Employee Advance Recovery") {
+                        advance_recovery = detail.amount;
+                    }
+                });
+            }
+
+            // Always try to set/clear the value in the F&F sheet
+            frm.doc.deduction.forEach(row => {
+                if (row.component === "Advance Salary/Loans") {
+                    frappe.model.set_value(row.doctype, row.name, "amount", advance_recovery || "");
+                }
+            });
+
             frm.refresh_field("earnings_breakdown");
+            frm.refresh_field("deduction");
         }
 
         // Call Leave Encashment Monthly Balance report
