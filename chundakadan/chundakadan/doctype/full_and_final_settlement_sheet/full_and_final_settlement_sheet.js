@@ -200,14 +200,34 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
             frm.refresh_field("earnings_breakdown");
         }
 
-        // Fetch Leave Encashment Balance Report
+        // Get Leave Period for employee
+        let leave_period = await frappe.db.get_list("Leave Period", {
+            filters: {
+                company: frm.doc.company || "Chundakadan Agencies"
+            },
+            fields: ["name"],
+            order_by: "from_date desc",
+            limit: 1
+        });
+
+        if (!leave_period.length) {
+            frappe.msgprint("No Leave Period found");
+            return;
+        }
+
+        let leave_period_name = leave_period[0].name;
+
+
+        // Call Leave Encashment Balance report
         let report = await frappe.call({
             method: "frappe.desk.query_report.run",
             args: {
                 report_name: "Leave Encashment Balance",
                 filters: {
-                    company: frm.doc.company || "Chundakadan Agencies",
-                    employee: emp.name
+                    company: frm.doc.company,
+                    employee: emp.name,
+                    leave_period: leave_period_name,
+                    payment_days: 30
                 }
             }
         });
@@ -234,7 +254,6 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                 }
 
             });
-
 
             frm.refresh_field("earnings_breakdown");
         }
