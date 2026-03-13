@@ -161,7 +161,8 @@ def get_data(filters):
         frappe.msgprint(_("No encashment-enabled leave types found"))
         return []
 
-    # Fetch Leave Allocations for the employee in the joined period
+    # Fetch ONLY the active Leave Allocation that covers the 'to_date' (Reference Date)
+    # This prevents adding up leaves from previous years/periods.
     allocation_query = """
         SELECT 
             name, employee, employee_name, department, leave_type,
@@ -170,13 +171,12 @@ def get_data(filters):
         WHERE docstatus = 1
         AND employee = %(employee)s
         AND leave_type IN %(leave_types)s
-        AND (from_date <= %(to_date)s AND to_date >= %(from_date)s)
+        AND (%(to_date)s BETWEEN from_date AND to_date)
     """
     
     allocations = frappe.db.sql(allocation_query, {
         "employee": employee_id,
         "leave_types": tuple(encashable_lt_map.keys()),
-        "from_date": from_date,
         "to_date": to_date
     }, as_dict=True)
 
@@ -190,15 +190,13 @@ def get_data(filters):
     # Get leaves taken in the period
     leaves_taken_map = get_leaves_taken([employee_id], list(encashable_lt_map.keys()), from_date, to_date)
 
-    data = []
+    leave_type_aggregated = {}
     
     for alloc in allocations:
         lt_settings = encashable_lt_map.get(alloc.leave_type)
         basic_salary = flt(salary_map.get(alloc.employee, 0))
         
         # Prorate calculation (Month Based)
-        # Calculation: (Allocated Leaves / Total Months in Allocation) * Months Worked (up to to_date)
-        
         alloc_from = getdate(alloc.from_date)
         alloc_to = getdate(alloc.to_date)
         
@@ -236,32 +234,51 @@ def get_data(filters):
         encashable_balance = max(0, balance - non_encashable)
         pending_leaves = min(encashable_balance, max_encashable)
         
-        # Calculate Amount
-        per_day_rate = 0
-        if payment_days > 0:
-            per_day_rate = basic_salary / payment_days
-            
-        payable_amount = pending_leaves * per_day_rate
+        # Initialize or update aggregation for this leave type
+        lt = alloc.leave_type
+        if lt not in leave_type_aggregated:
+            per_day_rate = 0
+            if payment_days > 0:
+                per_day_rate = basic_salary / payment_days
+                
+            leave_type_aggregated[lt] = {
+                "employee": alloc.employee,
+                "employee_name": alloc.employee_name,
+                "department": employee_details.department, # Use master department
+                "leave_type": lt,
+                "company": employee_details.company or "",
+                "encashment_enabled": 1,
+                "total_eligible_leaves": 0,
+                "leaves_already_encashed": 0,
+                "leaves_taken": leaves_taken, # This map is already per LT
+                "current_balance": 0,
+                "pending_encashment_leaves": 0,
+                "basic_salary": basic_salary,
+                "payment_days": int(payment_days),
+                "per_day_rate": per_day_rate,
+                "total_payable_amount": 0
+            }
         
-        row = {
-            "employee": alloc.employee,
-            "employee_name": alloc.employee_name,
-            "department": alloc.department,
-            "leave_type": alloc.leave_type,
-            "company": employee_details.company or "",
-            "encashment_enabled": 1,
-            "total_eligible_leaves": prorated_allocation,
-            "leaves_already_encashed": flt(alloc.total_leaves_encashed, 2),
-            "leaves_taken": flt(leaves_taken, 2),
-            "current_balance": flt(balance, 2),
-            "pending_encashment_leaves": flt(pending_leaves, 2),
-            "basic_salary": flt(basic_salary, 2),
-            "payment_days": int(payment_days),
-            "per_day_rate": flt(per_day_rate, 2),
-            "total_payable_amount": flt(payable_amount, 2)
-        }
-        
-        data.append(row)
+        # Sum up values from multiple allocations
+        leave_type_aggregated[lt]["total_eligible_leaves"] += prorated_allocation
+        leave_type_aggregated[lt]["leaves_already_encashed"] += leaves_encashed
+        leave_type_aggregated[lt]["current_balance"] += balance
+        leave_type_aggregated[lt]["pending_encashment_leaves"] += pending_leaves
+        leave_type_aggregated[lt]["total_payable_amount"] += (pending_leaves * leave_type_aggregated[lt]["per_day_rate"])
+
+    # Convert aggregated dict to data list
+    data = list(leave_type_aggregated.values())
+    
+    # Format precision for the final data
+    for row in data:
+        row["total_eligible_leaves"] = flt(row["total_eligible_leaves"], 2)
+        row["leaves_already_encashed"] = flt(row["leaves_already_encashed"], 2)
+        row["leaves_taken"] = flt(row["leaves_taken"], 2)
+        row["current_balance"] = flt(row["current_balance"], 2)
+        row["pending_encashment_leaves"] = flt(row["pending_encashment_leaves"], 2)
+        row["basic_salary"] = flt(row["basic_salary"], 2)
+        row["per_day_rate"] = flt(row["per_day_rate"], 2)
+        row["total_payable_amount"] = flt(row["total_payable_amount"], 2)
 
     return data
 

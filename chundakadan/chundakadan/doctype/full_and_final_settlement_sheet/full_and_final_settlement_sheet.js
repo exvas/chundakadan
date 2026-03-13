@@ -91,8 +91,28 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         }
     },
     custom_employee: async function (frm) {
+        if (!frm.doc.custom_employee) {
+            // Clear Employee Details table
+            if (frm.doc.employee_details) {
+                frm.doc.employee_details.forEach(row => {
+                    frappe.model.set_value(row.doctype, row.name, "data", "");
+                });
+            }
 
-        if (!frm.doc.custom_employee) return;
+            // Clear Earnings Breakdown table (the fields we fetch)
+            if (frm.doc.earnings_breakdown) {
+                frm.doc.earnings_breakdown.forEach(row => {
+                    frappe.model.set_value(row.doctype, row.name, "remarks", "");
+                    if (row.properties === "Leave Encashment") {
+                        frappe.model.set_value(row.doctype, row.name, "description", __("Unused paid leaves \u00d7 daily rate (max 30 days)"));
+                    }
+                });
+            }
+
+            frm.refresh_field("employee_details");
+            frm.refresh_field("earnings_breakdown");
+            return;
+        }
 
         // Get Employee
         let emp = await frappe.db.get_doc("Employee", frm.doc.custom_employee);
