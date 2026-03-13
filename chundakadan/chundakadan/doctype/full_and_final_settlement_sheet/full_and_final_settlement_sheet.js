@@ -8,7 +8,9 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                 "Designation",
                 "Date of Joining",
                 "Last Working Day",
-                "Total Service Period"
+                "Total Service Period",
+                "Payment Days",
+                "Per Day Rate"
             ];
 
             employee_rows.forEach(label_name => {
@@ -200,45 +202,38 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
             frm.refresh_field("earnings_breakdown");
         }
 
-        // Get Leave Period for employee
-        let leave_period = await frappe.db.get_list("Leave Period", {
-            filters: {
-                company: frm.doc.company || "Chundakadan Agencies"
-            },
-            fields: ["name"],
-            order_by: "from_date desc",
-            limit: 1
-        });
-
-        if (!leave_period.length) {
-            frappe.msgprint("No Leave Period found");
-            return;
-        }
-
-        let leave_period_name = leave_period[0].name;
-
-
-        // Call Leave Encashment Balance report
+        // Call Leave Encashment Monthly Balance report
         let report = await frappe.call({
             method: "frappe.desk.query_report.run",
             args: {
-                report_name: "Leave Encashment Balance",
+                report_name: "Leave Encashment Monthly Balance",
                 filters: {
                     company: frm.doc.company,
                     employee: emp.name,
-                    leave_period: leave_period_name,
                     payment_days: 30
                 }
             }
         });
 
-        if (report.message && report.message.result) {
+        if (report.message && report.message.result && report.message.result.length > 0) {
 
             let total = 0;
+            let payment_days = report.message.result[0].payment_days;
+            let per_day_rate = report.message.result[0].per_day_rate;
 
             report.message.result.forEach(row => {
                 total += row.total_payable_amount || 0;
             });
+
+            frm.doc.employee_details.forEach(row => {
+                if (row.details === "Payment Days") {
+                    frappe.model.set_value(row.doctype, row.name, "data", payment_days);
+                }
+                if (row.details === "Per Day Rate") {
+                    frappe.model.set_value(row.doctype, row.name, "data", per_day_rate);
+                }
+            });
+            frm.refresh_field("employee_details");
 
             frm.doc.earnings_breakdown.forEach(row => {
 
@@ -249,6 +244,13 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                         row.name,
                         "remarks",
                         total
+                    );
+
+                    frappe.model.set_value(
+                        row.doctype,
+                        row.name,
+                        "description",
+                        `Leave Encashment (${per_day_rate} per day for ${payment_days} payment days)`
                     );
 
                 }
