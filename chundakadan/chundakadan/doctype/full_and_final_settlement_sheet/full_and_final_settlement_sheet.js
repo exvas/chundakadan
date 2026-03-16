@@ -123,7 +123,33 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
     custom_employee: async function (frm) {
 
-        if (!frm.doc.custom_employee) return;
+        if (!frm.doc.custom_employee) {
+            // Clear Employee Details data
+            (frm.doc.employee_details || []).forEach(row => {
+                frappe.model.set_value(row.doctype, row.name, "data", "");
+            });
+
+            // Clear Earnings Breakdown remarks and reset descriptions
+            (frm.doc.earnings_breakdown || []).forEach(row => {
+                frappe.model.set_value(row.doctype, row.name, "remarks", "");
+                if (row.properties === "Last Month Salary") {
+                    frappe.model.set_value(row.doctype, row.name, "description", "Basic + Allowances for [Month/Year]");
+                }
+                if (row.properties === "Leave Encashment") {
+                    frappe.model.set_value(row.doctype, row.name, "description", "Unused paid leaves × daily rate (max 30 days)");
+                }
+            });
+
+            // Clear Deduction amounts
+            (frm.doc.deduction || []).forEach(row => {
+                frappe.model.set_value(row.doctype, row.name, "amount", "");
+            });
+
+            frm.refresh_field("employee_details");
+            frm.refresh_field("earnings_breakdown");
+            frm.refresh_field("deduction");
+            return;
+        }
 
         let emp = await frappe.db.get_doc("Employee", frm.doc.custom_employee);
 

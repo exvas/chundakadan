@@ -21,7 +21,8 @@
    "fieldname": "data",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Data"
+   "label": "Data",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

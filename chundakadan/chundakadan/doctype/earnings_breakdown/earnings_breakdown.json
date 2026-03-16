@@ -23,13 +23,15 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Description",
-   "read_only": 1
+   "read_only": 1,
+   "read_only_depends_on": "eval:doc.properties == 'Last Month Salary'"
   },
   {
    "fieldname": "remarks",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Remarks"
+   "label": "Remarks",
+   "read_only_depends_on": "eval:['Last Month Salary','Leave Encashment'].includes(doc.properties)"
   }
  ],
  "grid_page_length": 50,

@@ -29,7 +29,8 @@
    "fieldname": "amount",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Amount"
+   "label": "Amount",
+   "read_only_depends_on": "eval:doc.component == 'Advance Salary/Loans'"
   }
  ],
  "grid_page_length": 50,
