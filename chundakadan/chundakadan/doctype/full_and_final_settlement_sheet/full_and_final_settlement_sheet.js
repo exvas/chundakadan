@@ -310,7 +310,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
 
 
-        /* ---------------- PENDING SALARIES (draft slip of relieving month) ---------------- */
+        /* ---------------- PENDING SALARIES (draft/submitted slip of relieving month) ---------------- */
 
         // Fetch draft salary slips (docstatus = 0) for this employee
         let draftSlips = await frappe.db.get_list("Salary Slip", {
@@ -331,10 +331,38 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                 && ed.getMonth() === relievingMonth && ed.getFullYear() === relievingYear;
         });
 
+        // We use either the relieving month submitted slip OR the draft slip
+        let activeReliefSlip = pendingSlip || relievingSlip;
+        
+        let overtime_pay = 0;
+        let bonus_commission = 0;
+        let pending_net_pay = 0;
+
+        if (activeReliefSlip) {
+            let slip_doc = await frappe.db.get_doc("Salary Slip", activeReliefSlip.name);
+            pending_net_pay = slip_doc.net_pay;
+            
+            if (slip_doc && slip_doc.earnings) {
+                slip_doc.earnings.forEach(e => {
+                    if (e.salary_component === "Overtime Pay") {
+                        overtime_pay += flt(e.amount);
+                    }
+                    if (e.salary_component === "Bonus" || e.salary_component === "Commission") {
+                        bonus_commission += flt(e.amount);
+                    }
+                });
+            }
+        }
+
         frm.doc.earnings_breakdown.forEach(row => {
             if (row.properties === "Pending Salaries") {
-                frappe.model.set_value(row.doctype, row.name, "remarks",
-                    pendingSlip ? pendingSlip.net_pay : "");
+                frappe.model.set_value(row.doctype, row.name, "remarks", pendingSlip ? pending_net_pay : "");
+            }
+            if (row.properties === "Overtime Pay") {
+                frappe.model.set_value(row.doctype, row.name, "remarks", overtime_pay || "");
+            }
+            if (row.properties === "Bonus/Commission") {
+                frappe.model.set_value(row.doctype, row.name, "remarks", bonus_commission || "");
             }
         });
 
@@ -347,6 +375,9 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         // 1. Calculate Total Months
         let joiningDate = emp.date_of_joining ? frappe.datetime.str_to_obj(emp.date_of_joining) : null;
         let rDateObj = emp.relieving_date ? frappe.datetime.str_to_obj(emp.relieving_date) : new Date();
+
+        let hasESI = false;
+        let hasEPF = false;
 
         if (joiningDate && rDateObj) {
             let dayDiff = frappe.datetime.get_day_diff(rDateObj, joiningDate);
@@ -393,12 +424,14 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
                         };
 
                         if (d.salary_component === "ESI") {
+                            hasESI = true;
                             let monthlyESI = getMonthlyAmount(formula, base_salary);
                             totalESI = flt(monthlyESI * totalMonthsInService);
                             console.log(`FF Sheet: ESI Monthly: ${monthlyESI}, Total: ${totalESI}`);
                         }
 
                         if (d.salary_component === "EPF") {
+                            hasEPF = true;
                             let monthlyEPF = getMonthlyAmount(formula, base_salary);
                             totalEPF = flt(monthlyEPF * totalMonthsInService);
                             console.log(`FF Sheet: EPF Monthly: ${monthlyEPF}, Total: ${totalEPF}`);
@@ -411,9 +444,9 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         }
 
         frm.doc.deduction.forEach(row => {
-            if (row.component === "PF Contribution (Employer Share)")
+            if (row.component === "PF Contribution (Employer Share)" && hasEPF)
                 frappe.model.set_value(row.doctype, row.name, "amount", totalEPF);
-            if (row.component === "ESI (if applicable)")
+            if (row.component === "ESI (if applicable)" && hasESI)
                 frappe.model.set_value(row.doctype, row.name, "amount", totalESI);
         });
 
@@ -478,6 +511,78 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
         }
 
+        // Final calculation of all totals
+        calculate_totals(frm);
     }
-
 });
+
+frappe.ui.form.on("Full and Final Settlement Sheet", {
+    earnings_breakdown_remove: function(frm) {
+        calculate_totals(frm);
+    },
+    deduction_remove: function(frm) {
+        calculate_totals(frm);
+    }
+});
+
+// Row-level triggers to update totals when manual edits occur
+frappe.ui.form.on("Earnings Breakdown", {
+    remarks: function(frm) {
+        calculate_totals(frm);
+    }
+});
+
+frappe.ui.form.on("Deductions", {
+    amount: function(frm) {
+        calculate_totals(frm);
+    }
+});
+
+// Reusable function to calculate all totals and net settlement
+function calculate_totals(frm) {
+    let total_earnings = 0;
+    let total_deductions = 0;
+
+    // 1. Sum Earnings
+    (frm.doc.earnings_breakdown || []).forEach(row => {
+        if (row.properties !== "Total Earnings") {
+            total_earnings += flt(row.remarks);
+        }
+    });
+
+    // Set Total Earnings row
+    frm.doc.earnings_breakdown.forEach(row => {
+        if (row.properties === "Total Earnings") {
+            frappe.model.set_value(row.doctype, row.name, "remarks", total_earnings);
+        }
+    });
+
+    // 2. Sum Deductions
+    (frm.doc.deduction || []).forEach(row => {
+        if (row.component !== "Total Deductions") {
+            total_deductions += flt(row.amount);
+        }
+    });
+
+    // Set Total Deductions row
+    frm.doc.deduction.forEach(row => {
+        if (row.component === "Total Deductions") {
+            frappe.model.set_value(row.doctype, row.name, "amount", total_deductions);
+        }
+    });
+
+    // 3. Update Net Settlement Amount Table
+    let net_payable = total_earnings - total_deductions;
+    (frm.doc.net_settlement_amount || []).forEach(row => {
+        if (row.entries === "Total Earnings")
+            frappe.model.set_value(row.doctype, row.name, "values", total_earnings);
+        if (row.entries === "Less: Total Deductions")
+            frappe.model.set_value(row.doctype, row.name, "values", total_deductions);
+        if (row.entries === "Net Payable")
+            frappe.model.set_value(row.doctype, row.name, "values", net_payable);
+    });
+
+    frm.refresh_field("earnings_breakdown");
+    frm.refresh_field("deduction");
+    frm.refresh_field("net_settlement_amount");
+}

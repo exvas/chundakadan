@@ -31,7 +31,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Remarks",
-   "read_only_depends_on": "eval:['Last Month Salary','Leave Encashment'].includes(doc.properties)"
+   "read_only_depends_on": "eval:['Last Month Salary','Leave Encashment','Total Earnings','Overtime Pay','Bonus/Commission'].includes(doc.properties)"
   }
  ],
  "grid_page_length": 50,
