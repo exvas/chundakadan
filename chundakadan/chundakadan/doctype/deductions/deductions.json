@@ -30,7 +30,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Amount",
-   "read_only_depends_on": "eval:doc.component == 'Advance Salary/Loans'"
+   "read_only_depends_on": "eval:doc.component == 'Advance Salary/Loans' || doc.component == 'PF Contribution (Employer Share)' || doc.component == 'ESI (if applicable)'"
   }
  ],
  "grid_page_length": 50,

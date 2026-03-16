@@ -242,14 +242,14 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
             return new Date(+p[2], +p[1] - 1, +p[0]);                        // DD-MM-YYYY
         };
 
-        // Fetch all submitted slips for this employee (no date filter - dates in DB may be DD-MM-YYYY)
+        // Fetch ALL submitted slips for this employee (limit 0 = unlimited, needed for EPF/ESI totals)
         let allSlips = await frappe.db.get_list("Salary Slip", {
             filters: [
                 ["employee", "=", emp.name],
                 ["docstatus", "=", 1]
             ],
             fields: ["name", "net_pay", "start_date", "end_date"],
-            limit: 50
+            limit: 0
         });
 
         // Find the slip whose end_date falls in the target month/year (PREVIOUS month = Last Month Salary)
@@ -339,6 +339,85 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         });
 
         frm.refresh_field("earnings_breakdown");
+        /* -------- EPF & ESI TOTALS (Theoretical calculation based on Formula + Months) -------- */
+        
+        let totalEPF = 0;
+        let totalESI = 0;
+
+        // 1. Calculate Total Months
+        let joiningDate = emp.date_of_joining ? frappe.datetime.str_to_obj(emp.date_of_joining) : null;
+        let rDateObj = emp.relieving_date ? frappe.datetime.str_to_obj(emp.relieving_date) : new Date();
+
+        if (joiningDate && rDateObj) {
+            let dayDiff = frappe.datetime.get_day_diff(rDateObj, joiningDate);
+            let totalMonthsInService = Math.round(dayDiff / 30); // Approximate months
+            console.log("FF Sheet: Total months in service (approx):", totalMonthsInService);
+
+            // 2. Fetch Salary Structure Assignment
+            let assignment = await frappe.db.get_list("Salary Structure Assignment", {
+                filters: { employee: emp.name, docstatus: 1 },
+                fields: ["base", "salary_structure"],
+                order_by: "from_date desc",
+                limit_page_length: 1
+            });
+
+            if (assignment && assignment.length > 0) {
+                let base_salary = flt(assignment[0].base);
+                let structure_name = assignment[0].salary_structure;
+                console.log(`FF Sheet: Found assignment. Base: ${base_salary}, Structure: ${structure_name}`);
+
+                // 3. Fetch Salary Structure Details (Deductions table)
+                let structure = await frappe.db.get_doc("Salary Structure", structure_name);
+                
+                if (structure && structure.deductions) {
+                    structure.deductions.forEach(d => {
+                        let formula = d.formula;
+                        if (!formula) return;
+
+                        // Helper to evaluate formula (handles Python-style if/else)
+                        let getMonthlyAmount = (frmla, base) => {
+                            try {
+                                let f = frmla.toLowerCase().replace(/\bbase\b/g, base);
+                                
+                                // Transform Python "A if B else C" to JS "B ? A : C"
+                                if (f.includes(" if ") && f.includes(" else ")) {
+                                    f = f.replace(/(.*)\s+if\s+(.*)\s+else\s+(.*)/g, "($2) ? ($1) : ($3)");
+                                }
+                                
+                                let result = new Function(`return ${f}`)();
+                                return isNaN(result) ? 0 : flt(result);
+                            } catch (e) {
+                                console.error("FF Sheet: Formula evaluation failed:", frmla, e);
+                                return 0;
+                            }
+                        };
+
+                        if (d.salary_component === "ESI") {
+                            let monthlyESI = getMonthlyAmount(formula, base_salary);
+                            totalESI = flt(monthlyESI * totalMonthsInService);
+                            console.log(`FF Sheet: ESI Monthly: ${monthlyESI}, Total: ${totalESI}`);
+                        }
+
+                        if (d.salary_component === "EPF") {
+                            let monthlyEPF = getMonthlyAmount(formula, base_salary);
+                            totalEPF = flt(monthlyEPF * totalMonthsInService);
+                            console.log(`FF Sheet: EPF Monthly: ${monthlyEPF}, Total: ${totalEPF}`);
+                        }
+                    });
+                }
+            } else {
+                console.log("FF Sheet: No submitted Salary Structure Assignment found.");
+            }
+        }
+
+        frm.doc.deduction.forEach(row => {
+            if (row.component === "PF Contribution (Employer Share)")
+                frappe.model.set_value(row.doctype, row.name, "amount", totalEPF);
+            if (row.component === "ESI (if applicable)")
+                frappe.model.set_value(row.doctype, row.name, "amount", totalESI);
+        });
+
+        frm.refresh_field("deduction");
 
         let report = await frappe.call({
 
