@@ -153,6 +153,23 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
         let emp = await frappe.db.get_doc("Employee", frm.doc.custom_employee);
 
+        /* -- Reset all auto-fetched fields before populating new employee data -- */
+        (frm.doc.employee_details || []).forEach(row => {
+            frappe.model.set_value(row.doctype, row.name, "data", "");
+        });
+        (frm.doc.earnings_breakdown || []).forEach(row => {
+            frappe.model.set_value(row.doctype, row.name, "remarks", "");
+            if (row.properties === "Last Month Salary")
+                frappe.model.set_value(row.doctype, row.name, "description", "Basic + Allowances for [Month/Year]");
+            if (row.properties === "Leave Encashment")
+                frappe.model.set_value(row.doctype, row.name, "description", "Unused paid leaves × daily rate (max 30 days)");
+        });
+        (frm.doc.deduction || []).forEach(row => {
+            frappe.model.set_value(row.doctype, row.name, "amount", "");
+        });
+        frm.refresh_field("employee_details");
+        frm.refresh_field("earnings_breakdown");
+        frm.refresh_field("deduction");
 
         /* ---------------- EMPLOYEE DETAILS ---------------- */
 
@@ -235,7 +252,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
             limit: 50
         });
 
-        // Find the slip whose end_date falls in the target month/year
+        // Find the slip whose end_date falls in the target month/year (PREVIOUS month = Last Month Salary)
         let slip = allSlips.find(s => {
             let ed = parseDate(s.end_date);
             return ed && ed.getMonth() === targetMonth && ed.getFullYear() === targetYear;
@@ -257,24 +274,39 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
             });
 
             frm.refresh_field("earnings_breakdown");
+        }
 
-            /* -------- ADVANCE RECOVERY -------- */
-            let slip_doc = await frappe.db.get_doc("Salary Slip", slip.name);
-            let advance_recovery = 0;
-            if (slip_doc.deductions) {
+        /* -------- ADVANCE RECOVERY (from relieving month slip) -------- */
+        // Find the salary slip whose start_date and end_date are in the SAME month as relieving date
+        let relievingMonth = rDate.getMonth();   // 0-indexed
+        let relievingYear  = rDate.getFullYear();
+
+        let relievingSlip = allSlips.find(s => {
+            let sd = parseDate(s.start_date);
+            let ed = parseDate(s.end_date);
+            return sd && ed
+                && sd.getMonth() === relievingMonth && sd.getFullYear() === relievingYear
+                && ed.getMonth() === relievingMonth && ed.getFullYear() === relievingYear;
+        });
+
+        let advance_recovery = 0;
+
+        if (relievingSlip) {
+            let slip_doc = await frappe.db.get_doc("Salary Slip", relievingSlip.name);
+            if (slip_doc && slip_doc.deductions) {
                 slip_doc.deductions.forEach(d => {
                     if (d.salary_component === "Employee Advance Recovery")
                         advance_recovery = d.amount;
                 });
             }
-
-            frm.doc.deduction.forEach(row => {
-                if (row.component === "Advance Salary/Loans")
-                    frappe.model.set_value(row.doctype, row.name, "amount", advance_recovery);
-            });
-
-            frm.refresh_field("deduction");
         }
+
+        frm.doc.deduction.forEach(row => {
+            if (row.component === "Advance Salary/Loans")
+                frappe.model.set_value(row.doctype, row.name, "amount", advance_recovery || "");
+        });
+
+        frm.refresh_field("deduction");
 
 
 
