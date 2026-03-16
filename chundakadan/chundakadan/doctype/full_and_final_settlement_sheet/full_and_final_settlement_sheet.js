@@ -310,7 +310,35 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
 
 
-        /* ---------------- LEAVE ENCASHMENT ---------------- */
+        /* ---------------- PENDING SALARIES (draft slip of relieving month) ---------------- */
+
+        // Fetch draft salary slips (docstatus = 0) for this employee
+        let draftSlips = await frappe.db.get_list("Salary Slip", {
+            filters: [
+                ["employee", "=", emp.name],
+                ["docstatus", "=", 0]
+            ],
+            fields: ["name", "net_pay", "start_date", "end_date"],
+            limit: 50
+        });
+
+        // Find the draft slip whose start_date and end_date are in the SAME month as relieving date
+        let pendingSlip = draftSlips.find(s => {
+            let sd = parseDate(s.start_date);
+            let ed = parseDate(s.end_date);
+            return sd && ed
+                && sd.getMonth() === relievingMonth && sd.getFullYear() === relievingYear
+                && ed.getMonth() === relievingMonth && ed.getFullYear() === relievingYear;
+        });
+
+        frm.doc.earnings_breakdown.forEach(row => {
+            if (row.properties === "Pending Salaries") {
+                frappe.model.set_value(row.doctype, row.name, "remarks",
+                    pendingSlip ? pendingSlip.net_pay : "");
+            }
+        });
+
+        frm.refresh_field("earnings_breakdown");
 
         let report = await frappe.call({
 
