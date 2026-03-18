@@ -367,7 +367,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         });
 
         frm.refresh_field("earnings_breakdown");
-        /* -------- EPF & ESI TOTALS (Theoretical calculation based on Formula + Months) -------- */
+/* -------- EPF & ESI TOTALS (Theoretical calculation based on Formula + Months) -------- 
         
         let totalEPF = 0;
         let totalESI = 0;
@@ -451,6 +451,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         });
 
         frm.refresh_field("deduction");
+        */
 
         let report = await frappe.call({
 
@@ -513,6 +514,11 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
         // Final calculation of all totals
         calculate_totals(frm);
+
+        // Ensure manual entry is allowed for the deduction grid's amount column
+        if (frm.fields_dict.deduction && frm.fields_dict.deduction.grid) {
+            frm.fields_dict.deduction.grid.get_field("amount").df.read_only = 0;
+        }
     }
 });
 

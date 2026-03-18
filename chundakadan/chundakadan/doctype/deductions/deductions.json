@@ -27,10 +27,10 @@
   },
   {
    "fieldname": "amount",
-   "fieldtype": "Data",
+   "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Amount",
-   "read_only_depends_on": "eval:doc.component == 'Advance Salary/Loans' || doc.component == 'PF Contribution (Employer Share)' || doc.component == 'ESI (if applicable)' || doc.component == 'Total Deductions'"
+    "read_only": 0
   }
  ],
  "grid_page_length": 50,
