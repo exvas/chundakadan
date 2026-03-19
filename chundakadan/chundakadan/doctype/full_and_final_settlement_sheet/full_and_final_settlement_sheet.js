@@ -117,6 +117,7 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
 
             frm.refresh_field("hr_approval");
         }
+        adjust_grids(frm);
     },
 
 
@@ -515,10 +516,8 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
         // Final calculation of all totals
         calculate_totals(frm);
 
-        // Ensure manual entry is allowed for the deduction grid's amount column
-        if (frm.fields_dict.deduction && frm.fields_dict.deduction.grid) {
-            frm.fields_dict.deduction.grid.get_field("amount").df.read_only = 0;
-        }
+        // Adjust grid properties (read-only rows)
+        adjust_grids(frm);
     }
 });
 
@@ -531,16 +530,39 @@ frappe.ui.form.on("Full and Final Settlement Sheet", {
     }
 });
 
-// Row-level triggers to update totals when manual edits occur
-frappe.ui.form.on("Earnings Breakdown", {
-    remarks: function(frm) {
+
+frappe.ui.form.on("Deductions", {
+    amount: function(frm, cdt, cdn) {
         calculate_totals(frm);
+        adjust_grids(frm);
+    },
+    form_render: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        // Lock both "Total Deductions" and "Advance Salary/Loans"
+        let is_locked = (row.component === "Advance Salary/Loans");
+        
+        let grid_row = frm.fields_dict.deduction.grid.get_row(cdn);
+        if (grid_row) {
+            grid_row.toggle_editable("amount", !is_locked);
+            grid_row.refresh_field("amount");
+        }
     }
 });
 
-frappe.ui.form.on("Deductions", {
-    amount: function(frm) {
+frappe.ui.form.on("Earnings Breakdown", {
+    remarks: function(frm) {
         calculate_totals(frm);
+    },
+    form_render: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        // Lock "Total Earnings"
+        let is_locked = (row.properties === "Total Earnings");
+        
+        let grid_row = frm.fields_dict.earnings_breakdown.grid.get_row(cdn);
+        if (grid_row) {
+            grid_row.toggle_editable("remarks", !is_locked);
+            grid_row.refresh_field("remarks");
+        }
     }
 });
 
@@ -591,4 +613,45 @@ function calculate_totals(frm) {
     frm.refresh_field("earnings_breakdown");
     frm.refresh_field("deduction");
     frm.refresh_field("net_settlement_amount");
+
+    // Re-apply grid locks after value updates
+    adjust_grids(frm);
+}
+function adjust_grids(frm) {
+    // 1. Deduction Grid
+    if (frm.fields_dict.deduction && frm.fields_dict.deduction.grid) {
+        let grid = frm.fields_dict.deduction.grid;
+        (frm.doc.deduction || []).forEach(row => {
+            // Lock both "Total Deductions" and "Advance Salary/Loans"
+            let is_locked = (row.component === "Advance Salary/Loans");
+            
+            let grid_row = grid.get_row(row.name);
+            if (grid_row) {
+                grid_row.toggle_editable("amount", !is_locked);
+                grid_row.refresh_field("amount");
+            }
+        });
+        grid.refresh();
+    }
+
+    // 2. Earnings Grid
+    if (frm.fields_dict.earnings_breakdown && frm.fields_dict.earnings_breakdown.grid) {
+        let grid = frm.fields_dict.earnings_breakdown.grid;
+        (frm.doc.earnings_breakdown || []).forEach(row => {
+            let is_locked = (row.properties === "Total Earnings");
+            
+            let grid_row = grid.get_row(row.name);
+            if (grid_row) {
+                grid_row.toggle_editable("remarks", !is_locked);
+                grid_row.refresh_field("remarks");
+            }
+        });
+    }
+
+    // 3. Net Settlement Grid
+    if (frm.fields_dict.net_settlement_amount && frm.fields_dict.net_settlement_amount.grid) {
+        // Net settlement entries should ALWAYS be read-only
+        frm.fields_dict.net_settlement_amount.grid.get_field("values").df.read_only = 1;
+        frm.fields_dict.net_settlement_amount.grid.refresh();
+    }
 }
