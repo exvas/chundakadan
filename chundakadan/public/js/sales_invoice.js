@@ -5,7 +5,7 @@ frappe.ui.form.on('Sales Invoice', {
           'cursor': 'pointer',
           'background-color': '#f8f9fa'
       });
-      
+
       // Add sync button for Sales Person
       if (frm.doc.docstatus === 0) {
           frm.add_custom_button(__('Sync Sales Person'), function() {
@@ -34,7 +34,7 @@ frappe.ui.form.on('Sales Invoice', {
   onload(frm) {
       toggle_ui(frm);
   },
-  
+
   custom_sales_person: function(frm) {
       if (frm.doc.custom_sales_person) {
           if (!frm.doc.sales_team || frm.doc.sales_team.length === 0) {
@@ -50,7 +50,7 @@ frappe.ui.form.on('Sales Invoice', {
           frm.refresh_field('sales_team');
       }
   },
-  
+
   before_save: function(frm) {
       if (frm.doc.custom_sales_person && frm.doc.sales_team) {
           frm.doc.sales_team.forEach(function(row) {
@@ -60,8 +60,23 @@ frappe.ui.form.on('Sales Invoice', {
               }
           });
       }
-  }
-  
+  },
+	customer: function () {
+		if(cur_frm.doc.customer){
+			frappe.call({
+				method: "chundakadan.doc_events.sales_invoice.check_customer_overdue_transactions",
+				args: {
+					customer: cur_frm.doc.customer
+				},
+				freeze: true,
+				freeze_message: "Checking Customer Overdue Transactions",
+				callback: function () {
+
+				}
+			})
+		}
+	}
+
 });
 
 function toggle_ui(frm) {
@@ -106,7 +121,7 @@ function toggle_ui(frm) {
 frappe.ui.form.on('Sales Invoice Item', {
   item_code: function(frm, cdt, cdn) {
       let row = locals[cdt][cdn];
-      
+
       if (row.item_code && !row._from_dialog) {
           frappe.model.set_value(cdt, cdn, 'item_code', '');
           show_item_selection_dialog(frm, cdt, cdn);
@@ -131,13 +146,29 @@ function show_item_selection_dialog(frm, cdt, cdn) {
               fieldname: 'size',
               fieldtype: 'Link',
               label: __('Model & Size'),
-              options: 'Size'
+              options: 'Size',
+			  get_query: function () {
+					const item_group = dialog.get_value("item_group")
+					return {
+						filters: {
+							item_group: item_group
+						}
+					};
+				}
           },
           {
             fieldname: 'finish',
             fieldtype: 'Link',
             label: __('Finish'),
-            options: 'Finish Item'
+            options: 'Finish Item',
+			  get_query: function () {
+					const item_group = dialog.get_value("item_group")
+					return {
+						filters: {
+							item_group: item_group
+						}
+					};
+				}
         },
           {
               fieldname: 'search_button',
@@ -169,7 +200,7 @@ function show_item_selection_dialog(frm, cdt, cdn) {
 function search_filtered_items(dialog, frm, cdt, cdn) {
   let item_group = dialog.get_value('item_group');
   let brand = dialog.get_value('brand');
-  let size = dialog.get_value('size'); 
+  let size = dialog.get_value('size');
 
   if (!item_group) {
       frappe.msgprint(__('Please select an Item Group'));
@@ -187,7 +218,7 @@ function search_filtered_items(dialog, frm, cdt, cdn) {
   }
 
   if (size) {
-      filters['custom_size'] = size; 
+      filters['custom_size'] = size;
   }
 
   dialog.fields_dict.items_html.$wrapper.html(`
@@ -304,22 +335,22 @@ function display_items_grid(dialog, items, frm, cdt, cdn) {
 
 window.select_item_from_dialog = function(item_code, cdt, cdn) {
   let row = locals[cdt][cdn];
-  
+
   row._from_dialog = true;
-  
+
   frappe.model.set_value(cdt, cdn, 'item_code', item_code).then(() => {
       let grid_row = cur_frm.fields_dict.items.grid.grid_rows_by_docname[cdn];
       if (grid_row) {
-          grid_row.on_grid_fields_dict.item_code.df.onchange && 
+          grid_row.on_grid_fields_dict.item_code.df.onchange &&
           grid_row.on_grid_fields_dict.item_code.df.onchange();
-          
+
           grid_row.refresh();
       }
-      
+
       if (cur_dialog) {
           cur_dialog.hide();
       }
-      
+
       frappe.show_alert({
           message: __('Item selected successfully'),
           indicator: 'green'

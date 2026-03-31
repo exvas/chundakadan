@@ -96,6 +96,9 @@ doc_events = {
     "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
     },
+	"Sales Invoice": {
+        "validate": "chundakadan.doc_events.sales_invoice.validate_sales_invoice"
+    },
     "Leave Policy": {
         "before_save": "chundakadan.doc_events.leave_policy.set_annual_allocation_from_leave_type",
         "validate": "chundakadan.doc_events.leave_policy.validate_leave_policy_details"
@@ -294,5 +297,5 @@ fixtures = [
             ]
         ]
     },
-    
+
 ]

@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 12:24:20.793736",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "metric",
+  "description",
+  "actual_achievement",
+  "target",
+  "achievement_percentage",
+  "comments"
+ ],
+ "fields": [
+  {
+   "fieldname": "metric",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Metric",
+   "options": "Metric",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "metric.description",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "target",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Target"
+  },
+  {
+   "default": "0",
+   "description": "Actual/Target * 100",
+   "fieldname": "achievement_percentage",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Achievement Percentage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "comments",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Comments"
+  },
+  {
+   "default": "0",
+   "fieldname": "actual_achievement",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual Achievement"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-31 13:08:31.613096",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Quarterly Evaluation Sheet Metrics",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,321 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 12:11:35.128262",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_information_tab",
+  "section_break_qhrh",
+  "amended_from",
+  "series",
+  "employee",
+  "employee_name",
+  "department",
+  "territory",
+  "position",
+  "column_break_qpyb",
+  "posting_date",
+  "date_of_evaluation",
+  "quarter",
+  "evaluation_period_from",
+  "evaluation_period_to",
+  "evaluator",
+  "evaluator_name",
+  "evaluator_position",
+  "tab_2_tab",
+  "qualitative_evaluation_criteria_section",
+  "quarterly_evaluation_sheet_criteria",
+  "qualitative_scoring_section",
+  "total_qualitative_score",
+  "column_break_tevc",
+  "average_qualitative_score",
+  "quantitative_metrics_tab",
+  "quantitative_metrics_section",
+  "quarterly_evaluation_sheet_metrics",
+  "overall_performance_calculation_section",
+  "quantitative_score",
+  "column_break_sord",
+  "quantitative_total",
+  "column_break_dnxo",
+  "combined_score",
+  "more_information_tab",
+  "additional_comments",
+  "nomination_recommendation_section",
+  "recommend_for_best_performer_award",
+  "reason_for_recommendation_if_yes"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee_information_tab",
+   "fieldtype": "Tab Break",
+   "label": "Employee Information"
+  },
+  {
+   "fieldname": "section_break_qhrh",
+   "fieldtype": "Section Break",
+   "label": "Employee Information"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Quarterly Evaluation Sheet",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "QES-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "territory",
+   "fieldtype": "Link",
+   "label": "Territory",
+   "options": "Territory"
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fieldname": "position",
+   "fieldtype": "Link",
+   "label": "Position",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_qpyb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date_of_evaluation",
+   "fieldtype": "Date",
+   "label": "Date of Evaluation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quarter",
+   "fieldtype": "Select",
+   "label": "Quarter",
+   "options": "\n1\n2\n3\n4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "evaluation_period_from",
+   "fieldtype": "Date",
+   "label": "Evaluation Period From",
+   "read_only": 1
+  },
+  {
+   "fieldname": "evaluation_period_to",
+   "fieldtype": "Date",
+   "label": "Evaluation Period To",
+   "read_only": 1
+  },
+  {
+   "fieldname": "evaluator",
+   "fieldtype": "Link",
+   "label": "Evaluator",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "evaluator.employee_name",
+   "fieldname": "evaluator_name",
+   "fieldtype": "Data",
+   "label": "Evaluator Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "evaluator.designation",
+   "fieldname": "evaluator_position",
+   "fieldtype": "Link",
+   "label": "Evaluator Position",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_2_tab",
+   "fieldtype": "Tab Break",
+   "label": "Qualitative Evaluation Criteria"
+  },
+  {
+   "description": "Rate the employee on each criterion based on their performance during the period. Provide \nspecific examples in the comments section where possible.",
+   "fieldname": "qualitative_evaluation_criteria_section",
+   "fieldtype": "Section Break",
+   "label": "Qualitative Evaluation Criteria"
+  },
+  {
+   "fieldname": "quarterly_evaluation_sheet_criteria",
+   "fieldtype": "Table",
+   "label": "Quarterly Evaluation Sheet Criteria",
+   "options": "Quarterly Evaluation Sheet Criteria"
+  },
+  {
+   "fieldname": "qualitative_scoring_section",
+   "fieldtype": "Section Break",
+   "label": "Qualitative Scoring"
+  },
+  {
+   "default": "0",
+   "description": "Total Rating / (5 * Number of Criteria)",
+   "fieldname": "total_qualitative_score",
+   "fieldtype": "Float",
+   "label": "Total Qualitative Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_tevc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "average_qualitative_score",
+   "fieldtype": "Float",
+   "label": "Average Qualitative Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "quantitative_metrics_tab",
+   "fieldtype": "Tab Break",
+   "label": "Quantitative Metrics"
+  },
+  {
+   "description": "Record actual performance figures for the evaluation period. These will be used alongside \nqualitative scores to determine the best performer. Targets are provided for reference; adjust \nbased on individual goals",
+   "fieldname": "quantitative_metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Quantitative Metrics"
+  },
+  {
+   "fieldname": "quarterly_evaluation_sheet_metrics",
+   "fieldtype": "Table",
+   "label": "Quarterly Evaluation Sheet Metrics",
+   "options": "Quarterly Evaluation Sheet Metrics"
+  },
+  {
+   "fieldname": "overall_performance_calculation_section",
+   "fieldtype": "Section Break",
+   "label": "Overall Performance Calculation"
+  },
+  {
+   "default": "0",
+   "fieldname": "quantitative_score",
+   "fieldtype": "Float",
+   "label": "Quantitative Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sord",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "quantitative_total",
+   "fieldtype": "Float",
+   "label": "Quantitative Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dnxo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "combined_score",
+   "fieldtype": "Float",
+   "label": "Combined Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "more_information_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Information"
+  },
+  {
+   "fieldname": "additional_comments",
+   "fieldtype": "Small Text",
+   "label": "Additional Comments"
+  },
+  {
+   "fieldname": "nomination_recommendation_section",
+   "fieldtype": "Section Break",
+   "label": "Nomination Recommendation"
+  },
+  {
+   "fieldname": "recommend_for_best_performer_award",
+   "fieldtype": "Select",
+   "label": "Recommend for Best Performer Award?",
+   "options": "\nYes\nNo"
+  },
+  {
+   "depends_on": "eval: doc.recommend_for_best_performer_award == 'Yes'",
+   "fieldname": "reason_for_recommendation_if_yes",
+   "fieldtype": "Small Text",
+   "label": "Reason for Recommendation (if Yes)",
+   "mandatory_depends_on": "eval: doc.recommend_for_best_performer_award == 'Yes'"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-31 12:55:34.483703",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Quarterly Evaluation Sheet",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

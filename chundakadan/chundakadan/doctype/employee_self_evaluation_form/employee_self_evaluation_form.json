@@ -1,0 +1,266 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 13:38:28.319779",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_details_tab",
+  "section_break_pouh",
+  "amended_from",
+  "series",
+  "employee",
+  "employee_name",
+  "job_title",
+  "department",
+  "column_break_vqgx",
+  "posting_date",
+  "reporting_officer",
+  "reporting_officer_name",
+  "self_evaluation_questions_tab",
+  "employee_self_evaluation_questions",
+  "section_break_ihig",
+  "significant_accomplishments",
+  "section_break_qupr",
+  "duties_outside_regular_responsibilities",
+  "section_break_wcjm",
+  "activities_initiated",
+  "section_break_xfqt",
+  "professional_development_activities",
+  "areas_requires_improvement_section",
+  "areas_requires_improvement",
+  "section_break_jcwp",
+  "career_goals",
+  "self_evaluation_categories_tab",
+  "table_ujpx",
+  "section_break_avtt",
+  "other_management_personnel",
+  "column_break_ovpx",
+  "other_management_personnel_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_pouh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Employee Self Evaluation Form",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "ESEF-",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vqgx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fieldname": "job_title",
+   "fieldtype": "Link",
+   "label": "Job Title",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.reports_to",
+   "fieldname": "reporting_officer",
+   "fieldtype": "Link",
+   "label": "Reporting Officer",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "reporting_officer.employee_name",
+   "fieldname": "reporting_officer_name",
+   "fieldtype": "Data",
+   "label": "Reporting Officer Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Employee Details"
+  },
+  {
+   "fieldname": "self_evaluation_questions_tab",
+   "fieldtype": "Tab Break",
+   "label": "Self Evaluation Questions"
+  },
+  {
+   "fieldname": "employee_self_evaluation_questions",
+   "fieldtype": "Table",
+   "label": "Employee Self Evaluation Questions",
+   "options": "Employee Self Evaluation Questions"
+  },
+  {
+   "fieldname": "section_break_ihig",
+   "fieldtype": "Section Break",
+   "label": "Significant Accomplishments"
+  },
+  {
+   "description": "List your most significant accomplishment or contributions since last year. How do these achievements align with  the goals/objectives outlined for you?",
+   "fieldname": "significant_accomplishments",
+   "fieldtype": "Small Text",
+   "label": "Significant Accomplishments"
+  },
+  {
+   "fieldname": "section_break_qupr",
+   "fieldtype": "Section Break",
+   "label": "Duties Outside Regular Responsibilities"
+  },
+  {
+   "description": "Since the last appraisal period, have you successfully performed any new tasks or additional duties outside the scope\nof your regular responsibilities? If so, please specify.",
+   "fieldname": "duties_outside_regular_responsibilities",
+   "fieldtype": "Small Text",
+   "label": "Duties Outside Regular Responsibilities"
+  },
+  {
+   "fieldname": "section_break_wcjm",
+   "fieldtype": "Section Break",
+   "label": "Activities Initiated"
+  },
+  {
+   "description": "What activities have you initiated, or actively participated into encourage camaraderie and team work within your \ngroup and/or office? What was the result?",
+   "fieldname": "activities_initiated",
+   "fieldtype": "Small Text",
+   "label": "Activities Initiated"
+  },
+  {
+   "fieldname": "section_break_xfqt",
+   "fieldtype": "Section Break",
+   "label": "Professional Development Activities"
+  },
+  {
+   "description": "Describe your professional development activities since last year, such as offsite seminars/classes (specify if self\u0002directed or required by your supervisor), onsite training, peer training, management coaching or mentoring, on-the\u0002job experience, exposure to challenging projects, other\u2014please describe",
+   "fieldname": "professional_development_activities",
+   "fieldtype": "Small Text",
+   "label": "Professional Development Activities"
+  },
+  {
+   "fieldname": "areas_requires_improvement_section",
+   "fieldtype": "Section Break",
+   "label": "Areas Requires Improvement"
+  },
+  {
+   "description": "Describe areas you feel require improvement in terms of your professional capabilities. List the steps you plan to \ntake and/or the resources you need to accomplish this?",
+   "fieldname": "areas_requires_improvement",
+   "fieldtype": "Small Text",
+   "label": "Areas Requires Improvement"
+  },
+  {
+   "fieldname": "section_break_jcwp",
+   "fieldtype": "Section Break",
+   "label": "Career Goals"
+  },
+  {
+   "description": "Identify two career goals for the coming year and indicate how you plan to accomplish them",
+   "fieldname": "career_goals",
+   "fieldtype": "Small Text",
+   "label": "Career Goals"
+  },
+  {
+   "fieldname": "self_evaluation_categories_tab",
+   "fieldtype": "Tab Break",
+   "label": "Self Evaluation Categories"
+  },
+  {
+   "fieldname": "table_ujpx",
+   "fieldtype": "Table",
+   "label": "Self Evaluation Categories",
+   "options": "Employee Self Evaluation Category"
+  },
+  {
+   "fieldname": "section_break_avtt",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "Name any other management personnel, besides your current supervisor, that you feel should provide input \ntoward your performance appraisal",
+   "fieldname": "other_management_personnel",
+   "fieldtype": "Link",
+   "label": "Other Management Personnel",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_ovpx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "other_management_personnel.employee_name",
+   "fieldname": "other_management_personnel_name",
+   "fieldtype": "Data",
+   "label": "Other Management Personnel Name",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-31 14:09:34.185059",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Employee Self Evaluation Form",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

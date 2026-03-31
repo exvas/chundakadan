@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 14:02:57.979187",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "outstanding",
+  "satisfactory",
+  "need_improvement",
+  "incompetent"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Category",
+   "options": "Self Evaluation Form Category",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "outstanding",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Outstanding"
+  },
+  {
+   "default": "0",
+   "fieldname": "satisfactory",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Satisfactory"
+  },
+  {
+   "default": "0",
+   "fieldname": "need_improvement",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Need Improvement"
+  },
+  {
+   "default": "0",
+   "fieldname": "incompetent",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Incompetent"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-31 14:05:32.090632",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Employee Self Evaluation Category",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
