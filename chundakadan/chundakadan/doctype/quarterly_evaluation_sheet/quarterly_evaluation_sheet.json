@@ -23,14 +23,12 @@
   "evaluator",
   "evaluator_name",
   "evaluator_position",
-  "tab_2_tab",
   "qualitative_evaluation_criteria_section",
   "quarterly_evaluation_sheet_criteria",
   "qualitative_scoring_section",
   "total_qualitative_score",
   "column_break_tevc",
   "average_qualitative_score",
-  "quantitative_metrics_tab",
   "quantitative_metrics_section",
   "quarterly_evaluation_sheet_metrics",
   "overall_performance_calculation_section",
@@ -39,7 +37,7 @@
   "quantitative_total",
   "column_break_dnxo",
   "combined_score",
-  "more_information_tab",
+  "section_break_nhbv",
   "additional_comments",
   "nomination_recommendation_section",
   "recommend_for_best_performer_award",
@@ -169,11 +167,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "tab_2_tab",
-   "fieldtype": "Tab Break",
-   "label": "Qualitative Evaluation Criteria"
-  },
-  {
    "description": "Rate the employee on each criterion based on their performance during the period. Provide \nspecific examples in the comments section where possible.",
    "fieldname": "qualitative_evaluation_criteria_section",
    "fieldtype": "Section Break",
@@ -208,11 +201,6 @@
    "fieldtype": "Float",
    "label": "Average Qualitative Score",
    "read_only": 1
-  },
-  {
-   "fieldname": "quantitative_metrics_tab",
-   "fieldtype": "Tab Break",
-   "label": "Quantitative Metrics"
   },
   {
    "description": "Record actual performance figures for the evaluation period. These will be used alongside \nqualitative scores to determine the best performer. Targets are provided for reference; adjust \nbased on individual goals",
@@ -261,11 +249,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "more_information_tab",
-   "fieldtype": "Tab Break",
-   "label": "More Information"
-  },
-  {
    "fieldname": "additional_comments",
    "fieldtype": "Small Text",
    "label": "Additional Comments"
@@ -287,13 +270,17 @@
    "fieldtype": "Small Text",
    "label": "Reason for Recommendation (if Yes)",
    "mandatory_depends_on": "eval: doc.recommend_for_best_performer_award == 'Yes'"
+  },
+  {
+   "fieldname": "section_break_nhbv",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-31 12:55:34.483703",
+ "modified": "2026-04-01 11:24:50.109002",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Quarterly Evaluation Sheet",
