@@ -8,6 +8,7 @@ frappe.ui.form.on("Employee Self Evaluation Questions", {
 		d.strongly_agree = d.disagree ? 0 : 0
 		cur_frm.refresh_field(d.parentfield)
 	},
+
 	somewhat_agree: function (frm,cdt,cdn) {
 		var d = locals[cdt][cdn]
 		d.disagree = d.somewhat_agree ? 0 : 0
