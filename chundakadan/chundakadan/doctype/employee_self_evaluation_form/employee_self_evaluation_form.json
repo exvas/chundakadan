@@ -181,11 +181,11 @@
    "fieldtype": "Small Text"
   },
   {
+   "description": "Note: Name any other management personnel, besides your current supervisor, that you feel should provide input toward your performance appraisal",
    "fieldname": "section_break_avtt",
    "fieldtype": "Section Break"
   },
   {
-   "description": "Name any other management personnel, besides your current supervisor, that you feel should provide input \ntoward your performance appraisal",
    "fieldname": "other_management_personnel",
    "fieldtype": "Link",
    "label": "Other Management Personnel",
@@ -223,7 +223,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-01 12:01:46.460113",
+ "modified": "2026-04-01 15:38:23.135589",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Employee Self Evaluation Form",

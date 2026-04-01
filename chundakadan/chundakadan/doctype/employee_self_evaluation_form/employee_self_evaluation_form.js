@@ -1,6 +1,56 @@
 // Copyright (c) 2026, Ashkar and contributors
 // For license information, please see license.txt
 
+frappe.ui.form.on("Employee Self Evaluation Questions", {
+	disagree: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.somewhat_agree = d.disagree ? 0 : 0
+		d.strongly_agree = d.disagree ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	},
+	somewhat_agree: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.disagree = d.somewhat_agree ? 0 : 0
+		d.strongly_agree = d.somewhat_agree ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	},
+	strongly_agree: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.somewhat_agree = d.strongly_agree ? 0 : 0
+		d.disagree = d.strongly_agree ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	}
+})
+frappe.ui.form.on("Employee Self Evaluation Category", {
+	outstanding: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.satisfactory = d.outstanding ? 0 : 0
+		d.need_improvement = d.outstanding ? 0 : 0
+		d.incompetent = d.outstanding ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	},
+	satisfactory: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.outstanding = d.satisfactory ? 0 : 0
+		d.need_improvement = d.satisfactory ? 0 : 0
+		d.incompetent = d.satisfactory ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	},
+	need_improvement: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.satisfactory = d.need_improvement ? 0 : 0
+		d.outstanding = d.need_improvement ? 0 : 0
+		d.incompetent = d.need_improvement ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	},
+	incompetent: function (frm,cdt,cdn) {
+		var d = locals[cdt][cdn]
+		d.satisfactory = d.incompetent ? 0 : 0
+		d.need_improvement = d.incompetent ? 0 : 0
+		d.outstanding = d.incompetent ? 0 : 0
+		cur_frm.refresh_field(d.parentfield)
+	},
+})
 frappe.ui.form.on("Employee Self Evaluation Form", {
 	onload_post_render: function(frm) {
 		if(cur_frm.is_new()){
