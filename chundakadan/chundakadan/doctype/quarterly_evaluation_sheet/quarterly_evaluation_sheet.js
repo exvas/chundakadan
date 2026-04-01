@@ -2,6 +2,15 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Quarterly Evaluation Sheet", {
+	refresh: function () {
+	cur_frm.set_intro('<b>Quarterly Evaluation Sheet for Best Performer Award - Sales Executives</b><br>' +
+		'<p>This evaluation sheet is designed to assess Field Sales Executives performance for ' +
+		'selecting the Best Performer Award. Supervisors or evaluators should rate each employee based on the qualitative criteria below' +
+		' using a scale of 1-5 (1 = Poor, 2 = Below Average, 3 = Average, 4 = Above Average, 5 = Excellent). Additionally, record ' +
+		'quantitative metrics such as total sales, collections, leads generated, etc. Calculate the total qualitative score and ' +
+		'combine with quantitative achievements for overall assessment. The executive with the highest combined performance ' +
+		'(considering both scores and metrics) may be nominated. Submit completed sheets to HR by the end of the evaluation period</p>');
+	},
 	quarter: function(frm) {
 		if(cur_frm.doc.quarter){
 			cur_frm.call({
