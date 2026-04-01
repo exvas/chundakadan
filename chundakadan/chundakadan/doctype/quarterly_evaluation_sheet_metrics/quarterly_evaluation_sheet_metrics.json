@@ -16,10 +16,9 @@
  "fields": [
   {
    "fieldname": "metric",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Metric",
-   "options": "Metric",
    "reqd": 1
   },
   {
@@ -64,7 +63,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-31 13:08:31.613096",
+ "modified": "2026-04-01 11:33:02.861614",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Quarterly Evaluation Sheet Metrics",

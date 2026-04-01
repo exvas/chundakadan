@@ -15,10 +15,9 @@
  "fields": [
   {
    "fieldname": "category",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Category",
-   "options": "Self Evaluation Form Category",
    "reqd": 1
   },
   {
@@ -54,7 +53,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-31 14:05:32.090632",
+ "modified": "2026-04-01 11:34:08.172738",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Employee Self Evaluation Category",

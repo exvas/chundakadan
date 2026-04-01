@@ -32,7 +32,7 @@
   "section_break_jcwp",
   "career_goals",
   "section_break_tdbf",
-  "table_ujpx",
+  "self_evaluation_categories",
   "section_break_avtt",
   "other_management_personnel",
   "column_break_ovpx",
@@ -133,75 +133,52 @@
   },
   {
    "fieldname": "section_break_ihig",
-   "fieldtype": "Section Break",
-   "label": "Significant Accomplishments"
+   "fieldtype": "Section Break"
   },
   {
-   "description": "List your most significant accomplishment or contributions since last year. How do these achievements align with  the goals/objectives outlined for you?",
    "fieldname": "significant_accomplishments",
    "fieldtype": "Small Text",
-   "label": "Significant Accomplishments"
+   "label": "Test"
   },
   {
    "fieldname": "section_break_qupr",
-   "fieldtype": "Section Break",
-   "label": "Duties Outside Regular Responsibilities"
+   "fieldtype": "Section Break"
   },
   {
-   "description": "Since the last appraisal period, have you successfully performed any new tasks or additional duties outside the scope\nof your regular responsibilities? If so, please specify.",
    "fieldname": "duties_outside_regular_responsibilities",
-   "fieldtype": "Small Text",
-   "label": "Duties Outside Regular Responsibilities"
+   "fieldtype": "Small Text"
   },
   {
    "fieldname": "section_break_wcjm",
-   "fieldtype": "Section Break",
-   "label": "Activities Initiated"
+   "fieldtype": "Section Break"
   },
   {
-   "description": "What activities have you initiated, or actively participated into encourage camaraderie and team work within your \ngroup and/or office? What was the result?",
    "fieldname": "activities_initiated",
-   "fieldtype": "Small Text",
-   "label": "Activities Initiated"
+   "fieldtype": "Small Text"
   },
   {
    "fieldname": "section_break_xfqt",
-   "fieldtype": "Section Break",
-   "label": "Professional Development Activities"
+   "fieldtype": "Section Break"
   },
   {
-   "description": "Describe your professional development activities since last year, such as offsite seminars/classes (specify if self\u0002directed or required by your supervisor), onsite training, peer training, management coaching or mentoring, on-the\u0002job experience, exposure to challenging projects, other\u2014please describe",
    "fieldname": "professional_development_activities",
-   "fieldtype": "Small Text",
-   "label": "Professional Development Activities"
+   "fieldtype": "Small Text"
   },
   {
    "fieldname": "areas_requires_improvement_section",
-   "fieldtype": "Section Break",
-   "label": "Areas Requires Improvement"
+   "fieldtype": "Section Break"
   },
   {
-   "description": "Describe areas you feel require improvement in terms of your professional capabilities. List the steps you plan to \ntake and/or the resources you need to accomplish this?",
    "fieldname": "areas_requires_improvement",
-   "fieldtype": "Small Text",
-   "label": "Areas Requires Improvement"
+   "fieldtype": "Small Text"
   },
   {
    "fieldname": "section_break_jcwp",
-   "fieldtype": "Section Break",
-   "label": "Career Goals"
+   "fieldtype": "Section Break"
   },
   {
-   "description": "Identify two career goals for the coming year and indicate how you plan to accomplish them",
    "fieldname": "career_goals",
-   "fieldtype": "Small Text",
-   "label": "Career Goals"
-  },
-  {
-   "fieldname": "table_ujpx",
-   "fieldtype": "Table",
-   "label": "Self Evaluation Categories",
-   "options": "Employee Self Evaluation Category"
+   "fieldtype": "Small Text"
   },
   {
    "fieldname": "section_break_avtt",
@@ -234,13 +211,19 @@
    "description": "Evaluate yourself on all factors that apply to you since your last performance appraisal. If a\ncategory does not apply to you, indicate N/A",
    "fieldname": "section_break_tdbf",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "self_evaluation_categories",
+   "fieldtype": "Table",
+   "label": "Self Evaluation Categories",
+   "options": "Employee Self Evaluation Category"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-01 11:07:56.004538",
+ "modified": "2026-04-01 12:01:46.460113",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Employee Self Evaluation Form",
