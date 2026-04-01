@@ -20,6 +20,7 @@
    "reqd": 1
   },
   {
+   "columns": 3,
    "fetch_from": "criterion.description",
    "fieldname": "description",
    "fieldtype": "Small Text",
@@ -28,6 +29,7 @@
    "read_only": 1
   },
   {
+   "columns": 1,
    "fieldname": "rating",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -45,7 +47,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-01 11:32:49.120839",
+ "modified": "2026-04-01 12:37:05.513656",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Quarterly Evaluation Sheet Criteria",
