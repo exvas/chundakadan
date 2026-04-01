@@ -17,7 +17,7 @@
   "posting_date",
   "reporting_officer",
   "reporting_officer_name",
-  "self_evaluation_questions_tab",
+  "section_break_gvui",
   "employee_self_evaluation_questions",
   "section_break_ihig",
   "significant_accomplishments",
@@ -31,7 +31,7 @@
   "areas_requires_improvement",
   "section_break_jcwp",
   "career_goals",
-  "self_evaluation_categories_tab",
+  "section_break_tdbf",
   "table_ujpx",
   "section_break_avtt",
   "other_management_personnel",
@@ -40,8 +40,10 @@
  ],
  "fields": [
   {
+   "description": "Your thought and timely participation in the appraisal process will help to facilitate a fair and comprehensive review \nof your progress and accomplishments since the last performance review. The evaluation process applies to \nemployees who completed one year.",
    "fieldname": "section_break_pouh",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Employee Self-Evaluation Form-Annual/Yearly"
   },
   {
    "fieldname": "amended_from",
@@ -124,11 +126,6 @@
    "label": "Employee Details"
   },
   {
-   "fieldname": "self_evaluation_questions_tab",
-   "fieldtype": "Tab Break",
-   "label": "Self Evaluation Questions"
-  },
-  {
    "fieldname": "employee_self_evaluation_questions",
    "fieldtype": "Table",
    "label": "Employee Self Evaluation Questions",
@@ -201,11 +198,6 @@
    "label": "Career Goals"
   },
   {
-   "fieldname": "self_evaluation_categories_tab",
-   "fieldtype": "Tab Break",
-   "label": "Self Evaluation Categories"
-  },
-  {
    "fieldname": "table_ujpx",
    "fieldtype": "Table",
    "label": "Self Evaluation Categories",
@@ -232,13 +224,23 @@
    "fieldtype": "Data",
    "label": "Other Management Personnel Name",
    "read_only": 1
+  },
+  {
+   "description": "Please answer the following questions to the best of your knowledge and abilities. Place a check mark in the \nappropriate box to indicate your answer.",
+   "fieldname": "section_break_gvui",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "Evaluate yourself on all factors that apply to you since your last performance appraisal. If a\ncategory does not apply to you, indicate N/A",
+   "fieldname": "section_break_tdbf",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-31 14:09:34.185059",
+ "modified": "2026-04-01 11:07:56.004538",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Employee Self Evaluation Form",
