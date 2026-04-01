@@ -17,7 +17,6 @@
   "column_break_qpyb",
   "posting_date",
   "date_of_evaluation",
-  "quarter",
   "evaluation_period_from",
   "evaluation_period_to",
   "evaluator",
@@ -126,23 +125,16 @@
    "reqd": 1
   },
   {
-   "fieldname": "quarter",
-   "fieldtype": "Select",
-   "label": "Quarter",
-   "options": "\n1\n2\n3\n4",
-   "reqd": 1
-  },
-  {
    "fieldname": "evaluation_period_from",
    "fieldtype": "Date",
    "label": "Evaluation Period From",
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "evaluation_period_to",
    "fieldtype": "Date",
    "label": "Evaluation Period To",
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "evaluator",
@@ -280,7 +272,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-01 11:24:50.109002",
+ "modified": "2026-04-01 16:48:46.652738",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Quarterly Evaluation Sheet",
