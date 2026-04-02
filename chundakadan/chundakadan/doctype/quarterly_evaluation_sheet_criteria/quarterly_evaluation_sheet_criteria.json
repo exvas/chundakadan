@@ -13,6 +13,7 @@
  ],
  "fields": [
   {
+   "columns": 2,
    "fieldname": "criterion",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -20,7 +21,7 @@
    "reqd": 1
   },
   {
-   "columns": 3,
+   "columns": 6,
    "fetch_from": "criterion.description",
    "fieldname": "description",
    "fieldtype": "Small Text",
@@ -37,6 +38,7 @@
    "options": "1\n2\n3\n4\n5"
   },
   {
+   "columns": 1,
    "fieldname": "comments",
    "fieldtype": "Small Text",
    "in_list_view": 1,
