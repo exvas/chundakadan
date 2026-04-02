@@ -13,6 +13,7 @@
  ],
  "fields": [
   {
+   "columns": 4,
    "fieldname": "question",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -20,7 +21,7 @@
    "reqd": 1
   },
   {
-   "columns": 2,
+   "columns": 1,
    "default": "0",
    "fieldname": "disagree",
    "fieldtype": "Check",
@@ -28,7 +29,7 @@
    "label": "Disagree"
   },
   {
-   "columns": 2,
+   "columns": 1,
    "default": "0",
    "fieldname": "somewhat_agree",
    "fieldtype": "Check",
@@ -36,7 +37,7 @@
    "label": "Somewhat Agree"
   },
   {
-   "columns": 2,
+   "columns": 1,
    "default": "0",
    "fieldname": "strongly_agree",
    "fieldtype": "Check",
