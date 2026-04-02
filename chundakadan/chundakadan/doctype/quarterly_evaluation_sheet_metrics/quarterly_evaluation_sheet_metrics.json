@@ -15,6 +15,7 @@
  ],
  "fields": [
   {
+   "columns": 2,
    "fieldname": "metric",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -22,11 +23,21 @@
    "reqd": 1
   },
   {
+   "columns": 4,
    "fetch_from": "metric.description",
    "fieldname": "description",
    "fieldtype": "Small Text",
+   "in_list_view": 1,
    "label": "Description",
    "read_only": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "actual_achievement",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual Achievement"
   },
   {
    "columns": 1,
@@ -37,6 +48,7 @@
    "label": "Target"
   },
   {
+   "columns": 1,
    "default": "0",
    "description": "Actual/Target * 100",
    "fieldname": "achievement_percentage",
@@ -46,17 +58,11 @@
    "read_only": 1
   },
   {
+   "columns": 1,
    "fieldname": "comments",
    "fieldtype": "Small Text",
    "in_list_view": 1,
    "label": "Comments"
-  },
-  {
-   "default": "0",
-   "fieldname": "actual_achievement",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Actual Achievement"
   }
  ],
  "grid_page_length": 50,
