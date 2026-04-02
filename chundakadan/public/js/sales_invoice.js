@@ -1,10 +1,15 @@
 frappe.ui.form.on('Sales Invoice', {
   refresh(frm) {
-      toggle_ui(frm);
-      frm.fields_dict.items.grid.get_field('item_code').$input.css({
-          'cursor': 'pointer',
-          'background-color': '#f8f9fa'
-      });
+  	if(!cur_frm.is_new()){
+		  toggle_ui(frm);
+	}
+      if( frm.fields_dict.items.grid.get_field('item_code').$input){
+      	frm.fields_dict.items.grid.get_field('item_code').$input.css({
+			  'cursor': 'pointer',
+			  'background-color': '#f8f9fa'
+		  });
+	  }
+
 
       // Add sync button for Sales Person
       if (frm.doc.docstatus === 0) {
