@@ -111,6 +111,10 @@ doc_events = {
         "on_update": "chundakadan.doc_events.leave_application.on_approval_update",
         "on_submit": "chundakadan.doc_events.leave_application.on_hrms_submit",
         "on_update_after_submit": "chundakadan.doc_events.leave_application.on_hrms_status_change"
+    },
+    "Employee Checkin": {
+        "after_insert": "chundakadan.doc_events.employee_checkin.mark_attendance",
+        "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
     }
 }
 # before_install = "chundakadan.install.before_install"
