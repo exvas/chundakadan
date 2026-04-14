@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 
 
 @frappe.whitelist()
@@ -6,9 +7,9 @@ def validate_item_qty_in_stock(doc, method=None):
     if not doc.custom_special_order:
         for item in doc.items:
             if item.item_code and item.warehouse:
-                    available_qty=frappe.get_value("Bin",
+                    available_qty=flt(frappe.get_value("Bin",
                     {"item_code":item.item_code,"warehouse":item.warehouse
-                    },"actual_qty")
+                    },"actual_qty"))
                     if available_qty<item.qty:
                             frappe.throw(
                             f"Item {item.item_code} in warehouse {item.warehouse}: "

@@ -1,22 +1,27 @@
 """
 Patches the HRMS Monthly Attendance Sheet report so that each employee
 appears in a single row (all shifts merged), instead of one row per shift.
+
+NOTE: The _patched guard is intentionally removed. In production with multiple
+Gunicorn workers, each worker process has its own copy of the module in memory.
+A worker that restarts or is newly spawned will lose the patch if the guard
+prevents re-patching. Since re-assigning a function is virtually free,
+we always apply it on every request to guarantee all workers stay patched.
 """
 
 from frappe.utils import cstr
 
-_patched = False
-
 
 def apply_patch():
-	global _patched
-	if _patched:
-		return
+	"""Always apply the patch on every before_request call.
+
+	This is safe because re-assigning the function reference on an already-patched
+	module is idempotent and has negligible overhead.
+	"""
 	try:
 		import hrms.hr.report.monthly_attendance_sheet.monthly_attendance_sheet as mas
 
 		mas.get_attendance_status_for_detailed_view = _single_row_attendance_status
-		_patched = True
 	except ImportError:
 		pass
 
