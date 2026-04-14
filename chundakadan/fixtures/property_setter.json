@@ -2836,15 +2836,15 @@
   "doc_type": "Customer Visit Log",
   "docstatus": 0,
   "doctype": "Property Setter",
-  "doctype_or_field": "DocType",
-  "field_name": null,
-  "is_system_generated": 0,
-  "modified": "2026-04-14 10:53:01.292070",
+  "doctype_or_field": "DocField",
+  "field_name": "customer_name",
+  "is_system_generated": 1,
+  "modified": "2026-04-14 12:42:40.928362",
   "module": "Chundakadan",
-  "name": "Customer Visit Log-main-autoname",
-  "property": "autoname",
-  "property_type": "Data",
+  "name": "Customer Visit Log-customer_name-in_list_view",
+  "property": "in_list_view",
+  "property_type": "Check",
   "row_name": null,
-  "value": "CV-.###--.{customer_name}"
+  "value": "1"
  }
 ]
