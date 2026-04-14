@@ -166,7 +166,6 @@ doc_events = {
 
 override_doctype_class = {
 	"Leave Policy Assignment": "chundakadan.overrides.leave_policy_assignment.CustomLeavePolicyAssignment",
-    "Monthly Attendance Sheet": "chundakadan.overrides.monthly_attendance_sheet.CustomMonthlyAttendanceSheet"
 }
 
 # Document Events
@@ -225,7 +224,7 @@ scheduler_events = {
 
 # Request Events
 # ----------------
-before_request = ["chundakadan.overrides.monthly_attendance_sheet_patch.apply_patch"]
+# before_request = ["chundakadan.utils.before_request"]
 # after_request = ["chundakadan.utils.after_request"]
 
 # Job Events
@@ -272,6 +271,16 @@ before_request = ["chundakadan.overrides.monthly_attendance_sheet_patch.apply_pa
 # }
 
 fixtures = [
+    {
+        "doctype": "Report",
+        "filters": [
+            [
+                "name",
+                "=",
+                "Monthly Attendance Sheet"
+            ]
+        ]
+    },
     {
         "doctype": "Custom Field",
         "filters": [

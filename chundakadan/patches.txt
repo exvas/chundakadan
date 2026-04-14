@@ -8,3 +8,4 @@ chundakadan.patches.update_leave_policy_annual_allocation
 chundakadan.patches.fix_leave_type_settings
 chundakadan.patches.update_compassionate_leave_allocation
 chundakadan.patches.update_compassionate_leave_ledger
+
