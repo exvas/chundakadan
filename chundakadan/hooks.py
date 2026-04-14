@@ -165,7 +165,8 @@ doc_events = {
 # Override standard doctype classes
 
 override_doctype_class = {
-	"Leave Policy Assignment": "chundakadan.overrides.leave_policy_assignment.CustomLeavePolicyAssignment"
+	"Leave Policy Assignment": "chundakadan.overrides.leave_policy_assignment.CustomLeavePolicyAssignment",
+    "Monthly Attendance Sheet": "chundakadan.overrides.monthly_attendance_sheet.CustomMonthlyAttendanceSheet"
 }
 
 # Document Events
