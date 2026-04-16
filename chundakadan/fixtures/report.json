@@ -251,31 +251,31 @@
   "javascript": null,
   "json": null,
   "letter_head": null,
-  "modified": "2026-04-14 16:27:43.519310",
+  "modified": "2026-04-16 11:45:27.136912",
   "module": "Chundakadan",
-  "name": "Monthly Attendance Sheet",
+  "name": "Monthly Attendance Sheet CK",
   "prepared_report": 0,
   "query": null,
   "ref_doctype": "Attendance",
   "reference_report": null,
-  "report_name": "Monthly Attendance Sheet",
+  "report_name": "Monthly Attendance Sheet CK",
   "report_script": null,
   "report_type": "Script Report",
   "roles": [
    {
-    "parent": "Monthly Attendance Sheet",
+    "parent": "Monthly Attendance Sheet CK",
     "parentfield": "roles",
     "parenttype": "Report",
     "role": "System Manager"
    },
    {
-    "parent": "Monthly Attendance Sheet",
+    "parent": "Monthly Attendance Sheet CK",
     "parentfield": "roles",
     "parenttype": "Report",
     "role": "HR User"
    },
    {
-    "parent": "Monthly Attendance Sheet",
+    "parent": "Monthly Attendance Sheet CK",
     "parentfield": "roles",
     "parenttype": "Report",
     "role": "HR Manager"
