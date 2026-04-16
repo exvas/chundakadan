@@ -275,9 +275,9 @@ fixtures = [
         "doctype": "Report",
         "filters": [
             [
-                "name",
+                "module",
                 "=",
-                "Monthly Attendance Sheet"
+                "Chundakadan"
             ]
         ]
     },
