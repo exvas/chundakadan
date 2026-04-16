@@ -14,7 +14,7 @@ def execute(filters=None):
 	filters = frappe._dict(filters or {})
 
 	# When "Date Range" is selected, derive month and year from from_date
-	if filters.get("filter_based_on") == "Date Range" and filters.get("from_date"):
+	if filters.get("based_on") == "Date Range" and filters.get("from_date"):
 		d = getdate(filters.from_date)
 		filters.month = str(d.month)
 		filters.year = str(d.year)

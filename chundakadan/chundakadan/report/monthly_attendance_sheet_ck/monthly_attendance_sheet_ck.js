@@ -4,14 +4,14 @@
 frappe.query_reports["Monthly Attendance Sheet CK"] = {
 	filters: [
 		{
-			fieldname: "filter_based_on",
+			fieldname: "based_on",
 			label: __("Filter Based On"),
 			fieldtype: "Select",
 			options: ["Month and Year", "Date Range"],
 			default: "Month and Year",
 			reqd: 1,
 			on_change: () => {
-				let filter_based_on = frappe.query_report.get_filter_value("filter_based_on");
+				let filter_based_on = frappe.query_report.get_filter_value("based_on");
 				let is_month_year = filter_based_on === "Month and Year";
 				["month", "year"].forEach((f) => {
 					let filter = frappe.query_report.get_filter(f);
@@ -32,14 +32,14 @@ frappe.query_reports["Monthly Attendance Sheet CK"] = {
 			label: __("From Date"),
 			fieldtype: "Date",
 			hidden: 1,
-			depends_on: "eval: doc.filter_based_on == 'Date Range'",
+			depends_on: "eval: doc.based_on == 'Date Range'",
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
 			hidden: 1,
-			depends_on: "eval: doc.filter_based_on == 'Date Range'",
+			depends_on: "eval: doc.based_on == 'Date Range'",
 		},
 		{
 			fieldname: "month",
