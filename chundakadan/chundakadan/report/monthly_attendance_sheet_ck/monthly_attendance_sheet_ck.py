@@ -4,12 +4,21 @@
 # Monthly Attendance Sheet (CK) — chundakadan's own version of the HRMS report.
 # Single row per employee: all shifts merged into one row.
 
-from frappe.utils import cstr
+import frappe
+from frappe.utils import cstr, getdate
 
 import hrms.hr.report.monthly_attendance_sheet.monthly_attendance_sheet as _mas
 
 
 def execute(filters=None):
+	filters = frappe._dict(filters or {})
+
+	# When "Date Range" is selected, derive month and year from from_date
+	if filters.get("filter_based_on") == "Date Range" and filters.get("from_date"):
+		d = getdate(filters.from_date)
+		filters.month = str(d.month)
+		filters.year = str(d.year)
+
 	# Patch HRMS's helper with our single-row version, then delegate entirely to
 	# HRMS's execute so it handles all filter setup and query building correctly
 	# regardless of the installed HRMS version.

@@ -4,6 +4,44 @@
 frappe.query_reports["Monthly Attendance Sheet CK"] = {
 	filters: [
 		{
+			fieldname: "filter_based_on",
+			label: __("Filter Based On"),
+			fieldtype: "Select",
+			options: ["Month and Year", "Date Range"],
+			default: "Month and Year",
+			reqd: 1,
+			on_change: () => {
+				let filter_based_on = frappe.query_report.get_filter_value("filter_based_on");
+				let is_month_year = filter_based_on === "Month and Year";
+				["month", "year"].forEach((f) => {
+					let filter = frappe.query_report.get_filter(f);
+					filter.df.reqd = is_month_year;
+					filter.df.hidden = !is_month_year;
+					filter.refresh();
+				});
+				["from_date", "to_date"].forEach((f) => {
+					let filter = frappe.query_report.get_filter(f);
+					filter.df.reqd = !is_month_year;
+					filter.df.hidden = is_month_year;
+					filter.refresh();
+				});
+			},
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			hidden: 1,
+			depends_on: "eval: doc.filter_based_on == 'Date Range'",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			hidden: 1,
+			depends_on: "eval: doc.filter_based_on == 'Date Range'",
+		},
+		{
 			fieldname: "month",
 			label: __("Month"),
 			fieldtype: "Select",
