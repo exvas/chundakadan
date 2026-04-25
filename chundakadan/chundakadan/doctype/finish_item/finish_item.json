@@ -1,57 +1,57 @@
 {
- "actions": [],
- "allow_rename": 1,
- "autoname": "field:finish",
- "creation": "2025-09-15 14:53:13.444916",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "finish",
-  "item_group"
- ],
- "fields": [
-  {
-   "fieldname": "finish",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Finish",
-   "unique": 1
-  },
-  {
-   "fieldname": "item_group",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Item Group",
-   "options": "Item Group"
-  }
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2025-09-29 11:10:31.630722",
- "modified_by": "Administrator",
- "module": "Chundakadan",
- "name": "Finish Item",
- "naming_rule": "By fieldname",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
- ],
- "quick_entry": 1,
- "row_format": "Dynamic",
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "title_field": "finish"
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "field:finish",
+    "creation": "2025-09-15 14:53:13.444916",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "finish",
+        "item_group"
+    ],
+    "fields": [
+        {
+            "fieldname": "finish",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Finish",
+            "unique": 0
+        },
+        {
+            "fieldname": "item_group",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Item Group",
+            "options": "Item Group"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2025-09-29 11:10:31.630722",
+    "modified_by": "Administrator",
+    "module": "Chundakadan",
+    "name": "Finish Item",
+    "naming_rule": "By fieldname",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "quick_entry": 1,
+    "row_format": "Dynamic",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "title_field": "finish"
 }

@@ -1,6 +1,38 @@
 [
  {
   "default_value": null,
+  "doc_type": "Finish Item",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "finish",
+  "is_system_generated": 1,
+  "modified": "2026-04-25 15:24:49.728751",
+  "module": "Chundakadan",
+  "name": "Finish Item-finish-in_list_view",
+  "property": "in_list_view",
+  "property_type": "Check",
+  "row_name": null,
+  "value": "1"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Finish Item",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "item_group",
+  "is_system_generated": 1,
+  "modified": "2026-04-25 15:24:41.158239",
+  "module": "Chundakadan",
+  "name": "Finish Item-item_group-in_list_view",
+  "property": "in_list_view",
+  "property_type": "Check",
+  "row_name": null,
+  "value": "1"
+ },
+ {
+  "default_value": null,
   "doc_type": "Leave Allocation",
   "docstatus": 0,
   "doctype": "Property Setter",
