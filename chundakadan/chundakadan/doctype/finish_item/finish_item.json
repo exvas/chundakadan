@@ -13,12 +13,14 @@
   {
    "fieldname": "finish",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Finish",
    "unique": 1
   },
   {
    "fieldname": "item_group",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Item Group",
    "options": "Item Group"
   }
@@ -50,5 +52,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "finish"
 }
