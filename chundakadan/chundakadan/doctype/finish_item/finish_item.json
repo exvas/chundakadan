@@ -1,7 +1,7 @@
 {
     "actions": [],
     "allow_rename": 1,
-    "autoname": "field:finish",
+    "autoname": "hash",
     "creation": "2025-09-15 14:53:13.444916",
     "doctype": "DocType",
     "engine": "InnoDB",
@@ -32,7 +32,6 @@
     "modified_by": "Administrator",
     "module": "Chundakadan",
     "name": "Finish Item",
-    "naming_rule": "By fieldname",
     "owner": "Administrator",
     "permissions": [
         {
