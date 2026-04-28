@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/chundakadan/css/chundakadan.css"
-# app_include_js = "/assets/chundakadan/js/chundakadan.js"
+app_include_js = "/assets/chundakadan/js/item_selection_common.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/chundakadan/css/chundakadan.css"
@@ -48,6 +48,10 @@ doctype_js = {
     "payment Entry" : "public/js/payment_entry.js",
     "Item" : "public/js/item.js",
     "Sales Invoice" : "public/js/sales_invoice.js",
+    "Delivery Note" : "public/js/delivery_note.js",
+    "Purchase Order" : "public/js/purchase_order.js",
+    "Purchase Invoice" : "public/js/purchase_invoice.js",
+    "Quotation" : "public/js/quotation.js",
     "Leave Application" : "public/js/leave_application.js",
     "Exit Interview Form" : "public/js/exit_interview_form.js",
     "Interview" : "public/js/interview.js",

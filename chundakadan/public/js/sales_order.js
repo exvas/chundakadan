@@ -16,6 +16,7 @@ frappe.ui.form.on('Sales Order', {
     },
     
     refresh: function(frm) {
+        chundakadan.utils.setup_item_selection(frm, 'items');
         if (frm.doc.docstatus === 0) {
             frm.add_custom_button(__('Sync Sales Person'), function() {
                 if (frm.doc.custom_sales_person) {
