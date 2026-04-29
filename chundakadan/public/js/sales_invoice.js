@@ -40,6 +40,27 @@ frappe.ui.form.on('Sales Invoice', {
       toggle_ui(frm);
   },
 
+  customer: function(frm) {
+      if (frm.doc.customer) {
+          frappe.call({
+              method: "chundakadan.doc_events.sales_invoice.check_overdue_unpaid_invoices",
+              args: {
+                  customer: frm.doc.customer
+              },
+              callback: function(r) {
+                  if (r.message && r.message.length > 0) {
+                      let invoice_list = r.message.map(d => d.name).join(", ");
+                      frappe.msgprint({
+                          title: __('Overdue Invoices Found'),
+                          indicator: 'red',
+                          message: __(`Customer <b>${frm.doc.customer}</b> has overdue unpaid invoices: ${invoice_list}.<br><br>Creating new Sales Invoices for this customer will be restricted until these are cleared.`)
+                      });
+                  }
+              }
+          });
+      }
+  },
+
   custom_sales_person: function(frm) {
       if (frm.doc.custom_sales_person) {
           if (!frm.doc.sales_team || frm.doc.sales_team.length === 0) {
@@ -66,21 +87,7 @@ frappe.ui.form.on('Sales Invoice', {
           });
       }
   },
-	customer: function () {
-		if(cur_frm.doc.customer){
-			frappe.call({
-				method: "chundakadan.doc_events.sales_invoice.check_customer_overdue_transactions",
-				args: {
-					customer: cur_frm.doc.customer
-				},
-				freeze: true,
-				freeze_message: "Checking Customer Overdue Transactions",
-				callback: function () {
 
-				}
-			})
-		}
-	}
 
 });
 
