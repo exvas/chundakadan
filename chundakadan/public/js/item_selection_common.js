@@ -83,8 +83,49 @@ chundakadan.utils.show_item_selection_dialog = function(frm, cdt, cdn, child_tab
                 label: __('Available Items')
             }
         ],
-        primary_action_label: __('Close'),
+        primary_action_label: __('OK'),
         primary_action: function() {
+            let item_group = dialog.get_value('item_group');
+            let size = dialog.get_value('size');
+            let finish = dialog.get_value('finish');
+
+            if (!item_group) {
+                frappe.msgprint(__('Please select an Item Group'));
+                return;
+            }
+
+            let filters = {
+                'item_group': item_group,
+                'custom_size': size || '',
+                'custom_finish': finish || '',
+                'disabled': 0
+            };
+
+            if (is_purchase) {
+                filters['is_purchase_item'] = 1;
+            } else {
+                filters['is_sales_item'] = 1;
+            }
+
+            frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: 'Item',
+                    filters: filters,
+                    fieldname: 'name'
+                },
+                callback: function(r) {
+                    if (r.message && r.message.name) {
+                        chundakadan.utils.select_item_from_dialog(r.message.name, cdt, cdn, child_table_name);
+                        dialog.hide();
+                    } else {
+                        frappe.msgprint(__('No item found matching the selected criteria.'));
+                    }
+                }
+            });
+        },
+        secondary_action_label: __('Close'),
+        secondary_action: function() {
             dialog.hide();
         }
     });
