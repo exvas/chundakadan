@@ -10,7 +10,8 @@ if (!window.chundakadan_sales_invoice_loaded) {
     frappe.call({
       method: "chundakadan.doc_events.sales_invoice.check_overdue_unpaid_invoices",
       args: {
-        customer: frm.doc.customer
+        customer: frm.doc.customer,
+        posting_date: frm.doc.posting_date
       },
       callback: function(r) {
         if (r.message && r.message.length > 0) {
@@ -46,6 +47,10 @@ if (!window.chundakadan_sales_invoice_loaded) {
         // Force posting date and time to be editable for new invoices
         frm.set_df_property('posting_date', 'read_only', 0);
         frm.set_df_property('posting_time', 'read_only', 0);
+
+        if (frm.doc.customer) {
+          check_overdue_restriction(frm);
+        }
       }
 
       if (frm.fields_dict.items && frm.fields_dict.items.grid) {
@@ -87,8 +92,19 @@ if (!window.chundakadan_sales_invoice_loaded) {
       if (frm.is_new()) {
         // Use direct doc assignment to avoid triggering change events during load
         frm.doc.set_posting_time = 1;
+        
+        // Default posting date to today even if pulled from other docs
+        if (!frm.doc.posting_date || frm.doc.posting_date !== frappe.datetime.get_today()) {
+          frm.set_value('posting_date', frappe.datetime.get_today());
+        }
       }
       toggle_ui(frm);
+    },
+
+    posting_date: function(frm) {
+      if (frm.doc.customer && frm.doc.posting_date) {
+        check_overdue_restriction(frm);
+      }
     },
 
     customer: function(frm) {
