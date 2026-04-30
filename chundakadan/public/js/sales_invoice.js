@@ -15,25 +15,45 @@ if (!window.chundakadan_sales_invoice_loaded) {
       },
       callback: function (r) {
         if (r.message && r.message.length > 0) {
-          // Check if a similar dialog is already open to prevent duplicates
-          if ($('.modal-title:contains("Overdue Invoices Found")').length > 0) return;
+          // Dismiss any existing overdue dialog before opening a new one
+          if (frm._overdue_dialog) {
+            frm._overdue_dialog.hide();
+            frm._overdue_dialog = null;
+          }
 
-          let invoice_list = r.message.map(d => `<li>${d.name} (Due: ${d.due_date})</li>`).join("");
+          let invoice_list = r.message.map(d =>
+            `<li>${d.name} — Due: ${d.due_date}, Outstanding: <b>${format_currency(d.outstanding_amount)}</b></li>`
+          ).join("");
 
-          frappe.warn(
-            __('Overdue Invoices Found'),
-            __(`Customer <b>${frm.doc.customer}</b> has overdue unpaid invoices based on their payment schedule:<br><br><ul>${invoice_list}</ul><br>Creating new Sales Invoices for this customer is restricted. Do you want to continue?`),
-            () => {
-              // On Continue
+          let d = new frappe.ui.Dialog({
+            title: __('Overdue Invoices Found'),
+            indicator: 'red',
+            fields: [
+              {
+                fieldtype: 'HTML',
+                fieldname: 'overdue_html',
+                options: `<p>${__('Customer')} <b>${frm.doc.customer}</b> ${__('has overdue unpaid invoices based on their payment schedule')}:</p>
+                  <ul>${invoice_list}</ul>
+                  <p>${__('Creating new Sales Invoices for this customer is restricted. Do you want to continue?')}</p>`
+              }
+            ],
+            primary_action_label: __('Continue'),
+            primary_action: function () {
               frm.doc.custom_ignore_overdue_restriction = 1;
+              d.hide();
               frappe.show_alert({
                 message: __('Restriction bypassed for this document'),
                 indicator: 'orange'
               });
             },
-            __('Continue'),
-            true // show_cancel button
-          );
+            secondary_action_label: __('Cancel'),
+            secondary_action: function () {
+              d.hide();
+            }
+          });
+
+          frm._overdue_dialog = d;
+          d.show();
         }
       }
     });
