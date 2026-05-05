@@ -60,7 +60,10 @@ doctype_js = {
     "Exit Interview Form" : "public/js/exit_interview_form.js",
     "Interview" : "public/js/interview.js",
 }
-doctype_list_js = {"Leave Application" : "public/js/leave_application_list.js"}
+doctype_list_js = {
+    "Leave Application" : "public/js/leave_application_list.js",
+    "Employee Checkin" : "public/js/employee_checkin_list.js"
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
