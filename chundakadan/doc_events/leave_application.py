@@ -669,15 +669,22 @@ def _get_required_designation_for_status(status):
         "Pending HOD": "HOD",
         "Pending HR": "HR",
         "Pending GM": "GM",
-        # Intermediate approved statuses - next approver handles transition click
+        # Intermediate approved statuses - the NEXT role must handle the transition
         "Approved HOD": "HR",   # HR clicks to move from Approved HOD -> Pending HR
         "Approved HR": "GM",    # GM clicks to move from Approved HR -> Pending GM
+        "Approved GM": "GM",    # GM is final, but handles its own final click
     }
     role = status_to_role.get(status)
     if role:
         desig = APPROVER_DESIGNATIONS.get(role)
         if desig:
             return desig if isinstance(desig, list) else [desig]
+    
+    # For generic Pending or unknown status, fall back to initial approver roles
+    if status.startswith("Pending"):
+        # This covers generic "Pending" or custom Pending statuses not in the map
+        return APPROVER_DESIGNATIONS.get("HOD") if isinstance(APPROVER_DESIGNATIONS.get("HOD"), list) else [APPROVER_DESIGNATIONS.get("HOD")]
+        
     return []
 
 
@@ -738,35 +745,36 @@ def check_user_can_approve(doc_name, user=None):
     required_designation = _get_required_designation_for_status(status)
     
     # Authoritative check: Does the user's designation match the requirement?
-    if required_designation and _user_has_approver_designation(user, required_designation):
-        # User is eligible to approve this stage. 
-        # Update leave_approver field if it doesn't match to ensure consistent UI
-        if user != doc.leave_approver:
-            try:
-                frappe.db.set_value(
-                    "Leave Application", doc_name, "leave_approver", user,
-                    update_modified=False
-                )
-                approver_name = frappe.db.get_value("User", user, "full_name")
-                if approver_name:
+    if required_designation:
+        if _user_has_approver_designation(user, required_designation):
+            # User is eligible to approve this stage. 
+            # Update leave_approver field if it doesn't match to ensure consistent UI
+            if user != doc.leave_approver:
+                try:
                     frappe.db.set_value(
-                        "Leave Application", doc_name, "leave_approver_name", approver_name,
+                        "Leave Application", doc_name, "leave_approver", user,
                         update_modified=False
                     )
-                frappe.db.commit()
-            except Exception:
-                pass
-        return {"can_approve": True, "reason": f"Designation match: {required_designation}"}
+                    approver_name = frappe.db.get_value("User", user, "full_name")
+                    if approver_name:
+                        frappe.db.set_value(
+                            "Leave Application", doc_name, "leave_approver_name", approver_name,
+                            update_modified=False
+                        )
+                    frappe.db.commit()
+                except Exception:
+                    pass
+            return {"can_approve": True, "reason": f"Designation match: {required_designation}"}
+        else:
+            # User DOES NOT have the required designation for this status
+            # This explicitly hides buttons for previous approvers (e.g., HOD sees nothing on "Approved HOD")
+            return {"can_approve": False, "reason": f"Designation mismatch. Required: {required_designation}"}
     
-    # If designation requirement exists but user doesn't match, deny
-    if required_designation:
-        return {"can_approve": False, "reason": f"Required designation: {required_designation}"}
-
     # Fallback for statuses without specific designation requirements
     if user == doc.leave_approver:
         return {"can_approve": True, "reason": "Designated approver"}
     
-    return {"can_approve": False, "reason": "No matching designation"}
+    return {"can_approve": False, "reason": "No matching designation and no fallback"}
 
 
 @frappe.whitelist()

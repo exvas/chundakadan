@@ -76,6 +76,10 @@ function add_approval_buttons(frm) {
         callback: function (r) {
             if (r.message && r.message.can_approve) {
                 _render_approval_buttons(frm);
+            } else {
+                // Explicitly clear actions if user is not authorized
+                // This prevents previous approvers from seeing cached or default buttons
+                frm.page.clear_actions_menu();
             }
         }
     });
