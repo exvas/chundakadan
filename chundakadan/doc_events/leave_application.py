@@ -2,12 +2,94 @@ import frappe
 from frappe import _
 #code written by niranjana nir
 
-# Approver configuration - Email addresses for each approver role
-APPROVERS = {
+# Designation-to-approver-role mapping
+# Maps each approver role to the designation used to find the approver employee
+# HR uses a list to support both "HR Coordinator" and "Coordinator" designations
+APPROVER_DESIGNATIONS = {
+    "HOD": "Area Sales Manager",
+    "HR": ["HR Coordinator", "Coordinator"],
+    "GM": "General Manager"
+}
+
+# Fallback email addresses (used only if no active employee with the designation is found)
+FALLBACK_APPROVER_EMAILS = {
     "HOD": "chundakadannorthasm@gmail.com",
     "HR": "binduudayan334@gmail.com",
     "GM": "chundakadangm@gmail.com"
 }
+
+# Cache for approver lookups (cleared on each request)
+_approver_cache = {}
+
+
+def get_approver_email(approver_key):
+    """
+    Dynamically find the approver's email (user_id) based on their designation.
+    
+    Looks up an active Employee with the matching designation and returns their user_id.
+    Falls back to hardcoded email if no employee is found.
+    
+    Args:
+        approver_key: One of "HOD", "HR", "GM"
+        
+    Returns:
+        str: Email address (user_id) of the approver
+    """
+    global _approver_cache
+    
+    if approver_key in _approver_cache:
+        return _approver_cache[approver_key]
+    
+    designation = APPROVER_DESIGNATIONS.get(approver_key)
+    if not designation:
+        return FALLBACK_APPROVER_EMAILS.get(approver_key, "")
+    
+    # Support list of designations (e.g., HR can be "HR Coordinator" or "Coordinator")
+    designations = designation if isinstance(designation, list) else [designation]
+    
+    for desig in designations:
+        # Find an active employee with this designation who has a linked user_id
+        employee = frappe.db.get_value(
+            "Employee",
+            {
+                "designation": desig,
+                "status": "Active",
+                "user_id": ["is", "set"]
+            },
+            ["user_id", "employee_name"],
+            as_dict=True
+        )
+        
+        if employee and employee.user_id:
+            _approver_cache[approver_key] = employee.user_id
+            return employee.user_id
+        
+        # Try without status filter (in case employee status differs)
+        employee = frappe.db.get_value(
+            "Employee",
+            {
+                "designation": desig,
+                "user_id": ["is", "set"]
+            },
+            ["user_id", "employee_name"],
+            as_dict=True
+        )
+        
+        if employee and employee.user_id:
+            _approver_cache[approver_key] = employee.user_id
+            return employee.user_id
+    
+    # Final fallback to hardcoded email
+    fallback = FALLBACK_APPROVER_EMAILS.get(approver_key, "")
+    _approver_cache[approver_key] = fallback
+    return fallback
+
+
+def clear_approver_cache():
+    """Clear the approver cache. Called at the start of key operations."""
+    global _approver_cache
+    _approver_cache = {}
+
 
 # Status flow definitions for each employee category
 # Each step defines the current custom_approval_status and what it transitions to
@@ -165,7 +247,7 @@ def get_next_approver_and_status(category, current_status):
     for step in flow:
         if step["status"] == current_status:
             approver_key = step.get("approver")
-            approver_email = APPROVERS.get(approver_key) if approver_key else None
+            approver_email = get_approver_email(approver_key) if approver_key else None
             
             return {
                 "next_status": step["next_status"],
@@ -197,13 +279,16 @@ def get_approver_for_employee(employee_name, employee=None):
     if not employee_name and not employee:
         return None
     
+    # Clear cache to ensure fresh lookup
+    clear_approver_cache()
+    
     role_profile = get_employee_role_profile(employee_name, employee)
     category = get_employee_category(role_profile, employee_name, employee)
     
     initial_config = INITIAL_CONFIG.get(category, INITIAL_CONFIG["other"])
     
     approver_key = initial_config["approver"]
-    approver_email = APPROVERS.get(approver_key, "")
+    approver_email = get_approver_email(approver_key)
     approver_name = frappe.db.get_value("User", approver_email, "full_name") if approver_email else approver_key
     
     return {
@@ -222,6 +307,9 @@ def set_leave_approver(doc, method):
     # Only set on new documents that don't have custom_approval_status already set
     # This prevents resetting the status when approver saves the document
     if doc.is_new() and not doc.custom_approval_status:
+        # Clear cache to ensure fresh lookup
+        clear_approver_cache()
+        
         employee_name = doc.employee_name
         employee = doc.employee
         role_profile = get_employee_role_profile(employee_name, employee)
@@ -234,8 +322,9 @@ def set_leave_approver(doc, method):
         
         # Set initial approver
         approver_key = initial_config["approver"]
-        if approver_key and approver_key in APPROVERS:
-            doc.leave_approver = APPROVERS[approver_key]
+        approver_email = get_approver_email(approver_key)
+        if approver_email:
+            doc.leave_approver = approver_email
             # Set leave approver name
             approver_user = frappe.db.get_value("User", doc.leave_approver, "full_name")
             doc.leave_approver_name = approver_user or approver_key
@@ -292,12 +381,35 @@ def approve_leave(doc_name, approval_action="approve"):
         doc_name: Name of the Leave Application document
         approval_action: "approve" or "reject"
     """
+    # Clear cache to ensure fresh lookup
+    clear_approver_cache()
+    
     doc = frappe.get_doc("Leave Application", doc_name)
     
-    # Verify current user is the designated approver
+    # Verify current user is the designated approver (by email or by designation)
     current_user = frappe.session.user
-    if doc.leave_approver and current_user != doc.leave_approver and current_user != "Administrator":
-        frappe.throw(_("Only the designated approver ({0}) can approve this leave application").format(doc.leave_approver))
+    is_authorized = False
+    
+    if current_user == "Administrator":
+        is_authorized = True
+    elif doc.leave_approver and current_user == doc.leave_approver:
+        is_authorized = True
+    else:
+        # Fallback: check if user's Employee designation matches the required approver role
+        required_designation = _get_required_designation_for_status(doc.custom_approval_status)
+        if required_designation and _user_has_approver_designation(current_user, required_designation):
+            is_authorized = True
+            # Update leave_approver to current user so it's consistent
+            frappe.db.set_value("Leave Application", doc_name, "leave_approver", current_user, update_modified=False)
+            approver_name = frappe.db.get_value("User", current_user, "full_name")
+            if approver_name:
+                frappe.db.set_value("Leave Application", doc_name, "leave_approver_name", approver_name, update_modified=False)
+            doc.leave_approver = current_user
+    
+    if not is_authorized:
+        frappe.throw(_(
+            "Only the designated approver ({0}) can approve this leave application"
+        ).format(doc.leave_approver))
     
     if approval_action == "reject":
         # Use db_set to bypass all permissions
@@ -327,7 +439,7 @@ def approve_leave(doc_name, approval_action="approve"):
     # Find current step - handle both "Pending X" and "Approved X" (intermediate) statuses
     current_step = None
     current_step_index = None
-    is_transition_step = False  # Flag to indicate if this is a transition step (Approved X -> Pending X)
+    is_transition_step = False  # Flag: "Approved X" -> "Pending X" transition
     
     for i, step in enumerate(flow):
         if step["status"] == current_status:
@@ -337,12 +449,10 @@ def approve_leave(doc_name, approval_action="approve"):
     
     # If current status is intermediate "Approved X" (transition step with approver=None),
     # this means we need to transition to the next "Pending X" status
-    # This is NOT the final approval - GM needs to click again on "Pending GM" for final
     if current_step and current_step.get("approver") is None and current_status.startswith("Approved"):
-        # This is a transition step - mark it so we handle it correctly below
         is_transition_step = True
     elif current_step is None and current_status.startswith("Approved"):
-        # Fallback: status is "Approved X" but not found - try to find it
+        # Fallback: status is "Approved X" but not found in flow
         for i, step in enumerate(flow):
             if step["status"] == current_status:
                 current_step = step
@@ -353,14 +463,12 @@ def approve_leave(doc_name, approval_action="approve"):
     if current_step is None:
         frappe.throw(_("Invalid status transition from {0}").format(doc.custom_approval_status))
     
-    # Get the next status from current step
-    next_status = current_step["next_status"]  # e.g., "Pending GM" for transition or "Approved GM" for approval
+    next_status = current_step["next_status"]
     is_final = current_step.get("is_final", False)
     
-    # Handle transition step (Approved X -> Pending X)
-    # This is when GM clicks approve on "Approved HR" - it should change to "Pending GM"
+    # Handle transition step (e.g., "Approved HR" -> "Pending GM")
+    # GM clicks approve on "Approved HR" to change it to "Pending GM"
     if is_transition_step:
-        # Just transition to the next pending status
         next_pending_status = next_status  # e.g., "Pending GM"
         
         # Find the approver for the next pending status
@@ -374,11 +482,12 @@ def approve_leave(doc_name, approval_action="approve"):
             "custom_approval_status": next_pending_status
         }
         
-        # Set the approver (same user for GM since they're the next approver)
-        if next_approver_key and next_approver_key in APPROVERS:
-            update_values["leave_approver"] = APPROVERS[next_approver_key]
-            approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
-            update_values["leave_approver_name"] = approver_name or next_approver_key
+        if next_approver_key:
+            next_approver_email = get_approver_email(next_approver_key)
+            if next_approver_email:
+                update_values["leave_approver"] = next_approver_email
+                approver_name = frappe.db.get_value("User", next_approver_email, "full_name")
+                update_values["leave_approver_name"] = approver_name or next_approver_key
         
         frappe.db.set_value("Leave Application", doc_name, update_values, update_modified=True)
         frappe.db.commit()
@@ -390,36 +499,25 @@ def approve_leave(doc_name, approval_action="approve"):
         return {"success": True, "message": f"Status updated to {next_pending_status}", "new_status": next_pending_status}
     
     if is_final:
-        # This is the final approval step
-        # Set custom_approval_status and status to "Approved", then submit the document
-        # Submitting will trigger HRMS to create Leave Ledger Entry and update leave balance
-        
-        # First update the custom_approval_status and status in database
+        # Final approval step - submit the document
         frappe.db.set_value("Leave Application", doc_name, {
-            "custom_approval_status": next_status,  # e.g., "Approved GM" or "Approved HR"
+            "custom_approval_status": next_status,  # e.g., "Approved GM"
             "status": "Approved"
         }, update_modified=True)
         frappe.db.commit()
         
-        # Reload the document with updated values
         doc.reload()
-        
-        # Ensure status is "Approved" in memory (in case validate hooks try to change it)
         doc.status = "Approved"
         doc.flags.ignore_permissions = True
-        doc.flags.ignore_validate = True  # Skip validation that might reset status
-        doc.flags.skip_approval_update = True  # Skip on_approval_update hook to avoid duplicate messages
-        
-        # Submit the document - this sets docstatus to 1
-        # HRMS on_submit hook will call create_leave_ledger_entry()
+        doc.flags.ignore_validate = True
+        doc.flags.skip_approval_update = True
         doc.submit()
         
-        # Ensure status is still "Approved" after submit
         if doc.status != "Approved":
             frappe.db.set_value("Leave Application", doc_name, "status", "Approved", update_modified=False)
             frappe.db.commit()
         
-        # Verify leave ledger entry was created, if not create it manually
+        # Verify leave ledger entry was created
         leave_ledger_exists = frappe.db.exists(
             "Leave Ledger Entry",
             {
@@ -430,16 +528,15 @@ def approve_leave(doc_name, approval_action="approve"):
         )
         
         if not leave_ledger_exists:
-            # Leave ledger entry was not created, create it manually
             doc.reload()
-            doc.status = "Approved"  # Ensure status is Approved for ledger creation
+            doc.status = "Approved"
             doc.create_leave_ledger_entry()
         
         frappe.msgprint(_("Leave Application fully approved"), indicator="green")
         return {"success": True, "message": "Leave Application fully approved", "new_status": next_status}
     else:
-        # Not final - find the next step to get the next approver
-        approved_status = next_status  # e.g., "Approved HR"
+        # Not final - store "Approved X" and set next approver
+        approved_status = next_status  # e.g., "Approved HOD" or "Approved HR"
         next_pending_status = None
         next_approver_key = None
         
@@ -447,7 +544,6 @@ def approve_leave(doc_name, approval_action="approve"):
         for j in range(current_step_index + 1, len(flow)):
             next_step = flow[j]
             if next_step["status"] == approved_status:
-                # This step handles the transition from "Approved X" to next "Pending X"
                 next_pending_status = next_step["next_status"]
                 break
         
@@ -458,17 +554,17 @@ def approve_leave(doc_name, approval_action="approve"):
                     next_approver_key = step.get("approver")
                     break
         
-        # Update the leave application - store the approved status (e.g., "Approved HR")
-        # Everyone sees "Approved HR", GM will see it and click approve to transition
         update_values = {
             "custom_approval_status": approved_status  # Store "Approved HR"
         }
         
-        # Set the next approver
-        if next_approver_key and next_approver_key in APPROVERS:
-            update_values["leave_approver"] = APPROVERS[next_approver_key]
-            approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
-            update_values["leave_approver_name"] = approver_name or next_approver_key
+        # Set the next approver (the person who needs to handle the transition click)
+        if next_approver_key:
+            next_approver_email = get_approver_email(next_approver_key)
+            if next_approver_email:
+                update_values["leave_approver"] = next_approver_email
+                approver_name = frappe.db.get_value("User", next_approver_email, "full_name")
+                update_values["leave_approver_name"] = approver_name or next_approver_key
         
         frappe.db.set_value("Leave Application", doc_name, update_values, update_modified=True)
         frappe.db.commit()
@@ -502,6 +598,9 @@ def on_hrms_status_change(doc, method):
     Handle when HRMS changes the status of a submitted leave application.
     This captures the standard HRMS Approve/Reject button clicks.
     """
+    # Clear cache to ensure fresh lookup
+    clear_approver_cache()
+    
     # If the standard status changed to Approved
     if doc.status == "Approved" and doc.custom_approval_status and doc.custom_approval_status.startswith("Pending"):
         # HRMS approved, so we need to transition our custom status
@@ -548,11 +647,428 @@ def on_hrms_status_change(doc, method):
             doc.db_set("custom_approval_status", next_pending_status, update_modified=False)
             
             # Set next approver if not final
-            if next_pending_status != "Approved" and next_approver_key and next_approver_key in APPROVERS:
-                doc.db_set("leave_approver", APPROVERS[next_approver_key], update_modified=False)
-                approver_name = frappe.db.get_value("User", APPROVERS[next_approver_key], "full_name")
-                doc.db_set("leave_approver_name", approver_name or next_approver_key, update_modified=False)
+            if next_pending_status != "Approved" and next_approver_key:
+                next_approver_email = get_approver_email(next_approver_key)
+                if next_approver_email:
+                    doc.db_set("leave_approver", next_approver_email, update_modified=False)
+                    approver_name = frappe.db.get_value("User", next_approver_email, "full_name")
+                    doc.db_set("leave_approver_name", approver_name or next_approver_key, update_modified=False)
     
     # If the standard status changed to Rejected
     elif doc.status == "Rejected" and doc.custom_approval_status != "Rejected":
         doc.db_set("custom_approval_status", "Rejected", update_modified=False)
+
+
+def _get_required_designation_for_status(status):
+    """
+    Given a custom_approval_status, return the designation(s) required to approve it.
+    Returns a list of acceptable designations to support multiple designations per role.
+    E.g., "Pending HOD" -> ["Area Sales Manager"], "Pending HR" -> ["HR Coordinator", "Coordinator"]
+    """
+    status_to_role = {
+        "Pending HOD": "HOD",
+        "Pending HR": "HR",
+        "Pending GM": "GM",
+        # Intermediate approved statuses - next approver handles transition click
+        "Approved HOD": "HR",   # HR clicks to move from Approved HOD -> Pending HR
+        "Approved HR": "GM",    # GM clicks to move from Approved HR -> Pending GM
+    }
+    role = status_to_role.get(status)
+    if role:
+        desig = APPROVER_DESIGNATIONS.get(role)
+        if desig:
+            return desig if isinstance(desig, list) else [desig]
+    return []
+
+
+def _user_has_approver_designation(user, required_designations):
+    """
+    Check if the given user is linked to an Employee with one of the required designations.
+    
+    Args:
+        user: User email
+        required_designations: A string or list of acceptable designations
+    """
+    if not user or not required_designations:
+        return False
+    
+    # Normalize to list
+    if isinstance(required_designations, str):
+        required_designations = [required_designations]
+    
+    for designation in required_designations:
+        employee = frappe.db.get_value(
+            "Employee",
+            {"user_id": user, "designation": designation},
+            "name"
+        )
+        if employee:
+            return True
+    return False
+
+
+@frappe.whitelist()
+def check_user_can_approve(doc_name, user=None):
+    """
+    Check if the given user can approve the specified leave application.
+    Used as a fallback when the primary email check fails.
+    
+    Checks if the user's Employee designation matches the required
+    approver designation for the current approval status.
+    
+    Args:
+        doc_name: Name of the Leave Application
+        user: User email to check (defaults to current user)
+        
+    Returns:
+        dict: {"can_approve": True/False, "reason": str}
+    """
+    if not user:
+        user = frappe.session.user
+    
+    if user == "Administrator":
+        return {"can_approve": True, "reason": "Administrator"}
+    
+    doc = frappe.get_doc("Leave Application", doc_name)
+    status = doc.custom_approval_status
+    hrms_status = doc.status
+    
+    # Don't allow if already approved
+    if hrms_status == "Approved" or doc.docstatus == 1:
+        return {"can_approve": False, "reason": "Already approved"}
+    
+    if not status:
+        return {"can_approve": False, "reason": "No approval status set"}
+    
+    # Check if user is the designated leave_approver (primary check)
+    if user == doc.leave_approver:
+        return {"can_approve": True, "reason": "Designated approver"}
+    
+    # Fallback: check by designation
+    required_designation = _get_required_designation_for_status(status)
+    if required_designation and _user_has_approver_designation(user, required_designation):
+        # Also update the leave_approver to this user so approve_leave works
+        try:
+            frappe.db.set_value(
+                "Leave Application", doc_name, "leave_approver", user,
+                update_modified=False
+            )
+            approver_name = frappe.db.get_value("User", user, "full_name")
+            if approver_name:
+                frappe.db.set_value(
+                    "Leave Application", doc_name, "leave_approver_name", approver_name,
+                    update_modified=False
+                )
+            frappe.db.commit()
+        except Exception:
+            # Non-critical: even if we can't update the approver field, still allow the button
+            pass
+        return {"can_approve": True, "reason": f"Designation match: {required_designation}"}
+    
+    return {"can_approve": False, "reason": "No matching designation"}
+
+
+@frappe.whitelist()
+def diagnose_leave_approval(doc_name=None):
+    """
+    Diagnostic API to debug leave approval issues in production.
+    Returns detailed information about the approval setup.
+    
+    Args:
+        doc_name: Optional Leave Application name to diagnose
+        
+    Returns:
+        dict: Diagnostic information
+    """
+    clear_approver_cache()
+    current_user = frappe.session.user
+    
+    result = {
+        "current_user": current_user,
+        "approver_lookup": {},
+        "current_user_employee": None,
+        "doc_info": None
+    }
+    
+    # Check approver lookups
+    for role, designation in APPROVER_DESIGNATIONS.items():
+        email = get_approver_email(role)
+        # Handle list of designations (e.g., HR can be "HR Coordinator" or "Coordinator")
+        designations = designation if isinstance(designation, list) else [designation]
+        emp = None
+        for desig in designations:
+            emp = frappe.db.get_value(
+                "Employee",
+                {"designation": desig, "user_id": ["is", "set"]},
+                ["name", "employee_name", "user_id", "designation", "status"],
+                as_dict=True
+            )
+            if emp:
+                break
+        result["approver_lookup"][role] = {
+            "designation": designation,
+            "resolved_email": email,
+            "fallback_email": FALLBACK_APPROVER_EMAILS.get(role),
+            "employee": emp
+        }
+    
+    # Check current user's employee
+    emp = frappe.db.get_value(
+        "Employee",
+        {"user_id": current_user},
+        ["name", "employee_name", "designation", "status"],
+        as_dict=True
+    )
+    result["current_user_employee"] = emp
+    
+    # If doc_name provided, check the specific document
+    if doc_name:
+        doc = frappe.get_doc("Leave Application", doc_name)
+        role_profile = get_employee_role_profile(doc.employee_name, doc.employee)
+        category = get_employee_category(role_profile, doc.employee_name, doc.employee)
+        
+        result["doc_info"] = {
+            "name": doc.name,
+            "employee": doc.employee,
+            "employee_name": doc.employee_name,
+            "status": doc.status,
+            "docstatus": doc.docstatus,
+            "custom_approval_status": doc.custom_approval_status,
+            "leave_approver": doc.leave_approver,
+            "leave_approver_name": doc.leave_approver_name,
+            "category": category,
+            "role_profile": role_profile,
+            "required_designation": _get_required_designation_for_status(doc.custom_approval_status),
+            "current_user_can_approve": (
+                current_user == doc.leave_approver or 
+                current_user == "Administrator" or
+                _user_has_approver_designation(
+                    current_user,
+                    _get_required_designation_for_status(doc.custom_approval_status)
+                )
+            )
+        }
+    
+    return result
+
+
+@frappe.whitelist()
+def fix_pending_leave_approvers():
+    """
+    One-time fix: Update leave_approver on all pending Leave Applications
+    to use the dynamically resolved approver emails based on designation.
+    
+    This fixes existing leave applications that have stale/incorrect approver emails.
+    Should be called once after deploying the designation-based lookup change.
+    """
+    clear_approver_cache()
+    
+    # Find all pending leave applications (docstatus=0, not approved/rejected)
+    pending_apps = frappe.get_all(
+        "Leave Application",
+        filters={
+            "docstatus": 0,
+            "status": ["not in", ["Approved", "Rejected", "Cancelled"]]
+        },
+        fields=["name", "custom_approval_status", "leave_approver", "employee", "employee_name"]
+    )
+    
+    fixed_count = 0
+    for app in pending_apps:
+        status = app.custom_approval_status
+        if not status or status in ["Approved", "Rejected"]:
+            continue
+        
+        # Determine which approver role is needed for the current status
+        required_designations = _get_required_designation_for_status(status)
+        if not required_designations:
+            continue
+        
+        # Find the approver key from the designation(s)
+        approver_key = None
+        for key, desig in APPROVER_DESIGNATIONS.items():
+            desig_list = desig if isinstance(desig, list) else [desig]
+            if any(d in required_designations for d in desig_list):
+                approver_key = key
+                break
+        
+        if not approver_key:
+            continue
+        
+        # Get the correct approver email
+        correct_email = get_approver_email(approver_key)
+        if correct_email and correct_email != app.leave_approver:
+            approver_name = frappe.db.get_value("User", correct_email, "full_name")
+            frappe.db.set_value("Leave Application", app.name, {
+                "leave_approver": correct_email,
+                "leave_approver_name": approver_name or approver_key
+            }, update_modified=False)
+            fixed_count += 1
+    
+    frappe.db.commit()
+    return {"fixed": fixed_count, "total_pending": len(pending_apps)}
+
+
+def _get_current_user_approver_role():
+    """
+    Check if the current user is an HR Coordinator, HOD (Area Sales Manager), or GM.
+    Returns the approver role key ("HOD", "HR", "GM") or None.
+    Used for permission checks.
+    """
+    user = frappe.session.user
+    if not user or user in ["Administrator", "Guest"]:
+        return None
+
+    # Get current user's employee designation
+    emp = frappe.db.get_value(
+        "Employee",
+        {"user_id": user},
+        ["designation"],
+        as_dict=True
+    )
+    if not emp:
+        return None
+
+    designation = emp.designation
+
+    # Check all approver designations
+    for role_key, desig in APPROVER_DESIGNATIONS.items():
+        desig_list = desig if isinstance(desig, list) else [desig]
+        if designation in desig_list:
+            return role_key
+
+    return None
+
+
+def get_permission_query_conditions(user):
+    """
+    Custom permission query conditions for Leave Application.
+    
+    Allows the following users to see ALL Leave Applications:
+    - Administrator / System Manager
+    - HR Coordinator (Bindu T) - needs to approve all pending HR-stage applications
+    - Area Sales Manager (HOD) - needs to see their team's applications
+    - General Manager - needs to see all applications for final approval
+    
+    Standard users (employees) see only their own applications (Frappe default).
+    
+    This is registered in hooks.py as:
+        permission_query_conditions = {"Leave Application": "...get_permission_query_conditions"}
+    """
+    if not user:
+        user = frappe.session.user
+
+    # Administrator sees everything - no extra conditions
+    if user == "Administrator":
+        return ""
+
+    # Check if user has System Manager role
+    if "System Manager" in frappe.get_roles(user):
+        return ""
+
+    # Check if user has HR Manager role (standard HRMS role)
+    if "HR Manager" in frappe.get_roles(user):
+        return ""
+
+    # Check user's employee designation
+    emp = frappe.db.get_value(
+        "Employee",
+        {"user_id": user},
+        ["designation", "department"],
+        as_dict=True
+    )
+
+    if emp:
+        designation = emp.designation or ""
+
+        # HR Coordinator: can see all leave applications (they approve all)
+        hr_designations = APPROVER_DESIGNATIONS.get("HR", [])
+        if isinstance(hr_designations, str):
+            hr_designations = [hr_designations]
+        if designation in hr_designations:
+            return ""  # No restriction - see all
+
+        # General Manager: can see all leave applications
+        gm_designation = APPROVER_DESIGNATIONS.get("GM", "")
+        if designation == gm_designation:
+            return ""  # No restriction - see all
+
+        # Area Sales Manager (HOD): can see applications from their department
+        hod_designation = APPROVER_DESIGNATIONS.get("HOD", "")
+        if designation == hod_designation:
+            # Show all applications — HOD needs to approve Sales Executives
+            return ""  # No restriction - see all
+
+    # For all other employees: default Frappe behaviour
+    # They see their own applications and ones where they are the leave_approver
+    return (
+        f"(`tabLeave Application`.`owner` = {frappe.db.escape(user)}"
+        f" OR `tabLeave Application`.`leave_approver` = {frappe.db.escape(user)})"
+    )
+
+
+def has_permission(doc, ptype, user):
+    """
+    Custom document-level permission check for Leave Application.
+    
+    Grants read/write access to:
+    - The document owner (the employee who applied)
+    - The designated leave_approver
+    - HR Coordinator, HOD (Area Sales Manager), GM — they need to see and act on documents
+    - System Manager / Administrator
+    
+    Returns True to grant access, False to deny, None to use default Frappe logic.
+    
+    Registered in hooks.py as:
+        has_permission = {"Leave Application": "...has_permission"}
+    """
+    if not user:
+        user = frappe.session.user
+
+    # Administrator always has access
+    if user == "Administrator":
+        return True
+
+    # System Manager / HR Manager roles
+    user_roles = frappe.get_roles(user)
+    if "System Manager" in user_roles or "HR Manager" in user_roles:
+        return True
+
+    # Document owner (the employee who applied)
+    if doc.owner == user:
+        return True
+
+    # Designated leave approver for this document
+    if doc.leave_approver == user:
+        return True
+
+    # Check user's Employee designation
+    emp = frappe.db.get_value(
+        "Employee",
+        {"user_id": user},
+        ["designation"],
+        as_dict=True
+    )
+
+    if emp:
+        designation = emp.designation or ""
+
+        # HR Coordinator: access to all leave applications
+        hr_designations = APPROVER_DESIGNATIONS.get("HR", [])
+        if isinstance(hr_designations, str):
+            hr_designations = [hr_designations]
+        if designation in hr_designations:
+            return True
+
+        # General Manager: access to all leave applications
+        gm_designation = APPROVER_DESIGNATIONS.get("GM", "")
+        if designation == gm_designation:
+            return True
+
+        # Area Sales Manager (HOD): access to all leave applications
+        hod_designation = APPROVER_DESIGNATIONS.get("HOD", "")
+        if designation == hod_designation:
+            return True
+
+    # Fallback: use Frappe default permission logic
+    return None

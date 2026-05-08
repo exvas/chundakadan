@@ -3,9 +3,6 @@
 
 frappe.listview_settings['Leave Application'] = frappe.listview_settings['Leave Application'] || {};
 
-// GM email - should match the Python APPROVERS dict
-const GM_EMAIL = "chundakadangm@gmail.com";
-
 // Store original formatters
 const original_formatters = frappe.listview_settings['Leave Application'].formatters || {};
 

@@ -51,56 +51,54 @@ function set_approver_for_employee(frm) {
 
 function add_approval_buttons(frm) {
     const current_user = frappe.session.user;
-    const leave_approver = frm.doc.leave_approver;
     const custom_approval_status = frm.doc.custom_approval_status;
-
-    // Check if buttons should be shown:
-    // 1. For "Pending X" status - show to the designated approver
-    // 2. For "Approved X" status (intermediate, HRMS status not yet Approved) - show to the next approver
-    // Don't show if HRMS status is already "Approved" (final approval done)
-
-    let should_show_buttons = false;
     const hrms_status = frm.doc.status;
 
-    if (custom_approval_status && hrms_status !== "Approved") {
-        if (custom_approval_status.startsWith("Pending") && current_user === leave_approver) {
-            // Pending status - current user is the designated approver
-            should_show_buttons = true;
-        } else if (custom_approval_status.startsWith("Approved") &&
-            current_user === leave_approver) {
-            // Intermediate "Approved X" status - current user is the next approver
-            should_show_buttons = true;
-        }
+    // Don't show buttons if already fully approved or no status set
+    if (!custom_approval_status || hrms_status === "Approved") {
+        return;
     }
 
-    // Only proceed if there's a status to handle
-    if (custom_approval_status &&
-        (custom_approval_status.startsWith("Pending") ||
-            (custom_approval_status.startsWith("Approved") && hrms_status !== "Approved"))) {
+    // Only relevant for Pending or intermediate Approved statuses
+    if (!custom_approval_status.startsWith("Pending") &&
+        !(custom_approval_status.startsWith("Approved") && hrms_status !== "Approved")) {
+        return;
+    }
 
-        // Use a single timeout with frappe.after_ajax to ensure page is ready
-        frappe.after_ajax(function () {
-            // Clear existing action items first
-            frm.page.clear_actions_menu();
-
-            if (should_show_buttons) {
-                // Add Approve option
-                frm.page.add_action_item(__('Approve'), function () {
-                    approve_leave_application(frm, 'approve');
-                });
-
-                // Add Reject option
-                frm.page.add_action_item(__('Reject'), function () {
-                    frappe.confirm(
-                        __('Are you sure you want to reject this leave application?'),
-                        function () {
-                            approve_leave_application(frm, 'reject');
-                        }
-                    );
-                });
+    // Always use backend check to verify eligibility (handles all email/designation scenarios)
+    // This is the most reliable approach for both local and production environments
+    frappe.call({
+        method: 'chundakadan.doc_events.leave_application.check_user_can_approve',
+        args: {
+            doc_name: frm.doc.name,
+            user: current_user
+        },
+        callback: function (r) {
+            if (r.message && r.message.can_approve) {
+                _render_approval_buttons(frm);
             }
-        });
-    }
+        }
+    });
+}
+
+function _render_approval_buttons(frm) {
+    // Clear existing action items first
+    frm.page.clear_actions_menu();
+
+    // Add Approve option
+    frm.page.add_action_item(__('Approve'), function () {
+        approve_leave_application(frm, 'approve');
+    });
+
+    // Add Reject option
+    frm.page.add_action_item(__('Reject'), function () {
+        frappe.confirm(
+            __('Are you sure you want to reject this leave application?'),
+            function () {
+                approve_leave_application(frm, 'reject');
+            }
+        );
+    });
 }
 
 function approve_leave_application(frm, action) {
