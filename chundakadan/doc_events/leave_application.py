@@ -61,8 +61,9 @@ def get_approver_email(approver_key):
         )
         
         if employee and employee.user_id:
-            _approver_cache[approver_key] = employee.user_id
-            return employee.user_id
+            user_id = employee.user_id.lower().strip()
+            _approver_cache[approver_key] = user_id
+            return user_id
         
         # Try without status filter (in case employee status differs)
         employee = frappe.db.get_value(
@@ -76,11 +77,12 @@ def get_approver_email(approver_key):
         )
         
         if employee and employee.user_id:
-            _approver_cache[approver_key] = employee.user_id
-            return employee.user_id
+            user_id = employee.user_id.lower().strip()
+            _approver_cache[approver_key] = user_id
+            return user_id
     
     # Final fallback to hardcoded email
-    fallback = FALLBACK_APPROVER_EMAILS.get(approver_key, "")
+    fallback = FALLBACK_APPROVER_EMAILS.get(approver_key, "").lower().strip()
     _approver_cache[approver_key] = fallback
     return fallback
 
@@ -704,9 +706,27 @@ def _user_has_approver_designation(user, required_designations):
         required_designations = [required_designations]
     
     for designation in required_designations:
+        # Check for active employee with matching user_id (case-insensitive) and designation
+        # Using frappe.db.get_value with multiple filters is efficient
         employee = frappe.db.get_value(
             "Employee",
-            {"user_id": user, "designation": designation},
+            {
+                "user_id": ["like", f"{user}%"], 
+                "designation": designation,
+                "status": "Active"
+            },
+            "name"
+        )
+        if employee:
+            return True
+        
+        # Fallback: check without status filter
+        employee = frappe.db.get_value(
+            "Employee",
+            {
+                "user_id": ["like", f"{user}%"], 
+                "designation": designation
+            },
             "name"
         )
         if employee:
@@ -727,7 +747,10 @@ def check_user_can_approve(doc_name, user=None):
     if not user:
         user = frappe.session.user
     
-    if user == "Administrator":
+    # Normalize user email
+    user = user.lower().strip()
+    
+    if user == "administrator":
         return {"can_approve": True, "reason": "Administrator"}
     
     doc = frappe.get_doc("Leave Application", doc_name)
@@ -739,7 +762,11 @@ def check_user_can_approve(doc_name, user=None):
         return {"can_approve": False, "reason": "Already approved"}
     
     if not status:
-        return {"can_approve": False, "reason": "No approval status set"}
+        # If no custom status is set, try to determine it based on hrms_status
+        if hrms_status == "Open":
+            status = "Pending"
+        else:
+            return {"can_approve": False, "reason": "No approval status set"}
     
     # Get required designation for current status
     required_designation = _get_required_designation_for_status(status)
