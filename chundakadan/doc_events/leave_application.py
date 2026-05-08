@@ -711,17 +711,11 @@ def _user_has_approver_designation(user, required_designations):
 def check_user_can_approve(doc_name, user=None):
     """
     Check if the given user can approve the specified leave application.
-    Used as a fallback when the primary email check fails.
     
-    Checks if the user's Employee designation matches the required
-    approver designation for the current approval status.
-    
-    Args:
-        doc_name: Name of the Leave Application
-        user: User email to check (defaults to current user)
-        
-    Returns:
-        dict: {"can_approve": True/False, "reason": str}
+    This function validates if the user has the authority to approve based on 
+    their designation and the current approval status. It ensures that once 
+    a user has approved their stage (e.g. HOD approved), they no longer see 
+    the approval buttons.
     """
     if not user:
         user = frappe.session.user
@@ -733,37 +727,44 @@ def check_user_can_approve(doc_name, user=None):
     status = doc.custom_approval_status
     hrms_status = doc.status
     
-    # Don't allow if already approved
+    # Don't allow if already fully approved or document is submitted
     if hrms_status == "Approved" or doc.docstatus == 1:
         return {"can_approve": False, "reason": "Already approved"}
     
     if not status:
         return {"can_approve": False, "reason": "No approval status set"}
     
-    # Check if user is the designated leave_approver (primary check)
-    if user == doc.leave_approver:
-        return {"can_approve": True, "reason": "Designated approver"}
-    
-    # Fallback: check by designation
+    # Get required designation for current status
     required_designation = _get_required_designation_for_status(status)
+    
+    # Authoritative check: Does the user's designation match the requirement?
     if required_designation and _user_has_approver_designation(user, required_designation):
-        # Also update the leave_approver to this user so approve_leave works
-        try:
-            frappe.db.set_value(
-                "Leave Application", doc_name, "leave_approver", user,
-                update_modified=False
-            )
-            approver_name = frappe.db.get_value("User", user, "full_name")
-            if approver_name:
+        # User is eligible to approve this stage. 
+        # Update leave_approver field if it doesn't match to ensure consistent UI
+        if user != doc.leave_approver:
+            try:
                 frappe.db.set_value(
-                    "Leave Application", doc_name, "leave_approver_name", approver_name,
+                    "Leave Application", doc_name, "leave_approver", user,
                     update_modified=False
                 )
-            frappe.db.commit()
-        except Exception:
-            # Non-critical: even if we can't update the approver field, still allow the button
-            pass
+                approver_name = frappe.db.get_value("User", user, "full_name")
+                if approver_name:
+                    frappe.db.set_value(
+                        "Leave Application", doc_name, "leave_approver_name", approver_name,
+                        update_modified=False
+                    )
+                frappe.db.commit()
+            except Exception:
+                pass
         return {"can_approve": True, "reason": f"Designation match: {required_designation}"}
+    
+    # If designation requirement exists but user doesn't match, deny
+    if required_designation:
+        return {"can_approve": False, "reason": f"Required designation: {required_designation}"}
+
+    # Fallback for statuses without specific designation requirements
+    if user == doc.leave_approver:
+        return {"can_approve": True, "reason": "Designated approver"}
     
     return {"can_approve": False, "reason": "No matching designation"}
 
