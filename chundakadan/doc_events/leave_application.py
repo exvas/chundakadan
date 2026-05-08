@@ -6,7 +6,7 @@ from frappe import _
 # Maps each approver role to the designation used to find the approver employee
 # HR uses a list to support both "HR Coordinator" and "Coordinator" designations
 APPROVER_DESIGNATIONS = {
-    "HOD": "Area Sales Manager",
+    "HOD": ["Area Sales Manager", "Sales& Marketing Manager", "Sales Manager"],
     "HR": ["HR Coordinator", "Coordinator"],
     "GM": "General Manager"
 }
@@ -189,9 +189,9 @@ def get_employee_category(role_profile, employee_name=None, employee=None):
         if designation in ["Coordinator", "HR Coordinator"]:
             return "hod_hr"
 
-        # 3. Check for HOD (Area Sales Manager)
+        # 3. Check for HOD (Area Sales Manager, Sales& Marketing Manager, Sales Manager)
         # Leaves go to HR first, then GM
-        if designation == "Area Sales Manager":
+        if designation in ["Area Sales Manager", "Sales& Marketing Manager", "Sales Manager"]:
             return "other"
             
         # 4. Check for Sales Executive
