@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-11 17:22:24.025283",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "form_header",
+  "operational_efficiency_section",
+  "shares_accurate_order_details",
+  "communicates_clearly_and_timely",
+  "follows_up_on_pending_orders",
+  "maintains_proper_documentation_reporting",
+  "coordinates_smoothly_with_internal_teams",
+  "handles_pressure_and_urgency_effectively",
+  "overall_rating",
+  "open_feedback_section",
+  "strength",
+  "area_for_improvement",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "form_header",
+   "fieldtype": "HTML",
+   "options": "<div style=\"text-align: center; font-family: 'Times New Roman', serif; color: #000; padding: 20px;\">\n    <h2 style=\"font-weight: bold; text-transform: uppercase;\">2. COORDINATOR FEEDBACK FORM</h2>\n</div>"
+  },
+  {
+   "fieldname": "operational_efficiency_section",
+   "fieldtype": "Section Break",
+   "label": "Section: Operational Efficiency"
+  },
+  {
+   "fieldname": "shares_accurate_order_details",
+   "fieldtype": "Rating",
+   "label": "1. Shares accurate order details"
+  },
+  {
+   "fieldname": "communicates_clearly_and_timely",
+   "fieldtype": "Rating",
+   "label": "2. Communicates clearly and timely"
+  },
+  {
+   "fieldname": "follows_up_on_pending_orders",
+   "fieldtype": "Rating",
+   "label": "3. Follows up on pending orders/issues"
+  },
+  {
+   "fieldname": "maintains_proper_documentation_reporting",
+   "fieldtype": "Rating",
+   "label": "4. Maintains proper documentation/reporting"
+  },
+  {
+   "fieldname": "coordinates_smoothly_with_internal_teams",
+   "fieldtype": "Rating",
+   "label": "5. Coordinates smoothly with internal teams"
+  },
+  {
+   "fieldname": "handles_pressure_and_urgency_effectively",
+   "fieldtype": "Rating",
+   "label": "6. Handles pressure and urgency effectively"
+  },
+  {
+   "fieldname": "overall_rating",
+   "fieldtype": "Rating",
+   "label": "Overall Rating"
+  },
+  {
+   "fieldname": "open_feedback_section",
+   "fieldtype": "Section Break",
+   "label": "Open Feedback"
+  },
+  {
+   "fieldname": "strength",
+   "fieldtype": "Small Text",
+   "label": "Strength"
+  },
+  {
+   "fieldname": "area_for_improvement",
+   "fieldtype": "Small Text",
+   "label": "Area for Improvement"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Coordinator Feedback Form",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-11 17:25:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Coordinator Feedback Form",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
