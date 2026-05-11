@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-11 15:51:02.240905",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "form_header",
+  "section_break_4nld",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "form_header",
+   "fieldtype": "HTML",
+   "options": "<style>\n    .performance-form-header {\n        font-family: Arial, sans-serif;\n        color: #000;\n        line-height: 1.6;\n        padding: 10px;\n    }\n    .performance-form-header h2 {\n        font-weight: bold;\n        font-size: 20px;\n        margin-bottom: 20px;\n    }\n    .header-field {\n        font-size: 18px;\n        margin-bottom: 8px;\n        font-weight: bold;\n    }\n    .header-field span.value-line {\n        font-weight: normal;\n        text-decoration: none;\n        display: inline-block;\n        min-width: 200px;\n        border-bottom: 1px solid #000;\n        margin-left: 5px;\n    }\n    .instructions-header {\n        font-weight: bold;\n        font-size: 18px;\n        margin-top: 25px;\n        margin-bottom: 15px;\n    }\n    .instructions-list {\n        list-style-type: disc;\n        margin-left: 25px;\n    }\n    .instructions-list li {\n        margin-bottom: 5px;\n        font-size: 17px;\n    }\n    .rating-scale {\n        list-style-type: circle;\n        margin-left: 25px;\n        margin-top: 5px;\n    }\n</style>\n\n<div class=\"performance-form-header\">\n    <h2>360° Performance Feedback Form – Executive Evaluation</h2>\n    \n    <div class=\"header-field\">Cycle: [Jan–Jun / Jul–Dec]</div>\n    <div class=\"header-field\">Executive Name: <span class=\"value-line\">&nbsp;</span></div>\n    <div class=\"header-field\">Employee Code: <span class=\"value-line\">&nbsp;</span></div>\n    <div class=\"header-field\">Department/Territory: <span class=\"value-line\">&nbsp;</span></div>\n\n    <div class=\"instructions-header\">Instructions (keep this same everywhere):</div>\n    \n    <ul class=\"instructions-list\">\n        <li>Rate each statement on a scale of <b>1 to 5</b>\n            <ul class=\"rating-scale\">\n                <li>1 = Poor</li>\n                <li>2 = Below Average</li>\n                <li>3 = Satisfactory</li>\n                <li>4 = Good</li>\n                <li>5 = Excellent</li>\n            </ul>\n        </li>\n        <li>Be honest and objective</li>\n        <li>Feedback will be used for performance improvement and development</li>\n    </ul>\n</div>"
+  },
+  {
+   "fieldname": "section_break_4nld",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Performance Feedback Form",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-11 15:52:58.885250",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Performance Feedback Form",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
