@@ -5,13 +5,94 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_bmxw",
+  "form_header",
+  "relationship_service_quality_section",
+  "responds_promptly_to_calls_and_queries",
+  "maintains_regular_contact_and_visits",
+  "keeps_commitments",
+  "handles_complaints_issues_effectively",
+  "maintains_professional_and_respectful_behavior",
+  "helps_in_business_growth",
+  "overall_rating",
+  "open_feedback_section",
+  "what_does_this_executive_do_well",
+  "what_should_this_executive_improve",
+  "key_question_section",
+  "would_you_like_to_continue_working_with_this_executive",
   "amended_from"
  ],
  "fields": [
   {
-   "fieldname": "section_break_bmxw",
-   "fieldtype": "Section Break"
+   "fieldname": "form_header",
+   "fieldtype": "HTML",
+   "options": "<div style=\"text-align: center; font-family: 'Times New Roman', serif; color: #000; padding: 20px;\">\n    <h2 style=\"font-weight: bold; text-transform: uppercase;\">CUSTOMER FEEDBACK FORM</h2>\n</div>"
+  },
+  {
+   "fieldname": "relationship_service_quality_section",
+   "fieldtype": "Section Break",
+   "label": "Section: Relationship & Service Quality"
+  },
+  {
+   "description": "Rate the following (1-5):",
+   "fieldname": "responds_promptly_to_calls_and_queries",
+   "fieldtype": "Rating",
+   "label": "1. Responds promptly to calls and queries"
+  },
+  {
+   "fieldname": "maintains_regular_contact_and_visits",
+   "fieldtype": "Rating",
+   "label": "2. Maintains regular contact and visits"
+  },
+  {
+   "fieldname": "keeps_commitments",
+   "fieldtype": "Rating",
+   "label": "3. Keeps commitments (delivery, follow-up, promises)"
+  },
+  {
+   "fieldname": "handles_complaints_issues_effectively",
+   "fieldtype": "Rating",
+   "label": "4. Handles complaints/issues effectively"
+  },
+  {
+   "fieldname": "maintains_professional_and_respectful_behavior",
+   "fieldtype": "Rating",
+   "label": "5. Maintains professional and respectful behavior"
+  },
+  {
+   "fieldname": "helps_in_business_growth",
+   "fieldtype": "Rating",
+   "label": "6. Helps in business growth (suggestions, support)"
+  },
+  {
+   "fieldname": "overall_rating",
+   "fieldtype": "Rating",
+   "label": "Overall Rating"
+  },
+  {
+   "fieldname": "open_feedback_section",
+   "fieldtype": "Section Break",
+   "label": "Open Feedback"
+  },
+  {
+   "fieldname": "what_does_this_executive_do_well",
+   "fieldtype": "Small Text",
+   "label": "What does this executive do well?"
+  },
+  {
+   "fieldname": "what_should_this_executive_improve",
+   "fieldtype": "Small Text",
+   "label": "What should this executive improve?"
+  },
+  {
+   "fieldname": "key_question_section",
+   "fieldtype": "Section Break",
+   "label": "Key Question (Do not skip)"
+  },
+  {
+   "fieldname": "would_you_like_to_continue_working_with_this_executive",
+   "fieldtype": "Select",
+   "label": "Would you like to continue working with this executive?",
+   "options": "\nYes\nNo\nNeutral"
   },
   {
    "fieldname": "amended_from",
@@ -28,7 +109,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-11 16:36:41.127648",
+ "modified": "2026-05-11 17:15:00.000000",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Customer Feedback Form",
