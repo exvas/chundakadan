@@ -46,29 +46,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "cycle",
-   "fieldtype": "Data",
-   "label": "Cycle"
-  },
-  {
-   "fieldname": "executive_name",
-   "fieldtype": "Link",
-   "label": "Executive Name",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "employee_code",
-   "fieldtype": "Data",
-   "label": "Employee Code",
-   "read_only": 1
-  },
-  {
-   "fieldname": "department_territory",
-   "fieldtype": "Data",
-   "label": "Department/Territory",
-   "read_only": 1
-  },
-  {
    "fieldname": "instructions",
    "fieldtype": "HTML",
    "label": "Instructions (keep this same everywhere)"
@@ -104,6 +81,11 @@
    "label": "5. I contribute to team success"
   },
   {
+   "fieldname": "overall_self_rating",
+   "fieldtype": "Rating",
+   "label": "Overall Self Rating"
+  },
+  {
    "fieldname": "reflection_section",
    "fieldtype": "Section Break",
    "label": "Reflection"
@@ -122,12 +104,8 @@
    "fieldname": "support_required",
    "fieldtype": "Small Text",
    "label": "Support required from management"
-  },
-  {
-   "fieldname": "overall_self_rating",
-   "fieldtype": "Rating",
-   "label": "Overall Self Rating"
   }
+  
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
