@@ -1,139 +1,133 @@
 {
- "actions": [],
- "allow_rename": 1,
- "creation": "2026-05-12 10:20:22.960888",
- "doctype": "DocType",
- "engine": "InnoDB",
-  "field_order": [
-  "form_header",
-  "section_break_r5jf",
-  "amended_from",
-  "cycle",
-  "executive_name",
-  "employee_code",
-  "department_territory",
-  "instructions",
-  "rate_the_following",
-  "meet_targets",
-  "dealer_relationships",
-  "processes_reporting",
-  "handle_challenges",
-  "contribute_team",
-  "reflection_section",
-  "key_achievements",
-  "improvement_areas",
-  "support_required",
-  "overall_self_rating"
- ],
- "fields": [
-  {
-   "fieldname": "form_header",
-   "fieldtype": "HTML",
-   "options": "<div style=\"text-align: center; font-family: 'Times New Roman', serif; color: #000; padding: 20px;\">\n    <h2 style=\"font-weight: bold;\">5. SELF-ASSESSMENT FORM</h2>\n</div>"
-  },
-  {
-   "fieldname": "section_break_r5jf",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Self Assessment Form",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "instructions",
-   "fieldtype": "HTML",
-   "label": "Instructions (keep this same everywhere)"
-  },
-  {
-   "fieldname": "rate_the_following",
-   "fieldtype": "Section Break",
-   "label": "Rate the following:"
-  },
-  {
-   "fieldname": "meet_targets",
-   "fieldtype": "Rating",
-   "label": "1. I consistently meet my targets"
-  },
-  {
-   "fieldname": "dealer_relationships",
-   "fieldtype": "Rating",
-   "label": "2. I maintain strong dealer relationships"
-  },
-  {
-   "fieldname": "processes_reporting",
-   "fieldtype": "Rating",
-   "label": "3. I follow company processes and reporting"
-  },
-  {
-   "fieldname": "handle_challenges",
-   "fieldtype": "Rating",
-   "label": "4. I handle challenges effectively"
-  },
-  {
-   "fieldname": "contribute_team",
-   "fieldtype": "Rating",
-   "label": "5. I contribute to team success"
-  },
-  {
-   "fieldname": "overall_self_rating",
-   "fieldtype": "Rating",
-   "label": "Overall Self Rating"
-  },
-  {
-   "fieldname": "reflection_section",
-   "fieldtype": "Section Break",
-   "label": "Reflection"
-  },
-  {
-   "fieldname": "key_achievements",
-   "fieldtype": "Small Text",
-   "label": "Key achievements this cycle"
-  },
-  {
-   "fieldname": "improvement_areas",
-   "fieldtype": "Small Text",
-   "label": "Areas i want to improve"
-  },
-  {
-   "fieldname": "support_required",
-   "fieldtype": "Small Text",
-   "label": "Support required from management"
-  }
-  
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "is_submittable": 1,
- "links": [],
- "modified": "2026-05-12 11:15:00.000000",
- "modified_by": "Administrator",
- "module": "Chundakadan",
- "name": "Self Assessment Form",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "submit": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": []
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2026-05-12 10:20:22.960888",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "form_header",
+        "section_break_r5jf",
+        "amended_from",
+        "cycle",
+        "executive_name",
+        "employee_code",
+        "department_territory",
+        "instructions",
+        "rate_the_following",
+        "meet_targets",
+        "dealer_relationships",
+        "processes_reporting",
+        "handle_challenges",
+        "contribute_team",
+        "reflection_section",
+        "key_achievements",
+        "improvement_areas",
+        "support_required",
+        "overall_self_rating"
+    ],
+    "fields": [
+        {
+            "fieldname": "form_header",
+            "fieldtype": "HTML",
+            "options": "<div style=\"text-align: center; font-family: 'Times New Roman', serif; color: #000; padding: 20px;\">\n    <h2 style=\"font-weight: bold;\">5. SELF-ASSESSMENT FORM</h2>\n</div>"
+        },
+        {
+            "fieldname": "section_break_r5jf",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "amended_from",
+            "fieldtype": "Link",
+            "label": "Amended From",
+            "no_copy": 1,
+            "options": "Self Assessment Form",
+            "print_hide": 1,
+            "read_only": 1,
+            "search_index": 1
+        },
+        {
+            "fieldname": "rate_the_following",
+            "fieldtype": "Section Break",
+            "label": "Rate the following:"
+        },
+        {
+            "fieldname": "meet_targets",
+            "fieldtype": "Rating",
+            "label": "1. I consistently meet my targets"
+        },
+        {
+            "fieldname": "dealer_relationships",
+            "fieldtype": "Rating",
+            "label": "2. I maintain strong dealer relationships"
+        },
+        {
+            "fieldname": "processes_reporting",
+            "fieldtype": "Rating",
+            "label": "3. I follow company processes and reporting"
+        },
+        {
+            "fieldname": "handle_challenges",
+            "fieldtype": "Rating",
+            "label": "4. I handle challenges effectively"
+        },
+        {
+            "fieldname": "contribute_team",
+            "fieldtype": "Rating",
+            "label": "5. I contribute to team success"
+        },
+        {
+            "fieldname": "overall_self_rating",
+            "fieldtype": "Rating",
+            "label": "Overall Self Rating"
+        },
+        {
+            "fieldname": "reflection_section",
+            "fieldtype": "Section Break",
+            "label": "Reflection"
+        },
+        {
+            "fieldname": "key_achievements",
+            "fieldtype": "Small Text",
+            "label": "Key achievements this cycle"
+        },
+        {
+            "fieldname": "improvement_areas",
+            "fieldtype": "Small Text",
+            "label": "Areas i want to improve"
+        },
+        {
+            "fieldname": "support_required",
+            "fieldtype": "Small Text",
+            "label": "Support required from management"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "is_submittable": 1,
+    "links": [],
+    "modified": "2026-05-12 11:15:00.000000",
+    "modified_by": "Administrator",
+    "module": "Chundakadan",
+    "name": "Self Assessment Form",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "rows_threshold_for_grid_search": 20,
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
 }
