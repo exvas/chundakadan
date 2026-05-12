@@ -31,16 +31,26 @@ frappe.ui.form.on("Performance Feedback Form", {
 		}
 	},
 	custom_executive_name(frm) {
+
 		if (frm.doc.custom_executive_name) {
-			frappe.db.get_value('Employee', frm.doc.custom_executive_name, ['name', 'department'], (r) => {
-				if (r) {
-					frm.set_value('custom_employee_code', r.name);
-					frm.set_value('custom_departmentterritory', r.department);
-				}
-			});
-		} else {
-			frm.set_value('custom_employee_code', '');
-			frm.set_value('custom_departmentterritory', '');
+
+			frappe.db.get_doc("Employee", frm.doc.custom_executive_name)
+				.then((doc) => {
+
+					// Employee Name
+					frm.set_df_property(
+						"custom_executive_name",
+						"description",
+						`Employee Name: <b>${doc.employee_name}</b>`
+					);
+
+					// Employee Code
+					frm.set_value("custom_employee_code", doc.name);
+
+					// Department
+					frm.set_value("custom_departmentterritory", doc.department);
+				});
+
 		}
 	}
 });

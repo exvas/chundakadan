@@ -7,7 +7,12 @@
  "field_order": [
   "form_header",
   "section_break_4nld",
-  "amended_from"
+  "amended_from",
+  "custom_cycle",
+  "custom_executive_name",
+  "custom_employee_code",
+  "custom_departmentterritory",
+  "custom_instructions_keep_this_same_everywhere"
  ],
  "fields": [
   {
@@ -28,6 +33,35 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "custom_cycle",
+   "fieldtype": "Data",
+   "label": "Cycle"
+  },
+  {
+   "fieldname": "custom_executive_name",
+   "fieldtype": "Link",
+   "label": "Executive Name",
+   "options": "Employee",
+   "show_title_field_in_link": 1
+  },
+  {
+   "fieldname": "custom_employee_code",
+   "fieldtype": "Data",
+   "label": "Employee Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "custom_departmentterritory",
+   "fieldtype": "Data",
+   "label": "Department/Territory",
+   "read_only": 1
+  },
+  {
+   "fieldname": "custom_instructions_keep_this_same_everywhere",
+   "fieldtype": "HTML",
+   "label": "Instructions (keep this same everywhere)"
   }
  ],
  "grid_page_length": 50,
