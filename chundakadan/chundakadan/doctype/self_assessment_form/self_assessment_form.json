@@ -5,10 +5,32 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "form_header",
   "section_break_r5jf",
-  "amended_from"
+  "amended_from",
+  "custom_cycle",
+  "custom_executive_name",
+  "custom_employee_code",
+  "custom_departmentterritory",
+  "custom_instructions_keep_this_same_everywhere",
+  "rating_html",
+  "meet_targets",
+  "dealer_relationships",
+  "processes_reporting",
+  "handle_challenges",
+  "contribute_team",
+  "overall_self_rating"
  ],
  "fields": [
+  {
+   "fieldname": "form_header",
+   "fieldtype": "HTML",
+   "options": "<div style=\"text-align: center; font-family: 'Times New Roman', serif; color: #000; padding: 20px;\">\n    <h2 style=\"font-weight: bold;\">5. SELF-ASSESSMENT FORM</h2>\n</div>"
+  },
+  {
+   "fieldname": "section_break_r5jf",
+   "fieldtype": "Section Break"
+  },
   {
    "fieldname": "amended_from",
    "fieldtype": "Link",
@@ -20,15 +42,79 @@
    "search_index": 1
   },
   {
-   "fieldname": "section_break_r5jf",
-   "fieldtype": "Section Break"
+   "fieldname": "custom_cycle",
+   "fieldtype": "Data",
+   "label": "Cycle"
+  },
+  {
+   "fieldname": "custom_executive_name",
+   "fieldtype": "Link",
+   "label": "Executive Name",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "custom_employee_code",
+   "fieldtype": "Data",
+   "label": "Employee Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "custom_departmentterritory",
+   "fieldtype": "Data",
+   "label": "Department/Territory",
+   "read_only": 1
+  },
+  {
+   "fieldname": "custom_instructions_keep_this_same_everywhere",
+   "fieldtype": "HTML",
+   "label": "Instructions (keep this same everywhere)"
+  },
+  {
+   "fieldname": "rating_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "meet_targets",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "I consistently meet my targets"
+  },
+  {
+   "fieldname": "dealer_relationships",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "I maintain strong dealer relationships"
+  },
+  {
+   "fieldname": "processes_reporting",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "I follow company processes and reporting"
+  },
+  {
+   "fieldname": "handle_challenges",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "I handle challenges effectively"
+  },
+  {
+   "fieldname": "contribute_team",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "I contribute to team success"
+  },
+  {
+   "fieldname": "overall_self_rating",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Overall Self Rating"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-12 10:20:22.960888",
+ "modified": "2026-05-12 11:15:00.000000",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Self Assessment Form",

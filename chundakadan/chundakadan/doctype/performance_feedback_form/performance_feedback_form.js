@@ -21,10 +21,10 @@ frappe.ui.form.on("Performance Feedback Form", {
 				</ul>
 			</div>
 		`;
-		
+
 		// Method 1: Set property
 		frm.set_df_property('custom_instructions_keep_this_same_everywhere', 'options', instructions_html);
-		
+
 		// Method 2: Direct injection to wrapper
 		if (frm.fields_dict.custom_instructions_keep_this_same_everywhere) {
 			$(frm.fields_dict.custom_instructions_keep_this_same_everywhere.wrapper).html(instructions_html);
@@ -41,7 +41,7 @@ frappe.ui.form.on("Performance Feedback Form", {
 					frm.set_df_property(
 						"custom_executive_name",
 						"description",
-						`Employee Name: <b>${doc.employee_name}</b>`
+
 					);
 
 					// Employee Code

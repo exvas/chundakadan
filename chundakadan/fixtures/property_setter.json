@@ -3006,5 +3006,21 @@
   "property_type": "Data",
   "row_name": null,
   "value": "[\"form_header\", \"rating_section\", \"achieves_sales_collection_targets\", \"expands_market_coverage_and_new_dealers\", \"takes_ownership_of_responsibilities\", \"demonstrates_problem_solving_ability\", \"maintains_discipline_and_reporting_accuracy\", \"represents_the_company_professionally\", \"overall_rating\", \"amended_from\", \"custom_kpi_performance_manager_to_fill\", \"custom_target_achievement_\", \"custom_collection_efficiency\", \"custom_market_growth_contribution\", \"section_break_abyg\", \"manager_remarks\"]"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Employee",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": null,
+  "is_system_generated": 0,
+  "modified": "2026-05-12 11:09:02.675435",
+  "module": "Chundakadan",
+  "name": "Employee-main-show_title_field_in_link",
+  "property": "show_title_field_in_link",
+  "property_type": "Check",
+  "row_name": null,
+  "value": "1"
  }
 ]
