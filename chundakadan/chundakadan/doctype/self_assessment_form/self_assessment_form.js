@@ -16,21 +16,21 @@ frappe.ui.form.on("Self Assessment Form", {
 				</ul>
 			</div>
 		`;
-		if (frm.fields_dict.custom_instructions_keep_this_same_everywhere) {
-			$(frm.fields_dict.custom_instructions_keep_this_same_everywhere.wrapper).html(instructions_html);
+		if (frm.fields_dict.instructions) {
+			$(frm.fields_dict.instructions.wrapper).html(instructions_html);
 		}
 	},
-	custom_executive_name(frm) {
-		if (frm.doc.custom_executive_name) {
-			frappe.db.get_value("Employee", frm.doc.custom_executive_name, ["name", "department", "employee_name"], (r) => {
+	executive_name(frm) {
+		if (frm.doc.executive_name) {
+			frappe.db.get_value("Employee", frm.doc.executive_name, ["name", "department", "employee_name"], (r) => {
 				if (r) {
-					frm.set_value("custom_employee_code", r.name);
-					frm.set_value("custom_departmentterritory", r.department);
+					frm.set_value("employee_code", r.name);
+					frm.set_value("department_territory", r.department);
 				}
 			});
 		} else {
-			frm.set_value("custom_employee_code", "");
-			frm.set_value("custom_departmentterritory", "");
+			frm.set_value("employee_code", "");
+			frm.set_value("department_territory", "");
 		}
 	}
 });

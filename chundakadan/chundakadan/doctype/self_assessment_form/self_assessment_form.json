@@ -8,18 +8,21 @@
   "form_header",
   "section_break_r5jf",
   "amended_from",
-  
-  "custom_instructions_keep_this_same_everywhere",
-  "custom_rate_the_following",
+  "cycle",
+  "executive_name",
+  "employee_code",
+  "department_territory",
+  "instructions",
+  "rate_the_following",
   "meet_targets",
   "dealer_relationships",
   "processes_reporting",
   "handle_challenges",
   "contribute_team",
   "reflection_section",
-  "custom_key_achievements_this_cycle",
-  "custom_areas_i_want_to_improve",
-  "custom_support_required_from_management",
+  "key_achievements",
+  "improvement_areas",
+  "support_required",
   "overall_self_rating"
  ],
  "fields": [
@@ -42,14 +45,36 @@
    "read_only": 1,
    "search_index": 1
   },
-  
   {
-   "fieldname": "custom_instructions_keep_this_same_everywhere",
+   "fieldname": "cycle",
+   "fieldtype": "Data",
+   "label": "Cycle"
+  },
+  {
+   "fieldname": "executive_name",
+   "fieldtype": "Link",
+   "label": "Executive Name",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "employee_code",
+   "fieldtype": "Data",
+   "label": "Employee Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department_territory",
+   "fieldtype": "Data",
+   "label": "Department/Territory",
+   "read_only": 1
+  },
+  {
+   "fieldname": "instructions",
    "fieldtype": "HTML",
    "label": "Instructions (keep this same everywhere)"
   },
   {
-   "fieldname": "custom_rate_the_following",
+   "fieldname": "rate_the_following",
    "fieldtype": "Section Break",
    "label": "Rate the following:"
   },
@@ -84,17 +109,17 @@
    "label": "Reflection"
   },
   {
-   "fieldname": "custom_key_achievements_this_cycle",
+   "fieldname": "key_achievements",
    "fieldtype": "Small Text",
    "label": "Key achievements this cycle"
   },
   {
-   "fieldname": "custom_areas_i_want_to_improve",
+   "fieldname": "improvement_areas",
    "fieldtype": "Small Text",
    "label": "Areas i want to improve"
   },
   {
-   "fieldname": "custom_support_required_from_management",
+   "fieldname": "support_required",
    "fieldtype": "Small Text",
    "label": "Support required from management"
   },
