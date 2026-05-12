@@ -4,21 +4,22 @@
  "creation": "2026-05-12 10:20:22.960888",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
+  "field_order": [
   "form_header",
   "section_break_r5jf",
   "amended_from",
-  "custom_cycle",
-  "custom_executive_name",
-  "custom_employee_code",
-  "custom_departmentterritory",
+  
   "custom_instructions_keep_this_same_everywhere",
-  "rating_html",
+  "custom_rate_the_following",
   "meet_targets",
   "dealer_relationships",
   "processes_reporting",
   "handle_challenges",
   "contribute_team",
+  "reflection_section",
+  "custom_key_achievements_this_cycle",
+  "custom_areas_i_want_to_improve",
+  "custom_support_required_from_management",
   "overall_self_rating"
  ],
  "fields": [
@@ -41,72 +42,65 @@
    "read_only": 1,
    "search_index": 1
   },
-  {
-   "fieldname": "custom_cycle",
-   "fieldtype": "Data",
-   "label": "Cycle"
-  },
-  {
-   "fieldname": "custom_executive_name",
-   "fieldtype": "Link",
-   "label": "Executive Name",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "custom_employee_code",
-   "fieldtype": "Data",
-   "label": "Employee Code",
-   "read_only": 1
-  },
-  {
-   "fieldname": "custom_departmentterritory",
-   "fieldtype": "Data",
-   "label": "Department/Territory",
-   "read_only": 1
-  },
+  
   {
    "fieldname": "custom_instructions_keep_this_same_everywhere",
    "fieldtype": "HTML",
    "label": "Instructions (keep this same everywhere)"
   },
   {
-   "fieldname": "rating_html",
-   "fieldtype": "HTML"
+   "fieldname": "custom_rate_the_following",
+   "fieldtype": "Section Break",
+   "label": "Rate the following:"
   },
   {
    "fieldname": "meet_targets",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "I consistently meet my targets"
+   "fieldtype": "Rating",
+   "label": "1. I consistently meet my targets"
   },
   {
    "fieldname": "dealer_relationships",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "I maintain strong dealer relationships"
+   "fieldtype": "Rating",
+   "label": "2. I maintain strong dealer relationships"
   },
   {
    "fieldname": "processes_reporting",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "I follow company processes and reporting"
+   "fieldtype": "Rating",
+   "label": "3. I follow company processes and reporting"
   },
   {
    "fieldname": "handle_challenges",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "I handle challenges effectively"
+   "fieldtype": "Rating",
+   "label": "4. I handle challenges effectively"
   },
   {
    "fieldname": "contribute_team",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "I contribute to team success"
+   "fieldtype": "Rating",
+   "label": "5. I contribute to team success"
+  },
+  {
+   "fieldname": "reflection_section",
+   "fieldtype": "Section Break",
+   "label": "Reflection"
+  },
+  {
+   "fieldname": "custom_key_achievements_this_cycle",
+   "fieldtype": "Small Text",
+   "label": "Key achievements this cycle"
+  },
+  {
+   "fieldname": "custom_areas_i_want_to_improve",
+   "fieldtype": "Small Text",
+   "label": "Areas i want to improve"
+  },
+  {
+   "fieldname": "custom_support_required_from_management",
+   "fieldtype": "Small Text",
+   "label": "Support required from management"
   },
   {
    "fieldname": "overall_self_rating",
-   "fieldtype": "Int",
-   "hidden": 1,
+   "fieldtype": "Rating",
    "label": "Overall Self Rating"
   }
  ],
