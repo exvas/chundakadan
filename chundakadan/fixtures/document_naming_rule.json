@@ -1,0 +1,80 @@
+[
+ {
+  "conditions": [],
+  "counter": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Document Naming Rule",
+  "document_type": "Customer Feedback Form",
+  "modified": "2026-05-13 10:12:57.535361",
+  "name": "08e22hnrnl",
+  "prefix": "CUS-",
+  "prefix_digits": 3,
+  "priority": 0
+ },
+ {
+  "conditions": [],
+  "counter": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Document Naming Rule",
+  "document_type": "Self Assessment Form",
+  "modified": "2026-05-13 10:12:50.452356",
+  "name": "378kuobodi",
+  "prefix": "SELF-ASS-",
+  "prefix_digits": 3,
+  "priority": 0
+ },
+ {
+  "conditions": [],
+  "counter": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Document Naming Rule",
+  "document_type": "Coordinator Feedback Form",
+  "modified": "2026-05-13 10:16:24.303240",
+  "name": "5a3u9machh",
+  "prefix": "Coordinator",
+  "prefix_digits": 3,
+  "priority": 0
+ },
+ {
+  "conditions": [],
+  "counter": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Document Naming Rule",
+  "document_type": "Peer Feedback Form",
+  "modified": "2026-05-13 10:28:09.051531",
+  "name": "c6ajlpoipm",
+  "prefix": "PEER-",
+  "prefix_digits": 3,
+  "priority": 0
+ },
+ {
+  "conditions": [],
+  "counter": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Document Naming Rule",
+  "document_type": "Management Feedback Form",
+  "modified": "2026-05-13 10:28:43.819087",
+  "name": "ch6pn2gif8",
+  "prefix": "MAN-FEED-",
+  "prefix_digits": 3,
+  "priority": 0
+ },
+ {
+  "conditions": [],
+  "counter": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Document Naming Rule",
+  "document_type": "Performance Feedback Form",
+  "modified": "2026-05-13 10:37:56.165238",
+  "name": "htp0ohq1kh",
+  "prefix": "PER-FEED-",
+  "prefix_digits": 3,
+  "priority": 0
+ }
+]

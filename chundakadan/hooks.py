@@ -323,5 +323,22 @@ fixtures = [
             ]
         ]
     },
+    {
+        "doctype": "Document Naming Rule",
+        "filters": [
+            [
+                "document_type",
+                "in",
+                [
+                    "Performance Feedback Form",
+                    "Management Feedback Form",
+                    "Peer Feedback Form",
+                    "Coordinator Feedback Form",
+                    "Customer Feedback Form",
+                    "Self Assessment Form"
+                ]
+            ]
+        ]
+    }
 
 ]
