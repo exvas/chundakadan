@@ -336,7 +336,8 @@ fixtures = [
                     "Peer Feedback Form",
                     "Coordinator Feedback Form",
                     "Customer Feedback Form",
-                    "Self Assessment Form"
+                    "Self Assessment Form",
+                    "Period Salary Slip"
                 ]
             ]
         ]
