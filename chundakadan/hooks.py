@@ -59,6 +59,7 @@ doctype_js = {
     "Leave Application" : "public/js/leave_application.js",
     "Exit Interview Form" : "public/js/exit_interview_form.js",
     "Interview" : "public/js/interview.js",
+    "Period Salary Slip" : "public/js/period_salary_slip.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",
@@ -337,6 +338,16 @@ fixtures = [
                     "Customer Feedback Form",
                     "Self Assessment Form"
                 ]
+            ]
+        ]
+    },
+    {
+        "doctype": "Print Format",
+        "filters": [
+            [
+                "module",
+                "=",
+                "Chundakadan"
             ]
         ]
     }
