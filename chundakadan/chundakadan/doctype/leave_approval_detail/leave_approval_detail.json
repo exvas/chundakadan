@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "creation": "2026-05-18 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "approver",
+  "approver_role",
+  "status",
+  "approved_on",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Approver",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "approver_role",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Approver Role"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected",
+   "default": "Pending"
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Approved On"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-18 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Leave Approval Detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

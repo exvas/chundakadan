@@ -1,147 +1,101 @@
-//code written by niranjana nir
+// Copyright (c) 2026, Ashkar and contributors
+// For license information, please see license.txt
+
 frappe.ui.form.on('Leave Application', {
     refresh: function (frm) {
-        // Add approval buttons in Actions menu based on current user and approval status
-        if (!frm.is_new() && frm.doc.docstatus === 0) {
-            add_approval_buttons(frm);
+        // Enforce the approval_flow child table to be read-only in the UI
+        frm.set_df_property('approval_flow', 'read_only', 1);
+
+        // Show Approve and Reject buttons if the document is a draft (not submitted/cancelled)
+        // and the current logged-in user is the designated current approver
+        if (frm.doc.docstatus === 0 && frm.doc.current_approver === frappe.session.user) {
+            frm.add_custom_button(__('Approve'), function () {
+                approve_leave_application(frm);
+            }, __('Actions')).addClass('btn-primary');
+
+            frm.add_custom_button(__('Reject'), function () {
+                reject_leave_application(frm);
+            }, __('Actions')).addClass('btn-danger');
         }
 
-        // Show approval status indicator (contextual based on current user)
-        show_approval_status_indicator(frm);
-    },
-
-    onload: function (frm) {
-        // Set initial approval status for new documents
-        if (frm.is_new() && !frm.doc.custom_approval_status) {
-            frm.set_value('custom_approval_status', 'Pending');
-        }
-    },
-
-    employee: function (frm) {
-        // When employee is selected, fetch and set the approver details
-        if (frm.doc.employee && frm.doc.employee_name) {
-            set_approver_for_employee(frm);
-        }
-    },
-
-    employee_name: function (frm) {
-        // Also trigger when employee_name changes (fetched from employee)
-        if (frm.doc.employee_name) {
-            set_approver_for_employee(frm);
-        }
+        // Apply premium custom indicator to reflect the approval workflow status
+        update_approval_indicator(frm);
     }
 });
 
-function set_approver_for_employee(frm) {
-    frappe.call({
-        method: 'chundakadan.doc_events.leave_application.get_approver_for_employee',
-        args: {
-            employee_name: frm.doc.employee_name,
-            employee: frm.doc.employee
-        },
-        callback: function (r) {
-            if (r.message) {
-                frm.set_value('leave_approver', r.message.leave_approver);
-                frm.set_value('leave_approver_name', r.message.leave_approver_name);
-                frm.set_value('custom_approval_status', r.message.custom_approval_status);
-            }
+/**
+ * Calls backend approve_leave method, reloads document on success.
+ */
+function approve_leave_application(frm) {
+    frappe.confirm(
+        __('Are you sure you want to approve this leave application?'),
+        function () {
+            frappe.call({
+                method: 'chundakadan.chundakadan.api.leave.approve_leave',
+                args: {
+                    docname: frm.doc.name
+                },
+                freeze: true,
+                freeze_message: __('Processing approval...'),
+                callback: function (r) {
+                    if (r.message && r.message.success) {
+                        frm.reload_doc();
+                    }
+                }
+            });
         }
-    });
+    );
 }
 
-function add_approval_buttons(frm) {
-    const current_user = frappe.session.user;
-    const custom_approval_status = frm.doc.custom_approval_status;
-    const hrms_status = frm.doc.status;
-
-    // Don't show buttons if already fully approved or no status set
-    if (!custom_approval_status || hrms_status === "Approved") {
-        return;
-    }
-
-    // Only relevant for Pending or intermediate Approved statuses
-    if (!custom_approval_status.startsWith("Pending") &&
-        !(custom_approval_status.startsWith("Approved") && hrms_status !== "Approved")) {
-        return;
-    }
-
-    // Always use backend check to verify eligibility (handles all email/designation scenarios)
-    // This is the most reliable approach for both local and production environments
-    frappe.call({
-        method: 'chundakadan.doc_events.leave_application.check_user_can_approve',
-        args: {
-            doc_name: frm.doc.name,
-            user: current_user
+/**
+ * Prompts the user for a rejection reason, calls backend reject_leave method, and reloads.
+ */
+function reject_leave_application(frm) {
+    frappe.prompt(
+        [
+            {
+                label: __('Remarks / Reason for Rejection'),
+                fieldname: 'remarks',
+                fieldtype: 'Small Text',
+                reqd: true
+            }
+        ],
+        function (values) {
+            frappe.call({
+                method: 'chundakadan.chundakadan.api.leave.reject_leave',
+                args: {
+                    docname: frm.doc.name,
+                    remarks: values.remarks
+                },
+                freeze: true,
+                freeze_message: __('Processing rejection...'),
+                callback: function (r) {
+                    if (r.message && r.message.success) {
+                        frm.reload_doc();
+                    }
+                }
+            });
         },
-        callback: function (r) {
-            if (r.message && r.message.can_approve) {
-                _render_approval_buttons(frm);
-            } else {
-                // Explicitly clear actions if user is not authorized
-                // This prevents previous approvers from seeing cached or default buttons
-                frm.page.clear_actions_menu();
-            }
+        __('Reject Leave Application'),
+        __('Submit')
+    );
+}
+
+/**
+ * Updates form indicator bar color and text dynamically.
+ */
+function update_approval_indicator(frm) {
+    if (frm.doc.custom_approval_status) {
+        let color = 'orange'; // default for Pending
+        
+        if (frm.doc.custom_approval_status === 'Approved') {
+            color = 'green';
+        } else if (frm.doc.custom_approval_status === 'Rejected') {
+            color = 'red';
+        } else if (frm.doc.custom_approval_status === 'Partially Approved') {
+            color = 'blue';
         }
-    });
-}
-
-function _render_approval_buttons(frm) {
-    // Clear existing action items first
-    frm.page.clear_actions_menu();
-
-    // Add Approve option
-    frm.page.add_action_item(__('Approve'), function () {
-        approve_leave_application(frm, 'approve');
-    });
-
-    // Add Reject option
-    frm.page.add_action_item(__('Reject'), function () {
-        frappe.confirm(
-            __('Are you sure you want to reject this leave application?'),
-            function () {
-                approve_leave_application(frm, 'reject');
-            }
-        );
-    });
-}
-
-function approve_leave_application(frm, action) {
-    frappe.call({
-        method: 'chundakadan.doc_events.leave_application.approve_leave',
-        args: {
-            doc_name: frm.doc.name,
-            approval_action: action
-        },
-        freeze: true,
-        freeze_message: action === 'approve' ? __('Approving...') : __('Rejecting...'),
-        callback: function (r) {
-            if (r.message && r.message.success) {
-                frm.reload_doc();
-            }
-        }
-    });
-}
-
-function show_approval_status_indicator(frm) {
-    const status = frm.doc.custom_approval_status;
-    const hrms_status = frm.doc.status;
-
-    if (!status) return;
-
-    let indicator_color = 'blue';
-
-    // Determine indicator color based on status
-    // Everyone sees the actual stored status value
-    if (hrms_status === "Approved") {
-        indicator_color = 'green';
-    } else if (status.startsWith("Approved")) {
-        indicator_color = 'blue';
-    } else if (status === 'Rejected') {
-        indicator_color = 'red';
-    } else if (status.startsWith('Pending')) {
-        indicator_color = 'orange';
+        
+        frm.page.set_indicator(__(frm.doc.custom_approval_status), color);
     }
-
-    // Update the page indicator with actual status
-    frm.page.set_indicator(status, indicator_color);
 }

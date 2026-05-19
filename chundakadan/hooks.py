@@ -120,10 +120,7 @@ doc_events = {
         "before_submit": "chundakadan.doc_events.leave_policy_assignment.update_new_leaves_from_max_allowed"
     },
     "Leave Application": {
-        "before_save": "chundakadan.doc_events.leave_application.set_leave_approver",
-        "on_update": "chundakadan.doc_events.leave_application.on_approval_update",
-        "on_submit": "chundakadan.doc_events.leave_application.on_hrms_submit",
-        "on_update_after_submit": "chundakadan.doc_events.leave_application.on_hrms_status_change"
+        "validate": "chundakadan.chundakadan.api.leave.validate_leave"
     },
     "Employee Checkin": {
         "after_insert": "chundakadan.doc_events.employee_checkin.mark_attendance",
@@ -166,11 +163,11 @@ doc_events = {
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
-    "Leave Application": "chundakadan.doc_events.leave_application.get_permission_query_conditions",
+    "Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
 }
 
 has_permission = {
-    "Leave Application": "chundakadan.doc_events.leave_application.has_permission",
+    "Leave Application": "chundakadan.chundakadan.api.leave.has_permission",
 }
 
 # DocType Class
