@@ -57,9 +57,7 @@ if (!window.chundakadan_sales_invoice_loaded) {
         }
       }
     });
-  }, 500);
-
-  frappe.ui.form.on('Sales Invoice', {
+  }, 500);  frappe.ui.form.on('Sales Invoice', {
     refresh(frm) {
       if (frm.fields_dict.items && frm.fields_dict.items.grid) {
         const item_code_field = frm.fields_dict.items.grid.get_field('item_code');
@@ -70,6 +68,12 @@ if (!window.chundakadan_sales_invoice_loaded) {
           });
         }
       }
+
+      // Default naming series based on return flag
+      if (frm.doc.is_return) {
+        frm.set_value('naming_series', 'SR-.YY.-.####');
+      }
+
       toggle_ui(frm);
 
       if (frm.is_new()) {
@@ -104,9 +108,17 @@ if (!window.chundakadan_sales_invoice_loaded) {
         });
       }
     },
+
     is_return(frm) {
+      // Switch naming series for return invoices
+      if (frm.doc.is_return) {
+        frm.set_value('naming_series', 'SR-.YY.-.####');
+      } else {
+        frm.set_value('naming_series', 'SI-.YY.-.####');
+      }
       toggle_ui(frm);
     },
+
     onload(frm) {
       if (frm.is_new()) {
         // Use direct doc assignment to avoid triggering change events during load
