@@ -1,30 +1,71 @@
-//code written by niranjana nir
-// List view customization for Leave Application - shows contextual approval status
+// code written by niranjana nir
+// Leave Application list customization
 
-frappe.listview_settings['Leave Application'] = frappe.listview_settings['Leave Application'] || {};
+frappe.listview_settings['Leave Application'] = {
 
-// Store original formatters
-const original_formatters = frappe.listview_settings['Leave Application'].formatters || {};
+    get_indicator: function(doc) {
 
-frappe.listview_settings['Leave Application'].formatters = Object.assign({}, original_formatters, {
-    custom_approval_status: function (value, df, doc) {
-        if (!value) return '';
+        let color = "gray";
+        let label = doc.status;
 
-        const hrms_status = doc.status;  // HRMS standard status field
-        let indicator_color = 'blue';
-
-        // Determine indicator color based on status
-        // Everyone sees the actual stored status value
-        if (hrms_status === "Approved") {
-            indicator_color = 'green';
-        } else if (value.startsWith("Approved")) {
-            indicator_color = 'blue';
-        } else if (value === 'Rejected') {
-            indicator_color = 'red';
-        } else if (value.startsWith('Pending')) {
-            indicator_color = 'orange';
+        if (doc.status === "Approved") {
+            color = "green";
         }
 
-        return `<span class="indicator-pill ${indicator_color}">${__(value)}</span>`;
+        else if (doc.status === "Pending") {
+            color = "orange";
+        }
+
+        else if (doc.status === "Partially Approved") {
+            color = "blue";
+        }
+
+        else if (doc.status === "Rejected") {
+            color = "red";
+        }
+
+        else if (doc.status === "Draft") {
+            color = "gray";
+        }
+
+        else if (doc.status === "Cancelled") {
+            color = "darkgrey";
+        }
+
+        return [__(label), color, "status,=," + doc.status];
+    },
+
+    formatters: {
+
+        custom_approval_status: function(value, df, doc) {
+
+            if (!value) return '';
+
+            let color = "gray";
+
+            if (value === "Approved")
+                color = "green";
+
+            else if (value === "Pending")
+                color = "orange";
+
+            else if (value === "Partially Approved")
+                color = "blue";
+
+            else if (value === "Rejected")
+                color = "red";
+
+            else if (value === "Draft")
+                color = "gray";
+
+            else if (value === "Cancelled")
+                color = "darkgrey";
+
+            return `
+                <span class="indicator-pill ${color}">
+                    ${__(value)}
+                </span>
+            `;
+        }
     }
-});
+};
