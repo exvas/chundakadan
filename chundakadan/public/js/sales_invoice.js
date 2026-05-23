@@ -69,6 +69,28 @@ if (!window.chundakadan_sales_invoice_loaded) {
         }
       }
 
+      // Ensure required naming series options are available dynamically
+      let ns_field = frm.get_field("naming_series");
+      if (ns_field) {
+        let current_options = (ns_field.df.options || "").split("\n").map(o => o.trim()).filter(Boolean);
+        let required_options = [
+          "SIN.-.YY.-.#####",
+          "SIN.-YY.-RTN-.#####",
+          "SI-.YY.-.####",
+          "SR-.YY.-.####"
+        ];
+        let updated = false;
+        required_options.forEach(opt => {
+          if (!current_options.includes(opt)) {
+            current_options.push(opt);
+            updated = true;
+          }
+        });
+        if (updated) {
+          frm.set_df_property("naming_series", "options", current_options.join("\n"));
+        }
+      }
+
       // Default naming series based on return flag
       if (frm.doc.is_return) {
         frm.set_value('naming_series', 'SR-.YY.-.####');
