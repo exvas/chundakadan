@@ -99,3 +99,4 @@ function update_approval_indicator(frm) {
         frm.page.set_indicator(__(frm.doc.custom_approval_status), color);
     }
 }
+

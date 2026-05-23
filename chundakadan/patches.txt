@@ -9,5 +9,4 @@ chundakadan.patches.fix_leave_type_settings
 chundakadan.patches.update_compassionate_leave_allocation
 chundakadan.patches.update_compassionate_leave_ledger
 chundakadan.patches.delete_monthly_attendance_sheet_ck
-chundakadan.patches.add_sales_invoice_naming_series
 
