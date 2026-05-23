@@ -7,13 +7,29 @@
   "doctype_or_field": "DocField",
   "field_name": "naming_series",
   "is_system_generated": 1,
-  "modified": "2026-05-23 12:40:12.977912",
+  "modified": "2026-05-23 15:58:57.296032",
   "module": "Chundakadan",
-  "name": "Sales Invoice-naming_series-options",
-  "property": "options",
+  "name": "Sales Invoice-naming_series-default",
+  "property": "default",
   "property_type": "Text",
   "row_name": null,
-  "value": "SI-.YY.-.####\nSR-.YY.-.####\nACC-SINV-.YYYY.-\nACC-SINV-RET-.YYYY.-"
+  "value": "SI-.YY.-.####"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Leave Application",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "naming_series",
+  "is_system_generated": 0,
+  "modified": "2026-05-23 15:10:16.039562",
+  "module": "Chundakadan",
+  "name": "Leave Application-naming_series-default",
+  "property": "default",
+  "property_type": "Text",
+  "row_name": null,
+  "value": "HR-LAP-.YYYY.-"
  },
  {
   "default_value": null,
@@ -30,22 +46,6 @@
   "property_type": "Check",
   "row_name": null,
   "value": "1"
- },
- {
-  "default_value": null,
-  "doc_type": "Sales Invoice",
-  "docstatus": 0,
-  "doctype": "Property Setter",
-  "doctype_or_field": "DocField",
-  "field_name": "naming_series",
-  "is_system_generated": 1,
-  "modified": "2026-05-23 12:24:01.022053",
-  "module": "Chundakadan",
-  "name": "Sales Invoice-naming_series-default",
-  "property": "default",
-  "property_type": "Text",
-  "row_name": null,
-  "value": "SI-.YY.-.####"
  },
  {
   "default_value": null,
