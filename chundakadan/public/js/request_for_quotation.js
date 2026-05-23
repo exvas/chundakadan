@@ -16,12 +16,7 @@ frappe.ui.form.on('Request for Quotation Item', {
     item_code: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
 
-        if (row.item_code && !row._from_dialog) {
-            frappe.model.set_value(cdt, cdn, 'item_code', '');
-            show_item_selection_dialog(frm, cdt, cdn);
-        } else if (row._from_dialog) {
-            delete row._from_dialog;
-        }
+        // field_sales: Select Item dialog trigger removed
     }
 });
 
