@@ -57,7 +57,7 @@ if (!window.chundakadan_sales_invoice_loaded) {
         }
       }
     });
-  }, 500);  frappe.ui.form.on('Sales Invoice', {
+  }, 500); frappe.ui.form.on('Sales Invoice', {
     refresh(frm) {
       if (frm.fields_dict.items && frm.fields_dict.items.grid) {
         const item_code_field = frm.fields_dict.items.grid.get_field('item_code');
@@ -66,28 +66,6 @@ if (!window.chundakadan_sales_invoice_loaded) {
             'cursor': 'pointer',
             'background-color': '#f8f9fa'
           });
-        }
-      }
-
-      // Ensure required naming series options are available dynamically
-      let ns_field = frm.get_field("naming_series");
-      if (ns_field) {
-        let current_options = (ns_field.df.options || "").split("\n").map(o => o.trim()).filter(Boolean);
-        let required_options = [
-          "SIN.-.YY.-.#####",
-          "SIN.-YY.-RTN-.#####",
-          "SI-.YY.-.####",
-          "SR-.YY.-.####"
-        ];
-        let updated = false;
-        required_options.forEach(opt => {
-          if (!current_options.includes(opt)) {
-            current_options.push(opt);
-            updated = true;
-          }
-        });
-        if (updated) {
-          frm.set_df_property("naming_series", "options", current_options.join("\n"));
         }
       }
 
