@@ -11,3 +11,4 @@ chundakadan.patches.update_compassionate_leave_ledger
 chundakadan.patches.delete_monthly_attendance_sheet_ck
 chundakadan.patches.add_leave_application_pending_status
 chundakadan.patches.revert_leave_application_naming_series
+chundakadan.patches.add_leave_application_partially_approved
