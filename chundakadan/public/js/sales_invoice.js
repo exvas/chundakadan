@@ -76,6 +76,9 @@ if (!window.chundakadan_sales_invoice_loaded) {
       
       // Hide the naming_series field safely to avoid layout breaking
       frm.set_df_property('naming_series', 'hidden', 1);
+      
+      // Force company field to be visible
+      frm.set_df_property('company', 'hidden', 0);
 
       toggle_ui(frm);
 
