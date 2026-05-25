@@ -73,6 +73,9 @@ if (!window.chundakadan_sales_invoice_loaded) {
       if (frm.doc.is_return) {
         frm.set_value('naming_series', 'SR-.YY.-.####');
       }
+      
+      // Hide the naming_series field safely to avoid layout breaking
+      frm.set_df_property('naming_series', 'hidden', 1);
 
       toggle_ui(frm);
 
