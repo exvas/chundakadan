@@ -110,7 +110,9 @@ doc_events = {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
     },
 	"Sales Invoice": {
-        "validate": "chundakadan.doc_events.sales_invoice.validate_sales_invoice"
+        "autoname": "chundakadan.doc_events.sales_invoice.autoname",
+        "validate": "chundakadan.doc_events.sales_invoice.validate_sales_invoice",
+        "on_trash": "chundakadan.doc_events.sales_invoice.on_trash"
     },
     "Leave Policy": {
         "before_save": "chundakadan.doc_events.leave_policy.set_annual_allocation_from_leave_type",

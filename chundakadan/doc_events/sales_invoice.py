@@ -40,3 +40,23 @@ def check_overdue_unpaid_invoices(customer, posting_date=None):
 	""", (customer, posting_date), as_dict=1)
 	
 	return overdue_invoices
+
+def autoname(doc, method):
+	from frappe.model.naming import make_autoname
+	
+	if doc.is_return:
+		doc.custom_naming_series1 = "SR-.YY.-.####"
+	else:
+		doc.custom_naming_series1 = "SI-.YY.-.####"
+		
+	# Generate the name explicitly to ensure it works even if the Customize Form is misconfigured
+	if not doc.name:
+		doc.name = make_autoname(doc.custom_naming_series1, doc=doc)
+
+def on_trash(doc, method):
+	import frappe
+	if doc.custom_naming_series1 and doc.name:
+		try:
+			frappe.model.naming.revert_series_if_last(doc.custom_naming_series1, doc.name)
+		except Exception:
+			pass
