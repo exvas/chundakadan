@@ -1830,8 +1830,6 @@
   "collapsible": 0,
   "collapsible_depends_on": null,
   "columns": 0,
-<<<<<<< HEAD
-=======
   "default": null,
   "depends_on": null,
   "description": null,
@@ -1946,7 +1944,6 @@
   "collapsible": 0,
   "collapsible_depends_on": null,
   "columns": 0,
->>>>>>> 86be2f3 (payment entry check bounce)
   "default": "1",
   "depends_on": null,
   "description": null,
