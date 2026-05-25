@@ -81,7 +81,14 @@
         .qr-side-cell .qr-caption { font-weight: 700; font-size: 10px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
         .qr-side-cell .qr-subcaption { font-size: 9px; color: #333; margin-top: 2px; }
 
-        .letter-head-container, .letter-head-footer { margin: 0; padding: 0; height: auto; }
+        .letter-head-container, .letter-head-footer, .letter-footer-container { margin: 0; padding: 0; height: auto; }
+
+        /* wkhtmltopdf only respects page-break-inside on block-level
+           wrappers, not on <table> directly. Keep the eway+bank+QR
+           block together; if it doesn't fit, the whole group pushes to
+           the next page rather than the bank-QR row splitting off. */
+        .no-break { page-break-inside: avoid; -webkit-region-break-inside: avoid; break-inside: avoid; }
+        .no-break tr { page-break-inside: avoid; }
 
         .bold { font-weight: 600; }
         .text-right { text-align: right; }
@@ -293,6 +300,7 @@
                 </tbody>
             </table>
 
+            <div class="no-break">
             <div class="section-title">5.E Way Bill Details</div>
             <table class="eway-table">
                 <tr>
@@ -350,6 +358,7 @@
                     </td>
                 </tr>
             </table>
+            </div>
         </div>
     </div>
 
