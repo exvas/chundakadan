@@ -25,12 +25,15 @@
         .company-gstin { font-weight: 700; font-size: 14px; margin-bottom: 3px; letter-spacing: 1px; }
         .company-name { font-weight: 700; font-size: 16px; text-transform: uppercase; }
 
-        .top-section-wrapper { display: flex; position: relative; }
-        .left-content { flex: 1; border-right: 1px solid #333 !important; }
+        /* wkhtmltopdf (Qt WebKit ~2014) does NOT support flexbox reliably.
+           Use a CSS table so the e-invoice/transaction block and the QR
+           render side-by-side in PDF output. */
+        .top-section-wrapper { display: table; width: 100%; position: relative; border-collapse: collapse; }
+        .left-content { display: table-cell; vertical-align: top; border-right: 1px solid #333 !important; }
 
-        .qr-section { width: 160px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 6px 8px; }
+        .qr-section { display: table-cell; width: 170px; vertical-align: top; padding: 6px 8px; text-align: center; }
         .qr-section-header { font-weight: 700; font-size: 10px; text-align: center; margin-bottom: 5px; color: #000; letter-spacing: 0.3px; text-transform: uppercase; }
-        .qr-code-container { width: 130px; height: 130px; border: 1px solid #333 !important; display: flex; align-items: center; justify-content: center; background-color: #fff; }
+        .qr-code-container { width: 130px; height: 130px; border: 1px solid #333 !important; background-color: #fff; margin: 0 auto; text-align: center; line-height: 130px; }
         .qr-code-container img { width: 126px; height: 126px; object-fit: contain; }
 
         .qr-details { width: 100%; padding: 5px; font-size: 9px; text-align: center; }
