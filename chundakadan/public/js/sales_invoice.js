@@ -77,8 +77,10 @@ if (!window.chundakadan_sales_invoice_loaded) {
       // Hide the naming_series field safely to avoid layout breaking
       frm.set_df_property('naming_series', 'hidden', 1);
       
-      // Force company field to be visible
-      frm.set_df_property('company', 'hidden', 0);
+      // Force company field to be visible (wrapped in setTimeout to beat standard ERPNext script that hides it)
+      setTimeout(() => {
+        frm.set_df_property('company', 'hidden', 0);
+      }, 500);
 
       toggle_ui(frm);
 
