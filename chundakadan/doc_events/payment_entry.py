@@ -1,18 +1,23 @@
 import frappe
-from frappe import _
 
-def set_custom_sales_person(doc, method):
-    if doc.references:
-        for ref in doc.references:
-            if ref.reference_doctype and ref.reference_name:
-                try:
-                    ref_doc = frappe.get_doc(ref.reference_doctype, ref.reference_name)
-                    if hasattr(ref_doc, "custom_sales_person") and ref_doc.custom_sales_person:
-                        doc.custom_sales_person = ref_doc.custom_sales_person
-                        break
-                except Exception as e:
-                    frappe.log_error(f"Error fetching custom_sales_person: {e}")
+def set_custom_sales_person(doc, method=None):
 
-def validate_sales_person(doc, method):
-    pass
+    if not doc.references:
+        return
 
+    for ref in doc.references:
+
+        if (
+            ref.reference_doctype == "Sales Invoice"
+            and ref.reference_name
+        ):
+
+            sales_person = frappe.db.get_value(
+                "Sales Invoice",
+                ref.reference_name,
+                "custom_sales_person"
+            )
+
+            if sales_person:
+                doc.custom_sales_person = sales_person
+                return

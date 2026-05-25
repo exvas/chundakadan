@@ -1,0 +1,36 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-05-25 11:21:56.424401",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": "CA",
+ "letterhead": null,
+ "modified": "2026-05-25 11:31:24.857845",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Check Bounce",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "query": "SELECT\n    pe.reference_date AS \"Return Date:Date:150\",\n\n    c.customer_name AS \"Dealer Name:Data:220\",\n\n    pe.reference_no AS \"Cheque No.:Data:150\",\n\n    pe.paid_amount AS \"Amount:Currency:150\",\n\n    pe.custom_sales_person AS \"Sales Person Name:Link/Sales Person:200\"\n\nFROM\n    `tabPayment Entry` pe\n\nLEFT JOIN\n    `tabCustomer` c\nON\n    c.name = pe.party\n\nWHERE\n    pe.docstatus = 1\n\nORDER BY\n    pe.reference_date DESC",
+ "ref_doctype": "Payment Entry",
+ "report_name": "Check Bounce",
+ "report_type": "Query Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Sales Person"
+  }
+ ],
+ "timeout": 0
+}

@@ -1,5 +1,49 @@
 [
  {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 1,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "is_standard": "Yes",
+  "javascript": null,
+  "json": null,
+  "letter_head": null,
+  "modified": "2026-04-16 16:41:44.662932",
+  "module": "Chundakadan",
+  "name": "Monthly Attendance Sheet",
+  "prepared_report": 0,
+  "query": null,
+  "ref_doctype": "Attendance",
+  "reference_report": null,
+  "report_name": "Monthly Attendance Sheet",
+  "report_script": null,
+  "report_type": "Script Report",
+  "roles": [
+   {
+    "parent": "Monthly Attendance Sheet",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "parent": "Monthly Attendance Sheet",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "HR User"
+   },
+   {
+    "parent": "Monthly Attendance Sheet",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "HR Manager"
+   }
+  ],
+  "timeout": 0
+ },
+ {
   "add_total_row": 1,
   "add_translate_data": 0,
   "columns": [],
@@ -240,7 +284,7 @@
   "timeout": 0
  },
  {
-  "add_total_row": 1,
+  "add_total_row": 0,
   "add_translate_data": 0,
   "columns": [],
   "disabled": 0,
@@ -279,6 +323,50 @@
     "parentfield": "roles",
     "parenttype": "Report",
     "role": "HR Manager"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "is_standard": "Yes",
+  "javascript": null,
+  "json": null,
+  "letter_head": "CA",
+  "modified": "2026-05-25 11:31:24.857845",
+  "module": "Chundakadan",
+  "name": "Check Bounce",
+  "prepared_report": 0,
+  "query": "SELECT\n    pe.reference_date AS \"Return Date:Date:150\",\n\n    c.customer_name AS \"Dealer Name:Data:220\",\n\n    pe.reference_no AS \"Cheque No.:Data:150\",\n\n    pe.paid_amount AS \"Amount:Currency:150\",\n\n    pe.custom_sales_person AS \"Sales Person Name:Link/Sales Person:200\"\n\nFROM\n    `tabPayment Entry` pe\n\nLEFT JOIN\n    `tabCustomer` c\nON\n    c.name = pe.party\n\nWHERE\n    pe.docstatus = 1\n\nORDER BY\n    pe.reference_date DESC",
+  "ref_doctype": "Payment Entry",
+  "reference_report": null,
+  "report_name": "Check Bounce",
+  "report_script": null,
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "parent": "Check Bounce",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "Check Bounce",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "Check Bounce",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Sales Person"
    }
   ],
   "timeout": 0
