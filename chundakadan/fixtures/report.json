@@ -3,6 +3,50 @@
   "add_total_row": 0,
   "add_translate_data": 0,
   "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "is_standard": "Yes",
+  "javascript": null,
+  "json": null,
+  "letter_head": "CA",
+  "modified": "2026-05-25 15:45:09.350771",
+  "module": "Chundakadan",
+  "name": "Cheque Bounce",
+  "prepared_report": 0,
+  "query": "SELECT\n    per.reference_name AS \"Sales Invoice ID:Link/Sales Invoice:180\",\n\n    pe.name AS \"Payment ID:Link/Payment Entry:180\",\n\n    pe.posting_date AS \"Posting Date:Date:120\",\n\n    c.customer_name AS \"Dealer Name:Data:220\",\n\n    pe.custom_sales_person AS \"Sales Person Name:Link/Sales Person:200\",\n\n    pe.mode_of_payment AS \"Mode Of Payment:Link/Mode of Payment:180\",\n\n    pe.reference_no AS \"Cheque No.:Data:150\",\n\n    pe.reference_date AS \"Cheque Date:Date:150\",\n\n    pe.paid_amount AS \"Amount:Currency:150\"\n\nFROM\n    `tabPayment Entry` pe\n\nLEFT JOIN\n    `tabCustomer` c\nON\n    c.name = pe.party\n\nLEFT JOIN\n    `tabPayment Entry Reference` per\nON\n    per.parent = pe.name\n\nWHERE\n    pe.docstatus = 1\n    AND pe.custom_check_bounce = 1\n    AND per.reference_doctype = 'Sales Invoice'\n\nORDER BY\n    pe.posting_date DESC",
+  "ref_doctype": "Payment Entry",
+  "reference_report": null,
+  "report_name": "Cheque Bounce",
+  "report_script": null,
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "parent": "Cheque Bounce",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "Cheque Bounce",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "Cheque Bounce",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Sales Person"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
   "disabled": 1,
   "docstatus": 0,
   "doctype": "Report",
@@ -323,50 +367,6 @@
     "parentfield": "roles",
     "parenttype": "Report",
     "role": "HR Manager"
-   }
-  ],
-  "timeout": 0
- },
- {
-  "add_total_row": 0,
-  "add_translate_data": 0,
-  "columns": [],
-  "disabled": 0,
-  "docstatus": 0,
-  "doctype": "Report",
-  "filters": [],
-  "is_standard": "Yes",
-  "javascript": null,
-  "json": null,
-  "letter_head": "CA",
-  "modified": "2026-05-25 14:58:07.508222",
-  "module": "Chundakadan",
-  "name": "Check Bounce",
-  "prepared_report": 0,
-  "query": "SELECT\n    per.reference_name AS \"Sales Invoice ID:Link/Sales Invoice:180\",\n\n    pe.name AS \"Payment ID:Link/Payment Entry:180\",\n\n    pe.posting_date AS \"Posting Date:Date:120\",\n\n    c.customer_name AS \"Dealer Name:Data:220\",\n\n    pe.custom_sales_person AS \"Sales Person Name:Link/Sales Person:200\",\n\n    pe.mode_of_payment AS \"Mode Of Payment:Link/Mode of Payment:180\",\n\n    pe.reference_no AS \"Cheque No.:Data:150\",\n\n    pe.reference_date AS \"Cheque Date:Date:150\",\n\n    pe.paid_amount AS \"Amount:Currency:150\"\n\nFROM\n    `tabPayment Entry` pe\n\nLEFT JOIN\n    `tabCustomer` c\nON\n    c.name = pe.party\n\nLEFT JOIN\n    `tabPayment Entry Reference` per\nON\n    per.parent = pe.name\n\nWHERE\n    pe.docstatus = 1\n    AND pe.custom_check_bounce = 1\n    AND per.reference_doctype = 'Sales Invoice'\n\nORDER BY\n    pe.posting_date DESC",
-  "ref_doctype": "Payment Entry",
-  "reference_report": null,
-  "report_name": "Check Bounce",
-  "report_script": null,
-  "report_type": "Query Report",
-  "roles": [
-   {
-    "parent": "Check Bounce",
-    "parentfield": "roles",
-    "parenttype": "Report",
-    "role": "Accounts User"
-   },
-   {
-    "parent": "Check Bounce",
-    "parentfield": "roles",
-    "parenttype": "Report",
-    "role": "Accounts Manager"
-   },
-   {
-    "parent": "Check Bounce",
-    "parentfield": "roles",
-    "parenttype": "Report",
-    "role": "Sales Person"
    }
   ],
   "timeout": 0
