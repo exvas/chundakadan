@@ -113,9 +113,29 @@
     </style>
 </head>
 <body>
+    {#-
+      Frappe extracts id="header-html"/id="footer-html" and hands them to
+      wkhtmltopdf as standalone --header-html / --footer-html documents.
+      Those docs do NOT inherit the main <style> block, so every rule
+      that needs to apply must be inline. Repeats on every page.
+    -#}
     <div id="header-html" class="letter-head-container">
         {% if letter_head %}
             <div class="letter-head">{{ letter_head }}</div>
+        {% else %}
+            {% set _company_gstin = frappe.db.get_value("Address", doc.company_address, "gstin") if doc.company_address else "" %}
+            <table style="width:100%; border-collapse:collapse; font-family:'Inter',Arial,sans-serif; font-size:10px; color:#000; border-bottom:1px solid #333; padding:0; margin:0;">
+                <tr>
+                    <td style="padding:6px 10px; vertical-align:middle; text-align:left;">
+                        <div style="font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.4px;">{{ doc.company or "CHUNDAKADAN AGENCIES" }}</div>
+                        <div style="font-size:10px; margin-top:1px;">GSTIN: <b>{{ _company_gstin or "32AAGFC3363E1ZX" }}</b></div>
+                    </td>
+                    <td style="padding:6px 10px; vertical-align:middle; text-align:right; font-size:10px;">
+                        <div style="font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">{{ doc.select_print_heading or "Tax Invoice" }}</div>
+                        <div><b>{{ doc.name }}</b> &nbsp;|&nbsp; {{ doc.posting_date }}</div>
+                    </td>
+                </tr>
+            </table>
         {% endif %}
     </div>
 
@@ -365,6 +385,34 @@
     <div id="footer-html" class="letter-footer-container">
         {% if footer %}
             <div class="letter-footer">{{ footer }}</div>
+        {% else %}
+            {% set _company_addr = frappe.get_doc("Address", doc.company_address) if doc.company_address else None %}
+            <div style="font-family:'Inter',Arial,sans-serif; font-size:9px; color:#000; text-align:center; border-top:1px solid #333; padding:6px 10px;">
+                <div style="font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">{{ doc.company or "CHUNDAKADAN AGENCIES" }}</div>
+                <div>
+                    {%- if _company_addr -%}
+                        {{ _company_addr.address_line1 }}{% if _company_addr.city %}, {{ _company_addr.city }}{% endif %}{% if _company_addr.pincode %} - {{ _company_addr.pincode }}{% endif %}
+                        {%- if _company_addr.phone %} &nbsp;|&nbsp; Ph: {{ _company_addr.phone }}{% endif -%}
+                        {%- if _company_addr.email_id %} &nbsp;|&nbsp; {{ _company_addr.email_id }}{% endif -%}
+                    {%- endif -%}
+                </div>
+                <div style="margin-top:2px; font-style:italic; color:#444;">Page <span class="page"></span> of <span class="topage"></span></div>
+            </div>
+            <script>
+                /* wkhtmltopdf injects [page]/[topage] into URL params for the
+                   footer document; this fills the spans on each rendered page. */
+                function subst() {
+                    var vars = {};
+                    var x = document.location.search.substring(1).split('&');
+                    for (var i in x) { var z = x[i].split('=', 2); vars[z[0]] = decodeURI(z[1] || ''); }
+                    var cls = ['page', 'topage'];
+                    for (var j in cls) {
+                        var els = document.getElementsByClassName(cls[j]);
+                        for (var k = 0; k < els.length; ++k) els[k].textContent = vars[cls[j]] || '';
+                    }
+                }
+                window.addEventListener('load', subst);
+            </script>
         {% endif %}
     </div>
 </body>
