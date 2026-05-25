@@ -103,13 +103,13 @@
     </style>
 </head>
 <body>
-    <div class="invoice-container">
-        <div id="header-html" class="letter-head-container">
-            {% if letter_head %}
-                <div class="letter-head">{{ letter_head }}</div>
-            {% endif %}
-        </div>
+    <div id="header-html" class="letter-head-container">
+        {% if letter_head %}
+            <div class="letter-head">{{ letter_head }}</div>
+        {% endif %}
+    </div>
 
+    <div class="invoice-container">
         <div class="company-header">
             <div class="company-gstin">{{ frappe.db.get_value("Address", doc.company_address, "gstin") or "32AAGFC3363E1ZX" }}</div>
             <div class="company-name">{{ doc.company or "CHUNDAKADAN AGENCIES" }}</div>
@@ -350,11 +350,9 @@
         </div>
     </div>
 
-    <div id="footer-html" class="visible-pdf" style="position: fixed; bottom: 0; width: 100%; text-align: center; font-family: Arial, sans-serif; font-size: 10px;">
-        {% if not is_no_need_letterhead and footer %}
-            <div class="letter-head-footer">
-                {{ footer }}
-            </div>
+    <div id="footer-html" class="letter-footer-container">
+        {% if footer %}
+            <div class="letter-footer">{{ footer }}</div>
         {% endif %}
     </div>
 </body>
