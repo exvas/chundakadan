@@ -119,8 +119,16 @@
       Those docs do NOT inherit the main <style> block, so every rule
       that needs to apply must be inline. Repeats on every page.
     -#}
+    {#-
+      Frappe sets `letter_head = "<br/><br/>"` when no Letter Head doc
+      is configured — that's truthy in Jinja, so a naive `{% if letter_head %}`
+      check renders two empty <br>s and skips our fallback. Strip tags
+      + whitespace and check for real content instead.
+    -#}
+    {% set _lh_stripped = (letter_head or '')|striptags|trim %}
+    {% set _ft_stripped = (footer or '')|striptags|trim %}
     <div id="header-html" class="letter-head-container">
-        {% if letter_head %}
+        {% if _lh_stripped %}
             <div class="letter-head">{{ letter_head }}</div>
         {% else %}
             {% set _company_gstin = frappe.db.get_value("Address", doc.company_address, "gstin") if doc.company_address else "" %}
@@ -383,7 +391,7 @@
     </div>
 
     <div id="footer-html" class="letter-footer-container">
-        {% if footer %}
+        {% if _ft_stripped %}
             <div class="letter-footer">{{ footer }}</div>
         {% else %}
             {% set _company_addr = frappe.get_doc("Address", doc.company_address) if doc.company_address else None %}
