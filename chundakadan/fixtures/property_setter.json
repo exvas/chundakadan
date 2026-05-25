@@ -3550,37 +3550,5 @@
   "property_type": "Data",
   "row_name": null,
   "value": "format:PS-{employee_name}-{####}"
- },
- {
-  "default_value": null,
-  "doc_type": "Sales Invoice",
-  "docstatus": 0,
-  "doctype": "Property Setter",
-  "doctype_or_field": "DocField",
-  "field_name": "naming_series",
-  "is_system_generated": 0,
-  "modified": "2026-05-25 12:30:54.467755",
-  "module": "Chundakadan",
-  "name": "Sales Invoice-naming_series-depends_on",
-  "property": "depends_on",
-  "property_type": "Data",
-  "row_name": null,
-  "value": "eval:false"
- },
- {
-  "default_value": null,
-  "doc_type": "Sales Invoice",
-  "docstatus": 0,
-  "doctype": "Property Setter",
-  "doctype_or_field": "DocField",
-  "field_name": "naming_series",
-  "is_system_generated": 0,
-  "modified": "2026-05-25 12:50:26.392246",
-  "module": "Chundakadan",
-  "name": "Sales Invoice-naming_series-insert_after",
-  "property": "insert_after",
-  "property_type": "Data",
-  "row_name": null,
-  "value": "amended_from"
  }
 ]
