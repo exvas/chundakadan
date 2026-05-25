@@ -3,21 +3,12 @@ frappe.ui.form.on("Payment Entry", {
         setTimeout(() => {
             set_sales_person(frm);
         }, 500);
-    },
-
-    party(frm) {
-        set_sales_person(frm);
-    },
-
-    references_add(frm) {
-        set_sales_person(frm);
     }
 });
 
 function set_sales_person(frm) {
 
-    // allow manual override
-    if (frm.doc.custom_sales_person) return;
+    if (frm.doc.custom_sales_persons) return;
 
     if (!frm.doc.references?.length) return;
 
@@ -36,7 +27,7 @@ function set_sales_person(frm) {
         if (r.message?.custom_sales_person) {
 
             frm.set_value(
-                "custom_sales_person",
+                "custom_sales_persons",
                 r.message.custom_sales_person
             );
         }

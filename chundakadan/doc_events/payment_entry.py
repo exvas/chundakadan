@@ -2,6 +2,9 @@ import frappe
 
 def set_custom_sales_person(doc, method=None):
 
+    if doc.custom_sales_persons:
+        return
+
     if not doc.references:
         return
 
@@ -19,5 +22,5 @@ def set_custom_sales_person(doc, method=None):
             )
 
             if sales_person:
-                doc.custom_sales_person = sales_person
+                doc.custom_sales_persons = sales_person
                 return

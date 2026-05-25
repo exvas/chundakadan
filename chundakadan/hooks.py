@@ -45,7 +45,7 @@ app_license = "mit"
 # include js in doctype views
 doctype_js = {
     "Sales Order" : "public/js/sales_order.js",
-    "payment Entry" : "public/js/payment_entry.js",
+    "Payment Entry" : "public/js/payment_entry.js",
     "Item" : "public/js/item.js",
     "Sales Invoice" : "public/js/sales_invoice.js",
     "Delivery Note" : "public/js/delivery_note.js",
@@ -103,9 +103,11 @@ doctype_list_js = {
 # ------------
 doc_events = {
     "Payment Entry": {
-        "validate": "your_app.events.payment_entry.set_custom_sales_person",
+        "validate":
+        "chundakadan.doc_events.payment_entry.set_custom_sales_person",
+
         "before_save":
-        "your_app.events.payment_entry.set_custom_sales_person"
+        "chundakadan.doc_events.payment_entry.set_custom_sales_person"
     },
     "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
