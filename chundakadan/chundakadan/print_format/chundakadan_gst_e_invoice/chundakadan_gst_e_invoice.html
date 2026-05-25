@@ -330,7 +330,7 @@
 
             <div class="no-break">
             <div class="section-title">5.E Way Bill Details</div>
-            <table class="eway-table">
+            <table class="eway-table" style="margin-bottom:0;">
                 <tr>
                     <td style="width: 9%; font-weight: 600;">E Way Bill No</td>
                     <td style="width: 11%;">{{ doc.ewaybill or '' }}</td>
@@ -353,7 +353,9 @@
                     <td class="bold" style="text-align: right;">{{ '{:,.2f}'.format(doc.grand_total) or '' }}</td>
                 </tr>
             </table>
+            </div>
 
+            <div class="no-break">
             <table class="bottom-table">
                 <tr>
                     <td class="qr-side-cell">
