@@ -24,3 +24,11 @@ def set_custom_sales_person(doc, method=None):
             if sales_person:
                 doc.custom_sales_persons = sales_person
                 return
+
+
+def validate_check_bounce(doc, method=None):
+
+    if doc.custom_check_bounce:
+        frappe.throw(
+            "Cannot submit Payment Entry because cheque bounce is checked."
+        )

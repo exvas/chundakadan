@@ -107,7 +107,11 @@ doc_events = {
         "chundakadan.doc_events.payment_entry.set_custom_sales_person",
 
         "before_save":
-        "chundakadan.doc_events.payment_entry.set_custom_sales_person"
+        "chundakadan.doc_events.payment_entry.set_custom_sales_person",
+        "before_submit": [
+            "chundakadan.doc_events.payment_entry.set_custom_sales_person",
+            "chundakadan.doc_events.payment_entry.validate_check_bounce"
+        ]
     },
     "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
