@@ -58,17 +58,28 @@ def generate_approval_flow(doc, designation):
     - Fallback: HR -> GM
     """
     role_sequence = []
-    
+
+    # Sales chain: Sales Executive -> HOD (ASM) -> HR -> GM
     if designation == "Sales Executive":
         role_sequence = ["ASM Leave Approver", "HR Leave Approver", "GM Leave Approver"]
-    elif designation == "Area Sales Manager":
+    # Accounts/Purchasing chain: must clear Accounts Manager (HOD) first
+    elif designation in ("Accountant", "Purchase Coordinator", "Purchaser"):
+        role_sequence = [
+            "Accounts Manager Leave Approver",
+            "HR Leave Approver",
+            "GM Leave Approver",
+        ]
+    # HODs / department heads: skip their own level
+    elif designation in ("Area Sales Manager", "Accounts Manager"):
         role_sequence = ["HR Leave Approver", "GM Leave Approver"]
-    elif designation in ["HR Coordinator", "Coordinator"]:
+    # HR staff: HR self-approves, only GM needed
+    elif designation in ("HR Coordinator", "Coordinator", "HR Associate"):
         role_sequence = ["GM Leave Approver"]
+    # GM: only HR needs to sign off
     elif designation == "General Manager":
         role_sequence = ["HR Leave Approver"]
+    # Everyone else (floor staff, BDE, coordinators, etc.): HR -> GM
     else:
-        # Extensible Fallback: Default to HR Coordinator then General Manager approvals
         role_sequence = ["HR Leave Approver", "GM Leave Approver"]
         
     # Clear the existing approval flow child table
