@@ -60,6 +60,7 @@ doctype_js = {
     "Exit Interview Form" : "public/js/exit_interview_form.js",
     "Interview" : "public/js/interview.js",
     "Period Salary Slip" : "public/js/period_salary_slip.js",
+    "Employee" : "public/js/employee.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",
@@ -212,6 +213,11 @@ scheduler_events = {
 		],
 		"0 */6 * * *": [
 			"chundakadan.chundakadan.doctype.crosschex_settings.crosschex_settings.check_and_refresh_token"
+		],
+		# Daily at 01:00 — gates on Chundakadan Settings.annual_allocation_run_date,
+		# fires the annual leave allocation only on the configured day.
+		"0 1 * * *": [
+			"chundakadan.chundakadan.api.leave.maybe_auto_allocate"
 		]
 	}
 }

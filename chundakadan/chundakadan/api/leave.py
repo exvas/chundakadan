@@ -281,3 +281,151 @@ def has_permission(doc, ptype="read", user=None):
             return True
             
     return False
+
+
+# ---------------------------------------------------------------------------
+# Annual leave auto-allocation
+# Driven by Chundakadan Settings.annual_leave_policy + annual_allocation_run_date.
+# Two entry points:
+#   - maybe_auto_allocate(): cron-triggered daily; runs only on the configured day
+#   - allocate_annual_leaves_for_employee(employee): HR Action button on Employee
+# ---------------------------------------------------------------------------
+
+import datetime
+
+
+def _today():
+    return frappe.utils.getdate(frappe.utils.nowdate())
+
+
+def _allocation_window(run_date):
+    """Return (from_date, to_date) for the allocation period: the run date
+    of THIS year through the day before next year's run date."""
+    today = _today()
+    if isinstance(run_date, str):
+        run_date = frappe.utils.getdate(run_date)
+    start = datetime.date(today.year, run_date.month, run_date.day)
+    # If today is before this year's run-date, the window already started
+    # last year. Shouldn't happen on the cron path, but keep it safe.
+    if today < start:
+        start = datetime.date(today.year - 1, run_date.month, run_date.day)
+    end = datetime.date(start.year + 1, start.month, start.day) - datetime.timedelta(days=1)
+    return start, end
+
+
+def _create_allocation(employee, leave_type, days, from_date, to_date, carry_forward):
+    """Create one Leave Allocation. Returns the new doc's name or None
+    when skipped (already allocated for the window)."""
+    existing = frappe.db.exists(
+        "Leave Allocation",
+        {
+            "employee": employee,
+            "leave_type": leave_type,
+            "from_date": ["<=", to_date],
+            "to_date": [">=", from_date],
+            "docstatus": ["!=", 2],
+        },
+    )
+    if existing:
+        return None
+
+    alloc = frappe.new_doc("Leave Allocation")
+    alloc.employee = employee
+    alloc.leave_type = leave_type
+    alloc.from_date = from_date
+    alloc.to_date = to_date
+    alloc.new_leaves_allocated = days
+    alloc.carry_forward = 1 if carry_forward else 0
+    alloc.description = "Auto-allocated via Chundakadan Settings annual policy."
+    alloc.insert(ignore_permissions=True)
+    alloc.submit()
+    return alloc.name
+
+
+@frappe.whitelist()
+def allocate_annual_leaves_for_employee(employee):
+    """Allocate annual leaves for ONE employee per the policy table on
+    Chundakadan Settings. Idempotent — re-running on the same employee
+    in the same window skips rows already covered."""
+    if not employee:
+        frappe.throw(_("Employee is required"))
+
+    settings = frappe.get_cached_doc("Chundakadan Settings")
+    if not settings.get("annual_leave_policy"):
+        frappe.throw(_("No rows in Chundakadan Settings → Annual Leave Policy."))
+
+    run_date = settings.get("annual_allocation_run_date")
+    if not run_date:
+        # Default to today's MM-DD if the admin hasn't set one yet.
+        today = _today()
+        run_date = datetime.date(today.year, today.month, today.day)
+
+    from_date, to_date = _allocation_window(run_date)
+
+    created = []
+    skipped = []
+    for row in settings.annual_leave_policy:
+        name = _create_allocation(
+            employee=employee,
+            leave_type=row.leave_type,
+            days=row.days_per_year,
+            from_date=from_date,
+            to_date=to_date,
+            carry_forward=row.carry_forward,
+        )
+        if name:
+            created.append({"leave_type": row.leave_type, "allocation": name})
+        else:
+            skipped.append({"leave_type": row.leave_type, "reason": "already_allocated"})
+
+    return {
+        "employee": employee,
+        "from_date": str(from_date),
+        "to_date": str(to_date),
+        "created": created,
+        "skipped": skipped,
+    }
+
+
+def auto_allocate_annual_leaves():
+    """Allocate annual leaves for every Active Employee. Called by the
+    daily cron via maybe_auto_allocate (which gates on today's date)."""
+    settings = frappe.get_cached_doc("Chundakadan Settings")
+    if not settings.get("auto_allocate_annual_leaves"):
+        return {"status": "disabled"}
+    if not settings.get("annual_leave_policy"):
+        return {"status": "no_policy"}
+
+    employees = frappe.get_all("Employee", filters={"status": "Active"}, pluck="name")
+    summary = {"total_employees": len(employees), "created": 0, "skipped": 0, "errors": 0}
+    for emp in employees:
+        try:
+            r = allocate_annual_leaves_for_employee(emp)
+            summary["created"] += len(r["created"])
+            summary["skipped"] += len(r["skipped"])
+        except Exception:
+            summary["errors"] += 1
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"chundakadan.auto_allocate_annual_leaves[{emp}]",
+            )
+    frappe.db.commit()
+    return summary
+
+
+def maybe_auto_allocate():
+    """Daily cron entry-point. Fires the bulk allocation only when today's
+    month + day matches Chundakadan Settings.annual_allocation_run_date.
+    Year part of the configured date is ignored — this runs once per year
+    on the configured month+day."""
+    settings = frappe.get_cached_doc("Chundakadan Settings")
+    if not settings.get("auto_allocate_annual_leaves"):
+        return
+    run_date = settings.get("annual_allocation_run_date")
+    if not run_date:
+        return
+    if isinstance(run_date, str):
+        run_date = frappe.utils.getdate(run_date)
+    today = _today()
+    if today.month == run_date.month and today.day == run_date.day:
+        auto_allocate_annual_leaves()
