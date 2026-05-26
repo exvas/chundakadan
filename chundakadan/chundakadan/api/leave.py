@@ -313,9 +313,12 @@ def _allocation_window(run_date):
     return start, end
 
 
-def _create_allocation(employee, leave_type, days, from_date, to_date, carry_forward):
+def _create_allocation(employee, leave_type, days, from_date, to_date):
     """Create one Leave Allocation. Returns the new doc's name or None
-    when skipped (already allocated for the window)."""
+    when skipped (already allocated for the window). carry_forward is
+    taken from the Leave Type's own is_carry_forward flag — that's the
+    standard ERPNext source of truth, mirroring how Leave Policy
+    Assignment behaves."""
     existing = frappe.db.exists(
         "Leave Allocation",
         {
@@ -329,57 +332,66 @@ def _create_allocation(employee, leave_type, days, from_date, to_date, carry_for
     if existing:
         return None
 
+    carry = frappe.db.get_value("Leave Type", leave_type, "is_carry_forward") or 0
+
     alloc = frappe.new_doc("Leave Allocation")
     alloc.employee = employee
     alloc.leave_type = leave_type
     alloc.from_date = from_date
     alloc.to_date = to_date
     alloc.new_leaves_allocated = days
-    alloc.carry_forward = 1 if carry_forward else 0
+    alloc.carry_forward = 1 if carry else 0
     alloc.description = "Auto-allocated via Chundakadan Settings annual policy."
     alloc.insert(ignore_permissions=True)
     alloc.submit()
     return alloc.name
 
 
+def _get_policy_rows():
+    """Return [(leave_type, annual_allocation), ...] from the standard
+    Leave Policy linked on Chundakadan Settings. Empty list when no
+    policy is linked or it has no rows."""
+    settings = frappe.get_cached_doc("Chundakadan Settings")
+    lp_name = settings.get("annual_leave_policy")
+    if not lp_name:
+        return []
+    if not frappe.db.exists("Leave Policy", lp_name):
+        frappe.throw(_("Chundakadan Settings → Annual Leave Policy points to {0} which doesn't exist.").format(lp_name))
+    lp = frappe.get_cached_doc("Leave Policy", lp_name)
+    return [(d.leave_type, d.annual_allocation) for d in (lp.leave_policy_details or [])]
+
+
 @frappe.whitelist()
 def allocate_annual_leaves_for_employee(employee):
-    """Allocate annual leaves for ONE employee per the policy table on
-    Chundakadan Settings. Idempotent — re-running on the same employee
-    in the same window skips rows already covered."""
+    """Allocate annual leaves for ONE employee per the Leave Policy
+    linked on Chundakadan Settings. Idempotent — re-running on the
+    same employee in the same window skips rows already covered."""
     if not employee:
         frappe.throw(_("Employee is required"))
 
-    settings = frappe.get_cached_doc("Chundakadan Settings")
-    if not settings.get("annual_leave_policy"):
-        frappe.throw(_("No rows in Chundakadan Settings → Annual Leave Policy."))
+    rows = _get_policy_rows()
+    if not rows:
+        frappe.throw(_("Chundakadan Settings → Annual Leave Policy is empty or unset."))
 
+    settings = frappe.get_cached_doc("Chundakadan Settings")
     run_date = settings.get("annual_allocation_run_date")
     if not run_date:
-        # Default to today's MM-DD if the admin hasn't set one yet.
         today = _today()
         run_date = datetime.date(today.year, today.month, today.day)
 
     from_date, to_date = _allocation_window(run_date)
 
-    created = []
-    skipped = []
-    for row in settings.annual_leave_policy:
-        name = _create_allocation(
-            employee=employee,
-            leave_type=row.leave_type,
-            days=row.days_per_year,
-            from_date=from_date,
-            to_date=to_date,
-            carry_forward=row.carry_forward,
-        )
+    created, skipped = [], []
+    for leave_type, days in rows:
+        name = _create_allocation(employee, leave_type, days, from_date, to_date)
         if name:
-            created.append({"leave_type": row.leave_type, "allocation": name})
+            created.append({"leave_type": leave_type, "allocation": name})
         else:
-            skipped.append({"leave_type": row.leave_type, "reason": "already_allocated"})
+            skipped.append({"leave_type": leave_type, "reason": "already_allocated"})
 
     return {
         "employee": employee,
+        "leave_policy": settings.annual_leave_policy,
         "from_date": str(from_date),
         "to_date": str(to_date),
         "created": created,
@@ -393,7 +405,7 @@ def auto_allocate_annual_leaves():
     settings = frappe.get_cached_doc("Chundakadan Settings")
     if not settings.get("auto_allocate_annual_leaves"):
         return {"status": "disabled"}
-    if not settings.get("annual_leave_policy"):
+    if not _get_policy_rows():
         return {"status": "no_policy"}
 
     employees = frappe.get_all("Employee", filters={"status": "Active"}, pluck="name")
