@@ -113,25 +113,52 @@ def generate_approval_flow(doc, designation):
 def validate_leave(doc, method=None):
     """
     Hook triggered on validation of Leave Application.
-    Detects the designation of the employee and generates the approval chain dynamically.
+    - Generates the multi-step approval chain dynamically per designation.
+    - Enforces supporting-certificate upload when the selected Leave Type
+      has custom_require_certificate flagged (e.g. Sick Leave).
     """
-    # Do not execute if document is already submitted or cancelled
+    # Enforce the certificate even on submit attempts (docstatus changes)
+    _enforce_certificate_requirement(doc)
+
+    # Do not execute the approval flow logic if document is already
+    # submitted or cancelled — the chain was set at draft time.
     if doc.docstatus > 0:
         return
-        
+
     if not doc.employee:
         return
-        
+
     designation = frappe.db.get_value("Employee", doc.employee, "designation")
-    
+
     # Auto generate approval flow on creation or when employee changes
     if doc.is_new():
         generate_approval_flow(doc, designation)
     else:
-        # Check if the employee has changed
         db_employee = frappe.db.get_value("Leave Application", doc.name, "employee")
         if db_employee != doc.employee or not doc.approval_flow:
             generate_approval_flow(doc, designation)
+
+
+def _enforce_certificate_requirement(doc):
+    """Block save when the selected Leave Type has
+    `custom_require_certificate` ON and no `custom_medical_certificate`
+    file is attached. Applies to drafts AND submit attempts.
+    """
+    if not doc.leave_type:
+        return
+    require = frappe.db.get_value(
+        "Leave Type", doc.leave_type, "custom_require_certificate"
+    )
+    if not require:
+        return
+    if not (doc.get("custom_medical_certificate") or "").strip():
+        frappe.throw(
+            _(
+                "{0} requires a supporting certificate. "
+                "Please attach a medical certificate or proof document before submitting."
+            ).format(doc.leave_type),
+            title=_("Certificate Required"),
+        )
 
 
 @frappe.whitelist()
