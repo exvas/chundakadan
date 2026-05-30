@@ -23,6 +23,18 @@ frappe.ui.form.on('Leave Application', {
             frm.add_custom_button(__('Reject'), function () {
                 reject_leave_application(frm);
             }, __('Actions')).addClass('btn-danger');
+
+            // Style the Actions dropdown trigger black. Inline .css() is
+            // safe — it only affects the current form's button; other
+            // doctypes' Actions menus stay default. setTimeout waits for
+            // Frappe to finish rendering the button group.
+            setTimeout(function () {
+                $('.inner-group-button[data-label="Actions"] > button.btn').css({
+                    'background-color': '#000',
+                    'color': '#fff',
+                    'border-color': '#000',
+                });
+            }, 100);
         }
 
         // Apply premium custom indicator to reflect the approval workflow status
