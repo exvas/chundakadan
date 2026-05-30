@@ -194,36 +194,44 @@ def approve_leave(docname):
     
     # Advance to the next level
     next_idx = idx + 1
+    doc.flags.ignore_permissions = True
+
     if next_idx < len(doc.approval_flow):
+        # Intermediate step: just route, do NOT submit. The doc stays
+        # at docstatus=0 (Draft) so leave balance isn't consumed until
+        # the final approver acts.
         doc.current_approval_index = next_idx
         doc.current_approver = doc.approval_flow[next_idx].approver
         doc.custom_approval_status = "Partially Approved"
-        
-        # Save modifications bypassing standard permissions for the approver
-        doc.flags.ignore_permissions = True
-        doc.save()
-        
-        # Notify the user
+        if doc.docstatus == 0:
+            doc.save()
+        else:
+            # Backward compatibility: 44 historical leaves are already
+            # submitted (created before this draft-while-pending flow).
+            # Save in place — the allow_on_submit flag on chain fields
+            # makes this legal.
+            doc.save()
         frappe.msgprint(
-            _("Leave Application partially approved and successfully routed to {0}.").format(doc.current_approver),
-            indicator="blue"
+            _("Leave Application partially approved and routed to {0}.").format(doc.current_approver),
+            indicator="blue",
         )
     else:
-        # Final approval: Set custom status, clear current approver, set standard status and submit
+        # Final approval: lock the doc by submitting. Standard ERPNext
+        # validators (leave balance, overlap, etc.) fire here.
         doc.custom_approval_status = "Approved"
         doc.current_approver = None
         doc.status = "Approved"
-        
-        doc.flags.ignore_permissions = True
-        doc.flags.ignore_validate = True
-        doc.save()
-        doc.submit()
-        
-        frappe.msgprint(
-            _("Leave Application has been fully approved and submitted!"),
-            indicator="green"
-        )
-        
+        if doc.docstatus == 0:
+            doc.submit()
+            msg = _("Leave Application fully approved and submitted!")
+        else:
+            # Doc was already submitted in a previous flow version — just
+            # save the final status updates. allow_on_submit makes this OK.
+            doc.flags.ignore_validate = True
+            doc.save()
+            msg = _("Leave Application fully approved!")
+        frappe.msgprint(msg, indicator="green")
+
     return {"success": True}
 
 
@@ -258,11 +266,13 @@ def reject_leave(docname, remarks=None):
     if remarks:
         row.remarks = remarks
         
-    # Finalize rejection
+    # Finalize rejection. Rejected leaves do NOT consume leave balance,
+    # so we don't submit — the doc stays at Draft with status=Rejected
+    # (or stays at docstatus=1 if it was a legacy already-submitted doc).
     doc.custom_approval_status = "Rejected"
     doc.status = "Rejected"
     doc.current_approver = None
-    
+
     doc.flags.ignore_permissions = True
     doc.save()
     
