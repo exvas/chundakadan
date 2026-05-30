@@ -6,6 +6,26 @@ frappe.ui.form.on('Leave Application', {
         // Enforce the approval_flow child table to be read-only in the UI
         frm.set_df_property('approval_flow', 'read_only', 1);
 
+        // Hide the standard "Submit" button when the doc is Draft.
+        // Submission is owned by chundakadan's approval chain — the final
+        // approver clicking Approve in approve_leave() is what calls
+        // doc.submit(). Letting the user click Submit here would bypass
+        // the chain entirely and put balance on an unapproved leave.
+        //
+        // setTimeout because Frappe wires the primary action AFTER our
+        // refresh handler runs.
+        if (frm.doc.docstatus === 0 && !frm.is_new()) {
+            setTimeout(function () {
+                if (frm.page && frm.page.btn_primary) {
+                    frm.page.btn_primary.hide();
+                }
+                // Fallback selector in case Frappe re-renders the bar
+                $(frm.page.wrapper).find('.primary-action').filter(function () {
+                    return $(this).text().trim().toLowerCase() === 'submit';
+                }).hide();
+            }, 50);
+        }
+
         // Show Approve / Reject buttons when:
         //  - the doc is Draft (0) or Submitted (1) — chundakadan's chain
         //    advances on Submitted docs, not just Drafts
