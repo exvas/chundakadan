@@ -6,9 +6,16 @@ frappe.ui.form.on('Leave Application', {
         // Enforce the approval_flow child table to be read-only in the UI
         frm.set_df_property('approval_flow', 'read_only', 1);
 
-        // Show Approve and Reject buttons if the document is a draft (not submitted/cancelled)
-        // and the current logged-in user is the designated current approver
-        if (frm.doc.docstatus === 0 && frm.doc.current_approver === frappe.session.user) {
+        // Show Approve / Reject buttons when:
+        //  - the doc is Draft (0) or Submitted (1) — chundakadan's chain
+        //    advances on Submitted docs, not just Drafts
+        //  - the chain isn't already finalized
+        //  - the caller is the current approver (or Administrator)
+        const is_open = frm.doc.docstatus !== 2 &&
+            !['Approved', 'Rejected'].includes(frm.doc.custom_approval_status || '');
+        const is_authorized = frm.doc.current_approver === frappe.session.user ||
+            frappe.session.user === 'Administrator';
+        if (is_open && is_authorized && frm.doc.current_approver) {
             frm.add_custom_button(__('Approve'), function () {
                 approve_leave_application(frm);
             }, __('Actions')).addClass('btn-primary');
