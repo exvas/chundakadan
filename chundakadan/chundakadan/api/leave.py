@@ -4,6 +4,41 @@
 import frappe
 from frappe import _
 
+
+def _caller_can_act_on(doc):
+    """Return True if the calling user is authorised to approve / reject
+    the current step of `doc`.
+
+    Originally the gate was a strict `current_user == doc.current_approver`
+    check. That broke whenever `get_approver_by_role(...)` resolved a step
+    to user A while user B (who also holds the role) wanted to act —
+    e.g. Bindu (binduudayan334@gmail.com) couldn't approve a leave where
+    the chain resolved the GM step to Najeeb (chundakadangm@gmail.com),
+    even though Bindu also holds the "GM Leave Approver" role.
+
+    Widened policy — caller is authorised if ANY of:
+      1. caller is Administrator
+      2. caller == doc.current_approver (the resolved user)
+      3. caller == doc.leave_approver (the standard ERPNext designated
+         approver field; set per-doc by HR)
+      4. caller has the role attached to the CURRENT step
+         (approval_flow[current_approval_index].approver_role)
+    """
+    user = frappe.session.user
+    if user == "Administrator":
+        return True
+    if doc.current_approver and user == doc.current_approver:
+        return True
+    if doc.get("leave_approver") and user == doc.leave_approver:
+        return True
+    idx = doc.current_approval_index or 0
+    if doc.approval_flow and 0 <= idx < len(doc.approval_flow):
+        step_role = doc.approval_flow[idx].approver_role
+        if step_role and step_role in frappe.get_roles(user):
+            return True
+    return False
+
+
 def get_approver_by_role(role):
     """
     Helper function to dynamically fetch the approver user based on the custom role.
@@ -171,26 +206,30 @@ def approve_leave(docname):
     # Load the document
     doc = frappe.get_doc("Leave Application", docname)
     current_user = frappe.session.user
-    
-    # Security Validation: Only the designated current approver or Administrator can approve
-    if current_user != doc.current_approver and current_user != "Administrator":
+
+    # Security Validation — see _caller_can_act_on docstring for policy.
+    if not _caller_can_act_on(doc):
         frappe.throw(
             _("You are not authorized to approve this leave application. Current approver is: {0}").format(doc.current_approver)
         )
-        
+
     if doc.custom_approval_status in ["Approved", "Rejected"]:
         frappe.throw(
             _("This leave application has already been processed (Status: {0}).").format(doc.custom_approval_status)
         )
-        
+
     idx = doc.current_approval_index
     if not doc.approval_flow or idx >= len(doc.approval_flow):
         frappe.throw(_("The approval flow is empty or current index is out of bounds."))
-        
-    # Mark the current row approved
+
+    # Mark the current row approved. Record the actual acting user — the
+    # row.approver may have been resolved to a different person at chain
+    # creation time, but the audit trail should reflect who really clicked.
     row = doc.approval_flow[idx]
     row.status = "Approved"
     row.approved_on = frappe.utils.now_datetime()
+    if current_user != row.approver:
+        row.approver = current_user
     
     # Advance to the next level
     next_idx = idx + 1
@@ -243,26 +282,28 @@ def reject_leave(docname, remarks=None):
     """
     doc = frappe.get_doc("Leave Application", docname)
     current_user = frappe.session.user
-    
-    # Security Validation: Only the designated current approver or Administrator can reject
-    if current_user != doc.current_approver and current_user != "Administrator":
+
+    # Security Validation — see _caller_can_act_on docstring for policy.
+    if not _caller_can_act_on(doc):
         frappe.throw(
             _("You are not authorized to reject this leave application. Current approver is: {0}").format(doc.current_approver)
         )
-        
+
     if doc.custom_approval_status in ["Approved", "Rejected"]:
         frappe.throw(
             _("This leave application has already been processed (Status: {0}).").format(doc.custom_approval_status)
         )
-        
+
     idx = doc.current_approval_index
     if not doc.approval_flow or idx >= len(doc.approval_flow):
         frappe.throw(_("The approval flow is empty or current index is out of bounds."))
-        
-    # Mark the current row rejected
+
+    # Mark the current row rejected and stamp the real acting user.
     row = doc.approval_flow[idx]
     row.status = "Rejected"
     row.approved_on = frappe.utils.now_datetime()
+    if current_user != row.approver:
+        row.approver = current_user
     if remarks:
         row.remarks = remarks
         

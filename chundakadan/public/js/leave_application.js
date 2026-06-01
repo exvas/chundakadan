@@ -30,11 +30,30 @@ frappe.ui.form.on('Leave Application', {
         //  - the doc is Draft (0) or Submitted (1) — chundakadan's chain
         //    advances on Submitted docs, not just Drafts
         //  - the chain isn't already finalized
-        //  - the caller is the current approver (or Administrator)
+        //  - the caller is authorized (mirrors leave.py:_caller_can_act_on):
+        //      * Administrator
+        //      * current_approver (the resolved user for this step)
+        //      * leave_approver (the standard ERPNext field)
+        //      * holds the role of the current step
+        //    Last condition unblocks any HR/GM Leave Approver who wants to act
+        //    on a leave the chain happened to resolve to a different user.
         const is_open = frm.doc.docstatus !== 2 &&
             !['Approved', 'Rejected'].includes(frm.doc.custom_approval_status || '');
-        const is_authorized = frm.doc.current_approver === frappe.session.user ||
-            frappe.session.user === 'Administrator';
+
+        let current_step_role = null;
+        if (Array.isArray(frm.doc.approval_flow) && frm.doc.approval_flow.length) {
+            const idx = frm.doc.current_approval_index || 0;
+            if (idx >= 0 && idx < frm.doc.approval_flow.length) {
+                current_step_role = frm.doc.approval_flow[idx].approver_role;
+            }
+        }
+        const user_roles = frappe.user_roles || [];
+        const is_authorized =
+            frappe.session.user === 'Administrator' ||
+            frm.doc.current_approver === frappe.session.user ||
+            (frm.doc.leave_approver && frm.doc.leave_approver === frappe.session.user) ||
+            (current_step_role && user_roles.includes(current_step_role));
+
         if (is_open && is_authorized && frm.doc.current_approver) {
             frm.add_custom_button(__('Approve'), function () {
                 approve_leave_application(frm);
