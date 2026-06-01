@@ -145,6 +145,71 @@ def generate_approval_flow(doc, designation):
         doc.custom_approval_status = "Pending"
 
 
+def convert_conflicting_attendance_to_on_leave(doc, method=None):
+    """Before HRMS validates the Leave Application, find any Attendance
+    row that would block the save (status in {Present, Work From Home}
+    on a date inside the leave range) and flip it to "On Leave".
+
+    Wired as `before_validate` so this runs BEFORE
+    hrms.../leave_application.validate_attendance — that validator only
+    raises AttendanceAlreadyMarkedError when it finds rows with status
+    "Present" or "Work From Home". By converting them to "On Leave"
+    first, the validator sees no conflict.
+
+    Why this is preferable to cancelling the Attendance:
+      - audit trail intact — the row stays at docstatus=1
+      - monthly attendance sheet still counts the day (as "On Leave")
+      - leave_application + leave_type are linked back so HR can trace
+        WHY the day became "On Leave"
+
+    Uses frappe.db.set_value to bypass the standard "submitted doc
+    cannot be modified" gate. Safe here because Attendance has no GL
+    impact and the fields we touch (status, leave_application,
+    leave_type) are not financially load-bearing.
+    """
+    if not (doc.employee and doc.from_date and doc.to_date):
+        return
+
+    conflicts = frappe.get_all(
+        "Attendance",
+        filters={
+            "employee": doc.employee,
+            "attendance_date": ("between", [doc.from_date, doc.to_date]),
+            "status": ("in", ["Present", "Work From Home"]),
+            "docstatus": 1,
+        },
+        fields=["name", "attendance_date"],
+        order_by="attendance_date",
+    )
+    if not conflicts:
+        return
+
+    for att in conflicts:
+        frappe.db.set_value(
+            "Attendance",
+            att["name"],
+            {
+                "status": "On Leave",
+                "leave_application": doc.name or None,
+                "leave_type": doc.leave_type,
+            },
+            update_modified=True,
+        )
+
+    # Surface what we did — HR should know that attendance was changed
+    # implicitly so they can investigate biometric vs leave mismatches.
+    dates = ", ".join(
+        frappe.utils.formatdate(a["attendance_date"]) for a in conflicts
+    )
+    frappe.msgprint(
+        _("Converted {0} existing Attendance row(s) to 'On Leave' for: {1}").format(
+            len(conflicts), dates
+        ),
+        indicator="orange",
+        alert=True,
+    )
+
+
 def validate_leave(doc, method=None):
     """
     Hook triggered on validation of Leave Application.

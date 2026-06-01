@@ -130,6 +130,7 @@ doc_events = {
         "before_submit": "chundakadan.doc_events.leave_policy_assignment.update_new_leaves_from_max_allowed"
     },
     "Leave Application": {
+        "before_validate": "chundakadan.chundakadan.api.leave.convert_conflicting_attendance_to_on_leave",
         "validate": "chundakadan.chundakadan.api.leave.validate_leave"
     },
     "Employee Checkin": {
