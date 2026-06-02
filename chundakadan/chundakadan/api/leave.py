@@ -317,24 +317,26 @@ def approve_leave(docname):
     doc.flags.ignore_permissions = True
 
     # HRMS's validate_leave_access (called inside validate_balance_leaves
-    # on save/submit) does TWO things our custom gate doesn't help with:
-    #   1. Reads Employee.leave_approver via get_leave_approver(employee)
-    #      and checks `frappe.session.user IN (employee_user, leave_approver)`
-    #   2. If that fails, calls frappe.has_permission("Employee", "read",
-    #      employee), which any HOD lacks unless they hold HR User / HR
-    #      Manager role.
-    # Setting doc.leave_approver doesn't help (1) because it reads from
-    # the EMPLOYEE record, not the Leave Application. So we bypass via
-    # the global ignore_permissions flag — Frappe.has_permission returns
-    # True when that flag is set. Safe because _caller_can_act_on has
-    # already verified the acting user is authorised under chundakadan's
-    # multi-step policy.
-    doc.leave_approver = current_user  # cosmetic: keeps the doc's field
-                                       # consistent with who acted
+    # on save/submit) checks both:
+    #   1. `frappe.session.user IN (employee_user, leave_approver)` —
+    #      reads Employee.leave_approver (NOT the Leave App field), so
+    #      setting doc.leave_approver doesn't help here.
+    #   2. `frappe.has_permission("Employee", "read", employee)` — any
+    #      HOD lacks this unless they hold HR User/Manager role.
+    # Frappe's has_permission does NOT respect frappe.flags.ignore_
+    # permissions in v15, so the only reliable bypass is to temporarily
+    # switch session.user to Administrator for the save/submit block.
+    # Safe because _caller_can_act_on has ALREADY authorised the
+    # original caller. We stamp row.approver = current_user above, so
+    # the audit trail is preserved.
+    doc.leave_approver = current_user  # cosmetic: keep doc's standard
+                                       # field in sync with who acted
 
+    original_user = frappe.session.user
     saved_flag = frappe.flags.ignore_permissions
-    frappe.flags.ignore_permissions = True
     try:
+        frappe.set_user("Administrator")
+        frappe.flags.ignore_permissions = True
         if next_idx < len(doc.approval_flow):
             # Intermediate step: just route, do NOT submit. The doc stays
             # at docstatus=0 (Draft) so leave balance isn't consumed until
@@ -371,6 +373,7 @@ def approve_leave(docname):
                 msg = _("Leave Application fully approved!")
             frappe.msgprint(msg, indicator="green")
     finally:
+        frappe.set_user(original_user)
         frappe.flags.ignore_permissions = saved_flag
 
     return {"success": True}
@@ -420,14 +423,18 @@ def reject_leave(docname, remarks=None):
     doc.status = "Rejected"
     doc.current_approver = None
 
-    # Wrap save with global ignore_permissions flag so HRMS's internal
-    # validate_leave_access (Employee read perm check) passes. Our
-    # _caller_can_act_on already authorised the action.
+    # Temporarily run as Administrator so HRMS's validate_leave_access
+    # passes (it does an independent Employee read perm check that
+    # frappe.flags.ignore_permissions doesn't bypass in v15). Our
+    # _caller_can_act_on has already authorised the original caller.
+    original_user = frappe.session.user
     saved_flag = frappe.flags.ignore_permissions
-    frappe.flags.ignore_permissions = True
     try:
+        frappe.set_user("Administrator")
+        frappe.flags.ignore_permissions = True
         doc.save()
     finally:
+        frappe.set_user(original_user)
         frappe.flags.ignore_permissions = saved_flag
     
     frappe.msgprint(
