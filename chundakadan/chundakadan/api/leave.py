@@ -84,19 +84,25 @@ def generate_approval_flow(doc, designation):
     """
     Generates the approval sequence based on the employee's designation,
     populates the child table 'approval_flow', and sets the initial current approver.
-    
-    Flow Logic:
-    - Sales Executive: ASM -> HR -> GM
-    - Area Sales Manager: HR -> GM
-    - HR Coordinator / Coordinator: GM
-    - General Manager: HR
-    - Fallback: HR -> GM
+
+    Flow Logic (canonical per Razeel 2026-06-02 spec):
+    - General Manager       : HR  (1 step)
+    - HR Coord./Coord./Asst.: GM  (1 step)
+    - Area Sales Manager / Accounts Manager (HODs themselves): HR -> GM
+    - Sales Executive       : Sales HOD -> HR -> GM
+    - Accountant / Purchaser: Accounts Manager (HOD) -> HR -> GM
+    - Everyone else         : HR -> GM
+
+    "Sales HOD Leave Approver" covers BOTH Marketing HOD
+    (marketing@chundakadan.in) and Northern HOD
+    (chundakadannorthasm@gmail.com). Either can approve via the
+    widened _caller_can_act_on policy.
     """
     role_sequence = []
 
-    # Sales chain: Sales Executive -> HOD (ASM) -> HR -> GM
+    # Sales chain: Sales Executive -> Sales HOD -> HR -> GM
     if designation == "Sales Executive":
-        role_sequence = ["ASM Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+        role_sequence = ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
     # Accounts/Purchasing chain: must clear Accounts Manager (HOD) first
     elif designation in ("Accountant", "Purchase Coordinator", "Purchaser"):
         role_sequence = [
