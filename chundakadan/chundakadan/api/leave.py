@@ -316,6 +316,16 @@ def approve_leave(docname):
     next_idx = idx + 1
     doc.flags.ignore_permissions = True
 
+    # HRMS's validate_leave_access (called inside validate_balance_leaves
+    # on save/submit) checks `frappe.session.user IN (employee_user,
+    # leave_approver)`. It doesn't know about chundakadan's multi-step
+    # chain — only the standard leave_approver field. Set it to the
+    # current acting user so HRMS sees them as the legitimate approver
+    # for THIS save. This rotates per step, which is exactly what we
+    # want — each step's approver becomes the "official" leave_approver
+    # during their turn.
+    doc.leave_approver = current_user
+
     if next_idx < len(doc.approval_flow):
         # Intermediate step: just route, do NOT submit. The doc stays
         # at docstatus=0 (Draft) so leave balance isn't consumed until
@@ -387,6 +397,10 @@ def reject_leave(docname, remarks=None):
         row.approver = current_user
     if remarks:
         row.remarks = remarks
+
+    # HRMS validate_leave_access tolerance — see approve_leave for why.
+    doc.leave_approver = current_user
+    doc.flags.ignore_permissions = True
         
     # Finalize rejection. Rejected leaves do NOT consume leave balance,
     # so we don't submit — the doc stays at Draft with status=Rejected
