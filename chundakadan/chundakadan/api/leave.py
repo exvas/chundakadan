@@ -391,38 +391,70 @@ def reject_leave(docname, remarks=None):
 
 
 def get_permission_query_conditions(user=None):
-    """
-    Custom permission query conditions for Leave Application.
-    Ensures employees see their own applications, while current approvers can see their pending ones.
+    """List-view filter for Leave Application.
+
+    A user can list a leave if ANY of:
+      1. they are owner/applicant
+      2. they are the resolved current_approver
+      3. they are doc.leave_approver (standard ERPNext field)
+      4. they hold the role of ANY step in approval_flow (past, present, or
+         future) — lets a HOD see leaves heading their way before their
+         step becomes current
+
+    Admin / System Manager / HR Manager bypass the filter entirely.
     """
     if not user:
         user = frappe.session.user
-        
-    if user == "Administrator" or "System Manager" in frappe.get_roles(user) or "HR Manager" in frappe.get_roles(user):
+
+    roles = frappe.get_roles(user)
+    if user == "Administrator" or "System Manager" in roles or "HR Manager" in roles:
         return ""
-        
-    return f"(`tabLeave Application`.owner = {frappe.db.escape(user)} OR `tabLeave Application`.current_approver = {frappe.db.escape(user)})"
+
+    # Build the EXISTS clause that matches "any approval_flow row whose
+    # approver_role is in this user's roles". Empty roles list would yield
+    # an invalid SQL IN () — sentinel keeps the SQL valid but never matches.
+    role_list = roles or ["__noroles__"]
+    role_in_sql = ", ".join(frappe.db.escape(r) for r in role_list)
+    user_q = frappe.db.escape(user)
+
+    return (
+        f"(`tabLeave Application`.owner = {user_q} "
+        f"OR `tabLeave Application`.current_approver = {user_q} "
+        f"OR `tabLeave Application`.leave_approver = {user_q} "
+        f"OR EXISTS ("
+        f"  SELECT 1 FROM `tabLeave Approval Detail` flow "
+        f"  WHERE flow.parent = `tabLeave Application`.name "
+        f"    AND flow.parenttype = 'Leave Application' "
+        f"    AND flow.approver_role IN ({role_in_sql})"
+        f"))"
+    )
 
 
 def has_permission(doc, ptype="read", user=None):
-    """
-    Custom document-level permission verification.
-    Grants access if the user is the owner, a current/past approver, or holds elevated manager roles.
+    """Document-level permission. Mirrors get_permission_query_conditions
+    so list view + form view agree on who can see a leave.
     """
     if not user:
         user = frappe.session.user
-        
-    if user == "Administrator" or "System Manager" in frappe.get_roles(user) or "HR Manager" in frappe.get_roles(user):
+
+    roles = frappe.get_roles(user)
+    if user == "Administrator" or "System Manager" in roles or "HR Manager" in roles:
         return True
-        
-    if doc.owner == user or doc.current_approver == user:
+
+    if doc.owner == user:
         return True
-        
-    # Past approvers from the table can read
-    for row in getattr(doc, "approval_flow", []):
+    if doc.current_approver and doc.current_approver == user:
+        return True
+    if doc.get("leave_approver") and doc.leave_approver == user:
+        return True
+
+    # Holds the role of ANY step (past, current, or future)
+    for row in getattr(doc, "approval_flow", []) or []:
         if row.approver == user:
             return True
-            
+        if row.approver_role and row.approver_role in roles:
+            return True
+
     return False
 
 
