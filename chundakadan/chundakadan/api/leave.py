@@ -110,8 +110,18 @@ def generate_approval_flow(doc, designation):
             "HR Leave Approver",
             "GM Leave Approver",
         ]
-    # HODs / department heads: skip their own level
-    elif designation in ("Area Sales Manager", "Accounts Manager"):
+    # HODs / department heads: skip their own level — HR -> GM
+    # Includes the historical "Area Sales Manager" / "Accounts Manager"
+    # titles AND the current ones used by Arjun (CDN/026/37) and Razeel
+    # (CDN/025/020). Matched explicitly so future default-chain changes
+    # don't silently affect HOD routing.
+    elif designation in (
+        "Area Sales Manager",
+        "Accounts Manager",
+        "Sales& Marketing Manager",          # Arjun (Marketing HOD)
+        "Sales & Marketing Manager",         # tolerant of corrected typo
+        "Deputy Sales & Marketing Manager",  # Razeel (Northern HOD)
+    ):
         role_sequence = ["HR Leave Approver", "GM Leave Approver"]
     # HR staff: HR self-approves, only GM needed
     elif designation in ("HR Coordinator", "Coordinator", "HR Associate"):
