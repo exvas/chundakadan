@@ -317,50 +317,61 @@ def approve_leave(docname):
     doc.flags.ignore_permissions = True
 
     # HRMS's validate_leave_access (called inside validate_balance_leaves
-    # on save/submit) checks `frappe.session.user IN (employee_user,
-    # leave_approver)`. It doesn't know about chundakadan's multi-step
-    # chain — only the standard leave_approver field. Set it to the
-    # current acting user so HRMS sees them as the legitimate approver
-    # for THIS save. This rotates per step, which is exactly what we
-    # want — each step's approver becomes the "official" leave_approver
-    # during their turn.
-    doc.leave_approver = current_user
+    # on save/submit) does TWO things our custom gate doesn't help with:
+    #   1. Reads Employee.leave_approver via get_leave_approver(employee)
+    #      and checks `frappe.session.user IN (employee_user, leave_approver)`
+    #   2. If that fails, calls frappe.has_permission("Employee", "read",
+    #      employee), which any HOD lacks unless they hold HR User / HR
+    #      Manager role.
+    # Setting doc.leave_approver doesn't help (1) because it reads from
+    # the EMPLOYEE record, not the Leave Application. So we bypass via
+    # the global ignore_permissions flag — Frappe.has_permission returns
+    # True when that flag is set. Safe because _caller_can_act_on has
+    # already verified the acting user is authorised under chundakadan's
+    # multi-step policy.
+    doc.leave_approver = current_user  # cosmetic: keeps the doc's field
+                                       # consistent with who acted
 
-    if next_idx < len(doc.approval_flow):
-        # Intermediate step: just route, do NOT submit. The doc stays
-        # at docstatus=0 (Draft) so leave balance isn't consumed until
-        # the final approver acts.
-        doc.current_approval_index = next_idx
-        doc.current_approver = doc.approval_flow[next_idx].approver
-        doc.custom_approval_status = "Partially Approved"
-        if doc.docstatus == 0:
-            doc.save()
+    saved_flag = frappe.flags.ignore_permissions
+    frappe.flags.ignore_permissions = True
+    try:
+        if next_idx < len(doc.approval_flow):
+            # Intermediate step: just route, do NOT submit. The doc stays
+            # at docstatus=0 (Draft) so leave balance isn't consumed until
+            # the final approver acts.
+            doc.current_approval_index = next_idx
+            doc.current_approver = doc.approval_flow[next_idx].approver
+            doc.custom_approval_status = "Partially Approved"
+            if doc.docstatus == 0:
+                doc.save()
+            else:
+                # Backward compatibility: 44 historical leaves are already
+                # submitted (created before this draft-while-pending flow).
+                # Save in place — the allow_on_submit flag on chain fields
+                # makes this legal.
+                doc.save()
+            frappe.msgprint(
+                _("Leave Application partially approved and routed to {0}.").format(doc.current_approver),
+                indicator="blue",
+            )
         else:
-            # Backward compatibility: 44 historical leaves are already
-            # submitted (created before this draft-while-pending flow).
-            # Save in place — the allow_on_submit flag on chain fields
-            # makes this legal.
-            doc.save()
-        frappe.msgprint(
-            _("Leave Application partially approved and routed to {0}.").format(doc.current_approver),
-            indicator="blue",
-        )
-    else:
-        # Final approval: lock the doc by submitting. Standard ERPNext
-        # validators (leave balance, overlap, etc.) fire here.
-        doc.custom_approval_status = "Approved"
-        doc.current_approver = None
-        doc.status = "Approved"
-        if doc.docstatus == 0:
-            doc.submit()
-            msg = _("Leave Application fully approved and submitted!")
-        else:
-            # Doc was already submitted in a previous flow version — just
-            # save the final status updates. allow_on_submit makes this OK.
-            doc.flags.ignore_validate = True
-            doc.save()
-            msg = _("Leave Application fully approved!")
-        frappe.msgprint(msg, indicator="green")
+            # Final approval: lock the doc by submitting. Standard ERPNext
+            # validators (leave balance, overlap, etc.) fire here.
+            doc.custom_approval_status = "Approved"
+            doc.current_approver = None
+            doc.status = "Approved"
+            if doc.docstatus == 0:
+                doc.submit()
+                msg = _("Leave Application fully approved and submitted!")
+            else:
+                # Doc was already submitted in a previous flow version — just
+                # save the final status updates. allow_on_submit makes this OK.
+                doc.flags.ignore_validate = True
+                doc.save()
+                msg = _("Leave Application fully approved!")
+            frappe.msgprint(msg, indicator="green")
+    finally:
+        frappe.flags.ignore_permissions = saved_flag
 
     return {"success": True}
 
@@ -401,7 +412,7 @@ def reject_leave(docname, remarks=None):
     # HRMS validate_leave_access tolerance — see approve_leave for why.
     doc.leave_approver = current_user
     doc.flags.ignore_permissions = True
-        
+
     # Finalize rejection. Rejected leaves do NOT consume leave balance,
     # so we don't submit — the doc stays at Draft with status=Rejected
     # (or stays at docstatus=1 if it was a legacy already-submitted doc).
@@ -409,8 +420,15 @@ def reject_leave(docname, remarks=None):
     doc.status = "Rejected"
     doc.current_approver = None
 
-    doc.flags.ignore_permissions = True
-    doc.save()
+    # Wrap save with global ignore_permissions flag so HRMS's internal
+    # validate_leave_access (Employee read perm check) passes. Our
+    # _caller_can_act_on already authorised the action.
+    saved_flag = frappe.flags.ignore_permissions
+    frappe.flags.ignore_permissions = True
+    try:
+        doc.save()
+    finally:
+        frappe.flags.ignore_permissions = saved_flag
     
     frappe.msgprint(
         _("Leave Application has been rejected."),
