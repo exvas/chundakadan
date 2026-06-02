@@ -134,7 +134,10 @@ doc_events = {
         "validate": "chundakadan.chundakadan.api.leave.validate_leave"
     },
     "Employee Checkin": {
-        "after_insert": "chundakadan.doc_events.employee_checkin.mark_attendance",
+        "after_insert": [
+            "chundakadan.doc_events.employee_checkin.mark_attendance",
+            "chundakadan.doc_events.employee_checkin.resolve_location"
+        ],
         "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
     }
 }
