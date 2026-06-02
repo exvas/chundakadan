@@ -319,8 +319,7 @@ def approve_leave(docname):
     # HRMS's validate_leave_access (called inside validate_balance_leaves
     # on save/submit) checks both:
     #   1. `frappe.session.user IN (employee_user, leave_approver)` —
-    #      reads Employee.leave_approver (NOT the Leave App field), so
-    #      setting doc.leave_approver doesn't help here.
+    #      reads Employee.leave_approver (NOT the Leave App field).
     #   2. `frappe.has_permission("Employee", "read", employee)` — any
     #      HOD lacks this unless they hold HR User/Manager role.
     # Frappe's has_permission does NOT respect frappe.flags.ignore_
@@ -329,8 +328,15 @@ def approve_leave(docname):
     # Safe because _caller_can_act_on has ALREADY authorised the
     # original caller. We stamp row.approver = current_user above, so
     # the audit trail is preserved.
-    doc.leave_approver = current_user  # cosmetic: keep doc's standard
-                                       # field in sync with who acted
+    #
+    # DRAFT-only: rotate doc.leave_approver to acting user so the
+    # standard ERPNext field stays in sync. SKIPPED on submitted (legacy)
+    # docs because leave_approver doesn't have allow_on_submit=1 — would
+    # throw "Cannot Update After Submit". The Administrator switch below
+    # is what actually bypasses the HRMS validator; this rotation is just
+    # cosmetic.
+    if doc.docstatus == 0:
+        doc.leave_approver = current_user
 
     original_user = frappe.session.user
     saved_flag = frappe.flags.ignore_permissions
@@ -413,7 +419,12 @@ def reject_leave(docname, remarks=None):
         row.remarks = remarks
 
     # HRMS validate_leave_access tolerance — see approve_leave for why.
-    doc.leave_approver = current_user
+    # DRAFT-only rotation: leave_approver isn't allow_on_submit=1, so
+    # writing it on a legacy submitted doc throws "Cannot Update After
+    # Submit". Administrator switch below is what actually bypasses the
+    # validator; this is just cosmetic alignment of the standard field.
+    if doc.docstatus == 0:
+        doc.leave_approver = current_user
     doc.flags.ignore_permissions = True
 
     # Finalize rejection. Rejected leaves do NOT consume leave balance,
