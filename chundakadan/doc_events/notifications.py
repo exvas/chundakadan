@@ -34,8 +34,8 @@ def hr_policy_updated(doc, method=None):
         )
     except Exception:
         frappe.log_error(
-            frappe.get_traceback(),
             "chundakadan.notifications.hr_policy_updated",
+            frappe.get_traceback(),
         )
 
 
@@ -66,6 +66,6 @@ def newsletter_sent(doc, method=None):
         )
     except Exception:
         frappe.log_error(
-            frappe.get_traceback(),
             "chundakadan.notifications.newsletter_sent",
+            frappe.get_traceback(),
         )

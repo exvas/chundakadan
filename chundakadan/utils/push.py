@@ -45,10 +45,12 @@ def _ensure_fcm():
         import firebase_admin
         from firebase_admin import credentials
     except ImportError:
+        # Frappe v15 log_error signature is (title, message) — title
+        # has a 140-char max so keep it short.
         frappe.log_error(
+            "chundakadan.push: firebase-admin not installed",
             "firebase-admin not installed — push notifications disabled.\n"
             "Run: bench pip install firebase-admin",
-            "chundakadan.push.import",
         )
         return False
 
@@ -59,9 +61,8 @@ def _ensure_fcm():
     )
     if not os.path.exists(cred_path):
         frappe.log_error(
-            f"FCM service account JSON not found at {cred_path}. "
-            "See chundakadan/utils/push.py header for setup instructions.",
-            "chundakadan.push.credentials",
+            "chundakadan.push: FCM credentials missing",
+            f"Expected at {cred_path}. See chundakadan/utils/push.py for setup.",
         )
         return False
 
@@ -77,7 +78,7 @@ def _ensure_fcm():
         except Exception:
             return False
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "chundakadan.push.init")
+        frappe.log_error("chundakadan.push.init", frappe.get_traceback())
         return False
 
 
@@ -114,8 +115,8 @@ def _log_notification(user, title, body, data):
         log.insert()
     except Exception:
         frappe.log_error(
-            frappe.get_traceback(),
             "chundakadan.push._log_notification",
+            frappe.get_traceback(),
         )
 
 
@@ -184,7 +185,7 @@ def send_to_users(users, title, body, data=None):
             stale_token_rows.append(t["name"])
             result["failed"] += 1
         except Exception:
-            frappe.log_error(frappe.get_traceback(), "chundakadan.push.send")
+            frappe.log_error("chundakadan.push.send", frappe.get_traceback())
             result["failed"] += 1
 
     # Prune stale tokens so the same dead tokens don't waste cycles on

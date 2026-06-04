@@ -92,6 +92,6 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
         frappe.db.commit()
     except Exception:
         frappe.log_error(
-            frappe.get_traceback(),
             f"chundakadan.utils.geocode._geocode_and_save:{doctype}",
+            frappe.get_traceback(),
         )
