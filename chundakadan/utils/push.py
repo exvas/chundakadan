@@ -224,6 +224,21 @@ def send_to_users(users, title, body, data=None):
                         notification_priority="PRIORITY_HIGH",
                     ),
                 ),
+                # iOS configuration via APNs. Requires the APNs Authentication
+                # Key (.p8) to be uploaded to Firebase Console → Cloud
+                # Messaging → Apple app configuration. Without that, FCM
+                # silently drops iOS sends.
+                apns=messaging.APNSConfig(
+                    headers={"apns-priority": "10"},  # immediate delivery
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(
+                            sound="default",      # plays the default tone
+                            badge=1,              # red badge on the app icon
+                            content_available=True,
+                            mutable_content=True,
+                        ),
+                    ),
+                ),
             )
             messaging.send(message, app=_fcm_app)
             result["sent"] += 1
