@@ -150,8 +150,12 @@ doc_events = {
         "after_insert": "chundakadan.doc_events.notifications.newsletter_sent"
     }
 }
-# before_install = "chundakadan.install.before_install"
-# after_install = "chundakadan.install.after_install"
+# Ensure firebase-admin is pip-installed on first install AND on every
+# migrate — pyproject.toml declares it but a self-hosted bench doesn't
+# always pick that up automatically. The hook is idempotent: no-op if
+# already importable, non-fatal if the install fails.
+before_install = "chundakadan.install.ensure_firebase_admin_installed"
+before_migrate = "chundakadan.install.ensure_firebase_admin_installed"
 
 # Uninstallation
 # ------------
