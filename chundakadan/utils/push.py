@@ -210,7 +210,20 @@ def send_to_users(users, title, body, data=None):
                 notification=messaging.Notification(title=title, body=body),
                 data={k: str(v) for k, v in (data or {}).items()},
                 token=t["token"],
-                android=messaging.AndroidConfig(priority="high"),
+                android=messaging.AndroidConfig(
+                    priority="high",
+                    notification=messaging.AndroidNotification(
+                        # Android 8+ uses the channel's vibration setting;
+                        # default_vibrate_timings tells FCM to fall back to
+                        # the channel default (typically ON for high-importance
+                        # channels). default_sound + PRIORITY_HIGH push the
+                        # notification into heads-up mode which DOES vibrate
+                        # on most devices.
+                        default_sound=True,
+                        default_vibrate_timings=True,
+                        notification_priority="PRIORITY_HIGH",
+                    ),
+                ),
             )
             messaging.send(message, app=_fcm_app)
             result["sent"] += 1
