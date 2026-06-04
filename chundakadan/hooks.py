@@ -159,6 +159,7 @@ before_install = [
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
+    "chundakadan.seed.privacy_policy.upsert_page",
 ]
 
 # Uninstallation
