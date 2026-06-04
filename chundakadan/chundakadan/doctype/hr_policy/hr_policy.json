@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "creation": "2026-06-04 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "policy_section",
+  "policy_pdf",
+  "policy_html",
+  "metadata_section",
+  "version",
+  "last_updated_by",
+  "column_break_meta",
+  "last_updated_on",
+  "notify_on_update"
+ ],
+ "fields": [
+  {
+   "fieldname": "policy_section",
+   "fieldtype": "Section Break",
+   "label": "Policy Content"
+  },
+  {
+   "fieldname": "policy_pdf",
+   "fieldtype": "Attach",
+   "label": "Policy PDF",
+   "description": "Upload the CDN POLICY PDF — employees can download and view this in the mobile app."
+  },
+  {
+   "fieldname": "policy_html",
+   "fieldtype": "Text Editor",
+   "label": "Policy (Rich Text)",
+   "description": "Optional inline content rendered in the mobile app's HR Policy page. Use this OR the PDF, or both."
+  },
+  {
+   "fieldname": "metadata_section",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "default": "0",
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "read_only": 1,
+   "description": "Auto-incremented every save. Mobile compares against its cached copy to decide if a push notification is fresh."
+  },
+  {
+   "fieldname": "last_updated_by",
+   "fieldtype": "Link",
+   "label": "Last Updated By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_updated_on",
+   "fieldtype": "Datetime",
+   "label": "Last Updated On",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "notify_on_update",
+   "fieldtype": "Check",
+   "label": "Notify Employees on Update",
+   "description": "If checked, saves to this doctype send a push notification to all Active employees."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "HR Policy",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

@@ -139,6 +139,12 @@ doc_events = {
             "chundakadan.doc_events.employee_checkin.resolve_location"
         ],
         "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
+    },
+    "HR Policy": {
+        "on_update": "chundakadan.doc_events.notifications.hr_policy_updated"
+    },
+    "Newsletter": {
+        "after_insert": "chundakadan.doc_events.notifications.newsletter_sent"
     }
 }
 # before_install = "chundakadan.install.before_install"
