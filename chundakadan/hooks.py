@@ -140,6 +140,9 @@ doc_events = {
         ],
         "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
     },
+    "Customer Visit Log": {
+        "after_insert": "chundakadan.doc_events.customer_visit_log.resolve_location"
+    },
     "HR Policy": {
         "on_update": "chundakadan.doc_events.notifications.hr_policy_updated"
     },

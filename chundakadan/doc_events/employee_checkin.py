@@ -1,68 +1,24 @@
 import frappe
 from frappe.utils import getdate
 
+from chundakadan.utils.geocode import resolve_for_doc
+
 
 def resolve_location(doc, method=None):
-    """Reverse-geocode the checkin's lat/long and store the human-readable
-    address in `custom_location`. Runs as after_insert. Skips if:
-      - no coordinates
-      - custom_location field doesn't exist on the doctype (Custom Field
-        wasn't created yet)
-      - custom_location is already populated (idempotent on re-runs)
-
-    Uses OpenStreetMap Nominatim — free, no API key. Rate limit is 1
-    req/sec; we enqueue to the long queue so a burst of checkins doesn't
-    block the user's save and only hits the API in the background.
+    """Reverse-geocode the checkin's lat/long → custom_location.
+    Employee Checkin's GPS fields are `latitude` / `longitude`; this
+    delegates to the shared util in chundakadan.utils.geocode.
     """
-    if not (doc.latitude and doc.longitude):
-        return
-    # Custom Field check — skip silently if the field hasn't been created
-    if not doc.meta.has_field("custom_location"):
-        return
-    if doc.get("custom_location"):
-        return
-    frappe.enqueue(
-        "chundakadan.doc_events.employee_checkin._geocode_and_save",
-        queue="long",
-        timeout=120,
-        job_name=f"geocode_{doc.name}",
-        checkin=doc.name,
-        lat=str(doc.latitude),
-        lon=str(doc.longitude),
-    )
+    resolve_for_doc(doc)
 
 
+# Kept as a compat shim — Frappe queues older RQ jobs that reference
+# the old import path (chundakadan.doc_events.employee_checkin._geocode_and_save).
+# Re-routes to the shared util. Safe to remove once the long queue
+# fully drains of in-flight pre-refactor jobs.
 def _geocode_and_save(checkin, lat, lon):
-    """Background job. Calls Nominatim, writes the result to
-    custom_location via db.set_value (Employee Checkin is submittable
-    but custom_location has no GL impact).
-    """
-    import requests
-
-    try:
-        res = requests.get(
-            "https://nominatim.openstreetmap.org/reverse",
-            params={"lat": lat, "lon": lon, "format": "json", "zoom": 18, "addressdetails": 1},
-            headers={"User-Agent": "chundakadan-erp/1.0 (contact: sammish.thundiyil@gmail.com)"},
-            timeout=15,
-        )
-        if res.status_code != 200:
-            return
-        data = res.json()
-        # display_name is the comma-separated full address; trim to first
-        # ~250 chars so it fits a Small Text field without overflow.
-        address = (data.get("display_name") or "").strip()
-        if not address:
-            return
-        if len(address) > 250:
-            address = address[:247] + "…"
-        frappe.db.set_value(
-            "Employee Checkin", checkin, "custom_location", address,
-            update_modified=False,
-        )
-        frappe.db.commit()
-    except Exception:
-        frappe.log_error(frappe.get_traceback(), "employee_checkin._geocode_and_save")
+    from chundakadan.utils.geocode import _geocode_and_save as _new
+    return _new("Employee Checkin", checkin, lat, lon)
 
 
 def mark_attendance(doc, method):
