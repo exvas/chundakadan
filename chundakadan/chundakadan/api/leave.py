@@ -44,17 +44,27 @@ def get_approver_by_role(role):
     Helper function to dynamically fetch the approver user based on the custom role.
     It resolves the enabled User assigned to the specified Role.
     If multiple users exist, it prefers the one linked to an active Employee record.
-    
+
     Args:
-        role (str): The custom role name (e.g. 'ASM Leave Approver')
-        
+        role (str): The custom role name (e.g. 'Sales HOD Leave Approver')
+
     Returns:
         str: Email (user_id) of the matched approver user, or None
+
+    NOTE: `ignore_permissions=True` is REQUIRED on the get_all call. Without
+    it, when an end user without HR Manager / System Manager role triggers
+    this (e.g. Arjun applying for his own leave) the query runs under their
+    session and returns 0 Has Role rows — they can't see other users' role
+    assignments. The chain build then throws "Could not locate an active
+    user with the role X" misleadingly. Bug hit 2026-06-03 with Arjun
+    (marketing@chundakadan.in). Same applies to any caller who isn't a
+    privileged user — including every Sales Executive applying for leave.
     """
     users = frappe.get_all(
         "Has Role",
         filters={"role": role},
-        fields=["parent"]
+        fields=["parent"],
+        ignore_permissions=True,
     )
     if not users:
         return None
