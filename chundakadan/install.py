@@ -49,3 +49,49 @@ def ensure_firebase_admin_installed(*args, **kwargs):
             "  Push notifications will be disabled. To enable, run:\n"
             "    bench pip install firebase-admin"
         )
+
+
+def ensure_fcm_credentials_field(*args, **kwargs):
+    """Idempotent: create Chundakadan Settings.fcm_credentials_json
+    Custom Field if it doesn't exist. HR pastes the Firebase service-
+    account JSON contents into this field via the desk — no SSH /
+    filesystem needed. push.py checks this field first when initialising
+    firebase-admin.
+
+    Wired as before_migrate so the field is always present after a
+    chundakadan deploy on any host (self-hosted bench, Frappe Cloud,
+    fresh Ubuntu).
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Chundakadan Settings"):
+        # Singleton not yet created — first install hasn't finished.
+        # Skip; will get re-attempted on the next migrate.
+        return
+
+    if frappe.db.exists("Custom Field", "Chundakadan Settings-fcm_credentials_json"):
+        return
+
+    try:
+        frappe.get_doc({
+            "doctype": "Custom Field",
+            "dt": "Chundakadan Settings",
+            "fieldname": "fcm_credentials_json",
+            "label": "FCM Credentials JSON",
+            "fieldtype": "Long Text",
+            "insert_after": "modified",  # adjust if you want a specific section
+            "description": (
+                "Paste the contents of the Firebase service-account JSON "
+                "(downloaded from Firebase Console → Project Settings → "
+                "Service accounts → Generate new private key). The mobile "
+                "push helper reads from here first, then falls back to "
+                "/home/frappe/firebase-service-account.json."
+            ),
+            "module": "Chundakadan",
+            "translatable": 0,
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+        print("chundakadan.install: Custom Field 'fcm_credentials_json' "
+              "created on Chundakadan Settings")
+    except Exception as e:
+        print(f"chundakadan.install: could not create FCM field: {e}")

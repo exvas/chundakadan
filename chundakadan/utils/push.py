@@ -54,20 +54,54 @@ def _ensure_fcm():
         )
         return False
 
-    # Where's the service account JSON?
-    cred_path = (
-        frappe.conf.get("chundakadan_fcm_credentials_path")
-        or "/home/frappe/firebase-service-account.json"
-    )
-    if not os.path.exists(cred_path):
+    # Where's the service account JSON? Look in three places in order:
+    #   1. Chundakadan Settings.fcm_credentials_json (Custom Field, Long
+    #      Text — HR pastes the JSON contents into this field via the
+    #      desk). Survives Frappe Cloud migrations (no filesystem state).
+    #   2. Path in site_config.chundakadan_fcm_credentials_path.
+    #   3. Default path /home/frappe/firebase-service-account.json.
+    import json as _json
+    cred = None
+
+    # 1. Desk field — preferred (no filesystem needed)
+    try:
+        settings_json = frappe.db.get_single_value(
+            "Chundakadan Settings", "fcm_credentials_json"
+        )
+        if settings_json and settings_json.strip():
+            cred_dict = _json.loads(settings_json)
+            cred = credentials.Certificate(cred_dict)
+    except Exception:
+        # Field might not exist yet, or JSON is malformed — fall through
+        # to file path and log only if everything fails.
+        pass
+
+    # 2/3. File path fallback
+    if cred is None:
+        cred_path = (
+            frappe.conf.get("chundakadan_fcm_credentials_path")
+            or "/home/frappe/firebase-service-account.json"
+        )
+        if os.path.exists(cred_path):
+            try:
+                cred = credentials.Certificate(cred_path)
+            except Exception:
+                frappe.log_error(
+                    "chundakadan.push: bad credentials file",
+                    f"Could not load JSON from {cred_path}",
+                )
+                return False
+
+    if cred is None:
         frappe.log_error(
             "chundakadan.push: FCM credentials missing",
-            f"Expected at {cred_path}. See chundakadan/utils/push.py for setup.",
+            "Set Chundakadan Settings.fcm_credentials_json OR place JSON at "
+            "/home/frappe/firebase-service-account.json. "
+            "See chundakadan/utils/push.py for details.",
         )
         return False
 
     try:
-        cred = credentials.Certificate(cred_path)
         _fcm_app = firebase_admin.initialize_app(cred, name="chundakadan")
         return True
     except ValueError:
