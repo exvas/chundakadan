@@ -81,9 +81,49 @@ def _ensure_fcm():
         return False
 
 
+def _log_notification(user, title, body, data):
+    """Create a persistent Notification Log row so the user can see this
+    notification later from the mobile bell icon. Frappe's standard
+    Notification Log doctype — used by the desk too.
+
+    `data.route` + `data.name` get stored in document_type / document_name
+    so the mobile can route to the right page when the user taps the
+    log entry.
+    """
+    route = (data or {}).get("route", "")
+    name = (data or {}).get("name", "")
+    # Map route → doctype for the log row (so the desk dashboard also
+    # makes sense if anyone clicks through)
+    doctype_map = {
+        "/hr_policy": "HR Policy",
+        "/newsletter": "Newsletter",
+    }
+    doctype = doctype_map.get(route, "")
+    try:
+        log = frappe.get_doc({
+            "doctype": "Notification Log",
+            "subject": title,
+            "for_user": user,
+            "type": "Alert",
+            "document_type": doctype,
+            "document_name": name,
+            "email_content": body,
+            "from_user": "Administrator",
+        })
+        log.flags.ignore_permissions = True
+        log.insert()
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "chundakadan.push._log_notification",
+        )
+
+
 def send_to_users(users, title, body, data=None):
     """Send a push notification to a list of users (each can have multiple
     FCM tokens — one per device). Invalid / stale tokens are pruned.
+    Also writes a persistent Notification Log row per user so the
+    mobile bell can show a history.
 
     Args:
         users: list of User name strings (emails)
@@ -98,6 +138,12 @@ def send_to_users(users, title, body, data=None):
     result = {"sent": 0, "failed": 0, "skipped": 0}
     if not users:
         return result
+
+    # Persist a Notification Log row per user — independent of whether
+    # FCM delivery succeeds. The bell icon reads this list.
+    for u in users:
+        _log_notification(u, title, body, data)
+    frappe.db.commit()
 
     # Collect all tokens for these users
     tokens = frappe.get_all(
