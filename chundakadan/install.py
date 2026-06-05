@@ -150,25 +150,26 @@ def ensure_visit_log_visit_type_field(*args, **kwargs):
             )
             return
 
-    # Backfill existing rows (idempotent — only touches rows where
-    # visit_type is still NULL / empty).
+    # Backfill: Frappe's Custom Field `default` sets every existing row
+    # to "Customer Visit" the moment the field is created, so guarding
+    # on `WHERE visit_type IS NULL` matches zero rows. Use customer_name
+    # as the source of truth — those literal "Check-In" / "Check-Out"
+    # strings only come from create_employee_checkin's mirror code path.
+    # Idempotent: subsequent runs touch nothing because the visit_type
+    # is already correct.
     try:
-        affected = frappe.db.sql("""
+        frappe.db.sql("""
             UPDATE `tabCustomer Visit Log`
-               SET visit_type = CASE
-                   WHEN customer_name = 'Check-In'  THEN 'Check-In'
-                   WHEN customer_name = 'Check-Out' THEN 'Check-Out'
-                   ELSE 'Customer Visit'
-               END
-             WHERE visit_type IS NULL OR visit_type = ''
+               SET visit_type = customer_name
+             WHERE customer_name IN ('Check-In', 'Check-Out')
+               AND (visit_type IS NULL OR visit_type != customer_name)
         """)
         frappe.db.commit()
-        # frappe.db.sql returns row count via cursor; print only if any
         rows = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
         if rows:
             print(
-                f"chundakadan.install: backfilled visit_type on {rows} "
-                "Customer Visit Log rows"
+                f"chundakadan.install: re-tagged visit_type on {rows} "
+                "auto-paired Customer Visit Log rows"
             )
     except Exception as e:
         print(
