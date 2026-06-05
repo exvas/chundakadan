@@ -155,10 +155,12 @@ doc_events = {
 before_install = [
     "chundakadan.install.ensure_firebase_admin_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
+    "chundakadan.install.ensure_visit_log_location_field",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
+    "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.seed.privacy_policy.upsert_page",
 ]
 

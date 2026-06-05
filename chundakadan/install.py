@@ -95,3 +95,49 @@ def ensure_fcm_credentials_field(*args, **kwargs):
               "created on Chundakadan Settings")
     except Exception as e:
         print(f"chundakadan.install: could not create FCM field: {e}")
+
+
+def ensure_visit_log_location_field(*args, **kwargs):
+    """Idempotent: create Customer Visit Log.custom_location Custom Field
+    if missing. The reverse-geocoder in chundakadan/utils/geocode.py
+    writes the resolved street address into `custom_location` — but
+    Customer Visit Log doesn't ship with that field, so visit-log
+    addresses were silently dropped. Employee Checkin already has its
+    own custom_location field.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Customer Visit Log"):
+        return
+
+    if frappe.db.exists("Custom Field", "Customer Visit Log-custom_location"):
+        return
+
+    try:
+        # Insert AFTER the standard latitude/longitude pair so it groups
+        # naturally with the GPS fields in the form.
+        frappe.get_doc({
+            "doctype": "Custom Field",
+            "dt": "Customer Visit Log",
+            "fieldname": "custom_location",
+            "label": "Location",
+            "fieldtype": "Small Text",
+            "insert_after": "longitude",
+            "read_only": 1,
+            "description": (
+                "Reverse-geocoded street address from OpenStreetMap. "
+                "Auto-populated by chundakadan/utils/geocode.py via the "
+                "after_insert hook on Customer Visit Log."
+            ),
+            "module": "Chundakadan",
+            "translatable": 0,
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+        print(
+            "chundakadan.install: Custom Field 'custom_location' created "
+            "on Customer Visit Log"
+        )
+    except Exception as e:
+        print(
+            f"chundakadan.install: could not create visit log location field: {e}"
+        )

@@ -95,3 +95,56 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
             f"chundakadan.utils.geocode._geocode_and_save:{doctype}",
             frappe.get_traceback(),
         )
+
+
+def backfill_locations(
+    doctype,
+    lat_field="latitude",
+    lon_field="longitude",
+    location_field="custom_location",
+    limit=500,
+):
+    """Enqueue Nominatim reverse-geocoding for every existing row of
+    `doctype` that has lat/long but no resolved location yet. Skips
+    rows where the field is already populated (re-runnable / safe to
+    call repeatedly).
+
+    Usage:
+        from chundakadan.utils.geocode import backfill_locations
+        backfill_locations("Customer Visit Log")
+        backfill_locations("Employee Checkin",
+                           lat_field="custom_latitude",
+                           lon_field="custom_longitude")
+
+    Returns the count of jobs enqueued.
+    """
+    rows = frappe.get_all(
+        doctype,
+        filters={
+            lat_field: ["!=", 0],
+            lon_field: ["!=", 0],
+            location_field: ["in", [None, ""]],
+        },
+        fields=["name", lat_field, lon_field],
+        limit=limit,
+        ignore_permissions=True,
+    )
+    queued = 0
+    for r in rows:
+        lat = r.get(lat_field)
+        lon = r.get(lon_field)
+        if not (lat and lon):
+            continue
+        frappe.enqueue(
+            "chundakadan.utils.geocode._geocode_and_save",
+            queue="long",
+            timeout=120,
+            job_name=f"geocode_backfill_{doctype}_{r['name']}",
+            doctype=doctype,
+            name=r["name"],
+            lat=str(lat),
+            lon=str(lon),
+            location_field=location_field,
+        )
+        queued += 1
+    return queued
