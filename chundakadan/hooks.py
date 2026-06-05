@@ -157,15 +157,18 @@ before_install = [
     "chundakadan.install.ensure_fcm_credentials_field",
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
+    "chundakadan.install.ensure_employee_payroll_fields",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
+    "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.seed.privacy_policy.upsert_page",
     "chundakadan.seed.role_profiles.seed_profiles",
     "chundakadan.seed.role_profiles.cleanup_unused_profiles",
+    "chundakadan.seed.payroll_period.ensure_current_fy_period",
 ]
 
 # Uninstallation

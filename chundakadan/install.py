@@ -97,6 +97,100 @@ def ensure_fcm_credentials_field(*args, **kwargs):
         print(f"chundakadan.install: could not create FCM field: {e}")
 
 
+def ensure_employee_payroll_fields(*args, **kwargs):
+    """Idempotent: add 5 Custom Fields to Employee for payroll disbursement.
+
+    Standard ERPNext Employee usually ships PAN/bank/IFSC fields, but
+    this install had them stripped (likely an early customization).
+    Rather than re-enabling standard fields (risky if any code still
+    references the old definitions), we add custom_* fields:
+
+      custom_salary_mode        Select   Cash / Bank Transfer / Cheque
+      custom_bank_name          Data
+      custom_bank_account_no    Data
+      custom_ifsc_code          Data
+      custom_uan_number         Data     (PF compliance, optional)
+
+    All placed in a new 'Payroll Disbursement' section so HR sees them
+    grouped on the Employee form.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Employee"):
+        return
+
+    fields = [
+        {
+            "fieldname": "custom_payroll_section",
+            "label": "Payroll Disbursement",
+            "fieldtype": "Section Break",
+            "insert_after": "company_email",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "custom_salary_mode",
+            "label": "Salary Mode",
+            "fieldtype": "Select",
+            "options": "Cash\nBank Transfer\nCheque",
+            "default": "Cash",
+            "insert_after": "custom_payroll_section",
+            "in_standard_filter": 1,
+            "description": "How this employee's salary is paid each month.",
+        },
+        {
+            "fieldname": "custom_bank_name",
+            "label": "Bank Name",
+            "fieldtype": "Data",
+            "insert_after": "custom_salary_mode",
+            "depends_on": "eval:doc.custom_salary_mode == 'Bank Transfer'",
+        },
+        {
+            "fieldname": "custom_bank_account_no",
+            "label": "Bank A/C No",
+            "fieldtype": "Data",
+            "insert_after": "custom_bank_name",
+            "depends_on": "eval:doc.custom_salary_mode == 'Bank Transfer'",
+        },
+        {
+            "fieldname": "custom_ifsc_code",
+            "label": "IFSC Code",
+            "fieldtype": "Data",
+            "insert_after": "custom_bank_account_no",
+            "depends_on": "eval:doc.custom_salary_mode == 'Bank Transfer'",
+        },
+        {
+            "fieldname": "custom_uan_number",
+            "label": "UAN (PF)",
+            "fieldtype": "Data",
+            "insert_after": "custom_ifsc_code",
+            "description": "Universal Account Number for PF — optional, "
+                           "only needed if you start filing PF returns.",
+        },
+    ]
+
+    created = 0
+    for spec in fields:
+        cf_name = f"Employee-{spec['fieldname']}"
+        if frappe.db.exists("Custom Field", cf_name):
+            continue
+        try:
+            doc = frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Employee",
+                "module": "Chundakadan",
+                "translatable": 0,
+                **spec,
+            })
+            doc.insert(ignore_permissions=True)
+            created += 1
+        except Exception as e:
+            print(f"chundakadan.install: could not create {cf_name}: {e}")
+
+    if created:
+        frappe.db.commit()
+        print(f"chundakadan.install: created {created} Employee payroll fields")
+
+
 def ensure_visit_log_visit_type_field(*args, **kwargs):
     """Idempotent: create Customer Visit Log.visit_type Custom Field
     so HR can filter "real customer visits" vs "mobile check-in /
