@@ -164,6 +164,8 @@ before_migrate = [
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
     "chundakadan.seed.privacy_policy.upsert_page",
+    "chundakadan.seed.role_profiles.seed_profiles",
+    "chundakadan.seed.role_profiles.cleanup_unused_profiles",
 ]
 
 # Uninstallation
