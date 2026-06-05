@@ -393,6 +393,13 @@ def apply_user_assignments():
     print(f"Applying profile assignments to {len(USER_PROFILE_MAP)} users…\n")
     applied = []
     skipped = []
+
+    # Cache profile -> roles map so we can copy roles explicitly
+    # (Frappe's auto-sync from role_profile_name only fires on CHANGE
+    # detection, so re-runs with the same value silently skip the
+    # role copy. We do it ourselves to guarantee correctness.)
+    profile_roles_map = {p["name"]: list(p["roles"]) for p in PROFILES}
+
     for user, profile_name in USER_PROFILE_MAP.items():
         if not frappe.db.exists("User", user):
             skipped.append((user, "user missing"))
@@ -400,15 +407,31 @@ def apply_user_assignments():
         if not frappe.db.exists("Role Profile", profile_name):
             skipped.append((user, f"profile missing: {profile_name}"))
             continue
+        roles_to_apply = profile_roles_map.get(profile_name, [])
+        if not roles_to_apply:
+            skipped.append((user, f"no roles defined for {profile_name}"))
+            continue
         try:
             doc = frappe.get_doc("User", user)
+
+            # 1. Strip ALL existing roles for a clean slate (no leftover
+            #    cruft from previous profile assignments, hand-grants,
+            #    or fixture imports).
+            doc.roles = []
+
+            # 2. Add every role from the profile spec.
+            for role in roles_to_apply:
+                doc.append("roles", {"role": role})
+
+            # 3. Set profile linkages so the desk shows the relationship.
             doc.role_profile_name = profile_name
             if frappe.db.exists("Module Profile", profile_name):
                 doc.module_profile = profile_name
+
             doc.flags.ignore_permissions = True
             doc.save()
             applied.append((user, profile_name))
-            print(f"  ✓ {user:35s} → {profile_name}")
+            print(f"  ✓ {user:35s} → {profile_name:25s} ({len(roles_to_apply)} roles)")
         except Exception as e:
             skipped.append((user, str(e)[:80]))
             print(f"  ✗ {user:35s} {str(e)[:80]}")
