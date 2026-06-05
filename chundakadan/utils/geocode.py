@@ -56,8 +56,13 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
     geocoder, takes the display_name (full comma-separated address),
     trims to 250 chars to fit Small Text, and writes via db.set_value
     so we bypass any submit-state restrictions on the parent doctype.
+
+    Returns the resolved address (or None if anything failed). Logs
+    non-200 responses + exceptions so silent failures are visible in
+    the Error Log.
     """
     import requests
+    import time
 
     try:
         res = requests.get(
@@ -77,12 +82,46 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
             },
             timeout=15,
         )
+
+        # 429 = rate-limit. Retry once after a short pause; if still
+        # rate-limited, log and bail (caller can re-queue later).
+        if res.status_code == 429:
+            time.sleep(2)
+            res = requests.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "lat": lat, "lon": lon, "format": "json",
+                    "zoom": 18, "addressdetails": 1,
+                },
+                headers={
+                    "User-Agent": (
+                        "chundakadan-erp/1.0 "
+                        "(contact: sammish.thundiyil@gmail.com)"
+                    ),
+                },
+                timeout=15,
+            )
+
         if res.status_code != 200:
-            return
+            # Log so silent 429/403/5xx are visible. Truncate body —
+            # Nominatim returns long HTML on errors.
+            frappe.log_error(
+                f"chundakadan.utils.geocode: HTTP {res.status_code}",
+                f"doctype={doctype} name={name} lat={lat} lon={lon}\n"
+                f"body={res.text[:400]}",
+            )
+            return None
+
         data = res.json()
         address = (data.get("display_name") or "").strip()
         if not address:
-            return
+            frappe.log_error(
+                "chundakadan.utils.geocode: empty display_name",
+                f"doctype={doctype} name={name} lat={lat} lon={lon}\n"
+                f"data={data}",
+            )
+            return None
+
         if len(address) > 250:
             address = address[:247] + "…"
         frappe.db.set_value(
@@ -90,11 +129,68 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
             update_modified=False,
         )
         frappe.db.commit()
+        return address
     except Exception:
         frappe.log_error(
             f"chundakadan.utils.geocode._geocode_and_save:{doctype}",
             frappe.get_traceback(),
         )
+        return None
+
+
+def backfill_synchronously(
+    doctype,
+    lat_field="latitude",
+    lon_field="longitude",
+    location_field="custom_location",
+    delay=1.2,
+    limit=5000,
+):
+    """Walk every unresolved row of `doctype` IN ORDER and call
+    _geocode_and_save synchronously with a delay between requests.
+
+    Stays strictly under Nominatim's 1 req/sec policy by default
+    (delay=1.2). Use this for the initial backfill instead of the
+    enqueue-everything-at-once approach, which trips the rate limit
+    when multiple workers run jobs in parallel.
+
+    Prints progress every 25 rows. Safe to interrupt + resume (the
+    next call skips rows that already have a location).
+
+    Usage:
+        from chundakadan.utils.geocode import backfill_synchronously
+        backfill_synchronously("Customer Visit Log")
+    """
+    import time
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT name, `{lat_field}` as lat, `{lon_field}` as lon
+        FROM `tab{doctype}`
+        WHERE `{lat_field}` IS NOT NULL AND `{lat_field}` != 0
+          AND (`{location_field}` IS NULL OR `{location_field}` = '')
+        LIMIT {int(limit)}
+        """,
+        as_dict=True,
+    )
+    print(f"Processing {len(rows)} unresolved rows of '{doctype}'…")
+
+    ok = fail = 0
+    for i, r in enumerate(rows, start=1):
+        result = _geocode_and_save(
+            doctype, r["name"], str(r["lat"]), str(r["lon"]),
+            location_field=location_field,
+        )
+        if result:
+            ok += 1
+        else:
+            fail += 1
+        if i % 25 == 0:
+            print(f"  {i}/{len(rows)}  ok={ok}  fail={fail}")
+        time.sleep(delay)
+
+    print(f"Done. ok={ok} fail={fail} total={len(rows)}")
+    return {"ok": ok, "fail": fail, "total": len(rows)}
 
 
 def backfill_locations(
