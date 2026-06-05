@@ -97,6 +97,85 @@ def ensure_fcm_credentials_field(*args, **kwargs):
         print(f"chundakadan.install: could not create FCM field: {e}")
 
 
+def ensure_visit_log_visit_type_field(*args, **kwargs):
+    """Idempotent: create Customer Visit Log.visit_type Custom Field
+    so HR can filter "real customer visits" vs "mobile check-in /
+    check-out" auto-pairs.
+
+    Backfills existing rows on first creation:
+      - customer_name == "Check-In"  -> visit_type = "Check-In"
+      - customer_name == "Check-Out" -> visit_type = "Check-Out"
+      - everything else              -> visit_type = "Customer Visit"
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Customer Visit Log"):
+        return
+
+    field_already_exists = frappe.db.exists(
+        "Custom Field", "Customer Visit Log-visit_type"
+    )
+
+    if not field_already_exists:
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Customer Visit Log",
+                "fieldname": "visit_type",
+                "label": "Visit Type",
+                "fieldtype": "Select",
+                "options": "Customer Visit\nCheck-In\nCheck-Out",
+                "default": "Customer Visit",
+                "insert_after": "customer_name",
+                "in_standard_filter": 1,  # appears in list view filter sidebar
+                "in_list_view": 1,
+                "description": (
+                    "Distinguishes deliberate customer visits from "
+                    "mobile-app Check-In / Check-Out auto-pair rows. "
+                    "Check-In/Check-Out rows are created automatically "
+                    "from create_employee_checkin and shouldn't be "
+                    "treated as customer visits in reports."
+                ),
+                "module": "Chundakadan",
+                "translatable": 0,
+            }).insert(ignore_permissions=True)
+            frappe.db.commit()
+            print(
+                "chundakadan.install: Custom Field 'visit_type' created "
+                "on Customer Visit Log"
+            )
+        except Exception as e:
+            print(
+                f"chundakadan.install: could not create visit_type field: {e}"
+            )
+            return
+
+    # Backfill existing rows (idempotent — only touches rows where
+    # visit_type is still NULL / empty).
+    try:
+        affected = frappe.db.sql("""
+            UPDATE `tabCustomer Visit Log`
+               SET visit_type = CASE
+                   WHEN customer_name = 'Check-In'  THEN 'Check-In'
+                   WHEN customer_name = 'Check-Out' THEN 'Check-Out'
+                   ELSE 'Customer Visit'
+               END
+             WHERE visit_type IS NULL OR visit_type = ''
+        """)
+        frappe.db.commit()
+        # frappe.db.sql returns row count via cursor; print only if any
+        rows = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
+        if rows:
+            print(
+                f"chundakadan.install: backfilled visit_type on {rows} "
+                "Customer Visit Log rows"
+            )
+    except Exception as e:
+        print(
+            f"chundakadan.install: could not backfill visit_type: {e}"
+        )
+
+
 def ensure_visit_log_location_field(*args, **kwargs):
     """Idempotent: create Customer Visit Log.custom_location Custom Field
     if missing. The reverse-geocoder in chundakadan/utils/geocode.py
