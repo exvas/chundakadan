@@ -138,11 +138,24 @@ def ensure_payroll_config_fields(*args, **kwargs):
             ),
         },
         {
+            "fieldname": "esi_extended_ceiling",
+            "label": "ESI Extended Cutoff (₹)",
+            "fieldtype": "Int",
+            "default": "42000",
+            "insert_after": "esi_wage_ceiling",
+            "description": (
+                "Chundakadan-specific: ESI continues for employees up "
+                "to this gross. Between ESI Wage Ceiling and this cutoff, "
+                "contribution is calculated on the capped wage. Above "
+                "this cutoff, no ESI."
+            ),
+        },
+        {
             "fieldname": "pf_wage_ceiling",
             "label": "PF Wage Ceiling (₹)",
             "fieldtype": "Int",
             "default": "15000",
-            "insert_after": "esi_wage_ceiling",
+            "insert_after": "esi_extended_ceiling",
             "description": (
                 "Cap on Basic+DA for PF computation. Indian statutory "
                 "ceiling = ₹15,000. PF = 12% of min(basic, ceiling)."

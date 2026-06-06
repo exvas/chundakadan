@@ -192,21 +192,48 @@ def cleanup_all_payroll():
 def _get_ceilings():
     """Read ESI + PF wage ceilings from Chundakadan Settings.
 
-    Falls back to Indian statutory defaults if the fields don't exist
-    yet (first-run race condition). HR can change values via the desk
-    + re-run seed_salary_components() to propagate.
+    Returns (esi_ceiling, esi_extended_ceiling, pf_ceiling).
+    Falls back to defaults if fields don't exist yet (first-run
+    race condition). HR can change values via the desk + re-run
+    seed_salary_components() to propagate.
     """
-    esi = frappe.db.get_single_value("Chundakadan Settings", "esi_wage_ceiling") or 21000
-    pf = frappe.db.get_single_value("Chundakadan Settings", "pf_wage_ceiling") or 15000
-    return int(esi), int(pf)
+    esi = frappe.db.get_single_value(
+        "Chundakadan Settings", "esi_wage_ceiling") or 21000
+    esi_ext = frappe.db.get_single_value(
+        "Chundakadan Settings", "esi_extended_ceiling") or 42000
+    pf = frappe.db.get_single_value(
+        "Chundakadan Settings", "pf_wage_ceiling") or 15000
+    return int(esi), int(esi_ext), int(pf)
+
+
+def _esi_formula(rate):
+    """Build the Chundakadan-specific 3-tier ESI formula.
+
+    Tier 1: gross > extended_ceiling  → no ESI (0)
+    Tier 2: gross > wage_ceiling      → ESI on capped wage_ceiling
+    Tier 3: gross <= wage_ceiling     → ESI on (gross - Arrear - Incentive - Collection Incentive)
+
+    Arrear/Incentive/Collection Incentive references use their default
+    Frappe-auto-generated abbreviations (AR / IN / CI) which Frappe's
+    formula eval automatically resolves to 0 when the component
+    doesn't appear on a particular slip.
+    """
+    esi_ceiling, esi_ext, _ = _get_ceilings()
+    return (
+        f"0 if gross_pay > {esi_ext} "
+        f"else (round({esi_ceiling} * {rate}) if gross_pay > {esi_ceiling} "
+        f"else round(max(gross_pay - AR - IN - CI, 0) * {rate}))"
+    )
 
 
 def _components_spec():
     """Build the SALARY_COMPONENTS list with current ceilings baked
     into formulas. Called at seed time so the formulas reflect the
     latest Chundakadan Settings values."""
-    esi_ceiling, pf_ceiling = _get_ceilings()
-    print(f"  Using ESI ceiling = ₹{esi_ceiling:,}, PF ceiling = ₹{pf_ceiling:,}")
+    esi_ceiling, esi_ext, pf_ceiling = _get_ceilings()
+    print(f"  Using ESI ceiling = ₹{esi_ceiling:,}, "
+          f"ESI extended cutoff = ₹{esi_ext:,}, "
+          f"PF ceiling = ₹{pf_ceiling:,}")
 
     return [
     # ─── Earnings ─────────────────────────────────────────────────
@@ -224,18 +251,25 @@ def _components_spec():
      "depends_on_payment_days": 1},
     {"salary_component": "Medical  Allowance", "type": "Earning",
      "depends_on_payment_days": 1},
+    # Abbreviations pinned because the ESI formula references AR/IN/CI
+    # by name to subtract their amounts from gross_pay. Without explicit
+    # abbrs, Frappe auto-generates from initials and could collide.
     {"salary_component": "Incentive", "type": "Earning",
+     "salary_component_abbr": "IN",
      "depends_on_payment_days": 0, "is_additional_component": 1},
     {"salary_component": "Collection Incentive", "type": "Earning",
+     "salary_component_abbr": "CI",
      "depends_on_payment_days": 0, "is_additional_component": 1},
     {"salary_component": "Arrear", "type": "Earning",
+     "salary_component_abbr": "AR",
      "depends_on_payment_days": 0, "is_additional_component": 1},
 
     # ─── Statistical (employer contributions, NOT deducted) ───────
+    # ESI Employer = 3.25% of ESI base, follows same 3-tier rule
     {"salary_component": "ESI Employer Contribution", "type": "Earning",
      "statistical_component": 1, "do_not_include_in_total": 1,
      "amount_based_on_formula": 1,
-     "formula": f"round(gross_pay * 0.0325) if gross_pay <= {esi_ceiling} else 0",
+     "formula": _esi_formula(0.0325),
      "round_to_the_nearest_integer": 1},
     {"salary_component": "PF Employer Contribution", "type": "Earning",
      "statistical_component": 1, "do_not_include_in_total": 1,
@@ -244,9 +278,13 @@ def _components_spec():
      "round_to_the_nearest_integer": 1},
 
     # ─── Deductions ───────────────────────────────────────────────
+    # ESI = 0.75% with Chundakadan's 3-tier rule (per Najeeb 2026-06-07):
+    #   gross > ₹42K → 0 (no ESI)
+    #   ₹21K < gross ≤ ₹42K → 0.75% × ₹21K (capped base)
+    #   gross ≤ ₹21K → 0.75% × (gross - Arrears - Incentives)
     {"salary_component": "ESI", "type": "Deduction",
      "amount_based_on_formula": 1,
-     "formula": f"round(gross_pay * 0.0075) if gross_pay <= {esi_ceiling} else 0",
+     "formula": _esi_formula(0.0075),
      "round_to_the_nearest_integer": 1,
      "depends_on_payment_days": 1},
     {"salary_component": "Employee PF", "type": "Deduction",
