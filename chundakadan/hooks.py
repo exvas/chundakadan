@@ -157,6 +157,7 @@ doc_events = {
 # nothing to do (already installed, field already exists).
 before_install = [
     "chundakadan.install.ensure_firebase_admin_installed",
+    "chundakadan.install.ensure_holidays_library_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
@@ -166,6 +167,7 @@ before_install = [
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
+    "chundakadan.install.ensure_holidays_library_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
@@ -258,10 +260,10 @@ scheduler_events = {
 		"0 1 * * *": [
 			"chundakadan.chundakadan.api.leave.maybe_auto_allocate"
 		],
-		# Jan 1 at 00:00 — auto-generate the new year's Holiday List,
-		# set as Company default, migrate Employees from last year's
-		# list to the new one.
-		"0 0 1 1 *": [
+		# Dec 31 at 23:00 — append the upcoming year's holidays to the
+		# existing `CA` Holiday List, so leave + payroll keep working
+		# across the Jan 1 rollover.
+		"0 23 31 12 *": [
 			"chundakadan.seed.holiday_list.annual_holiday_refresh"
 		]
 	}

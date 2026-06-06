@@ -10,6 +10,7 @@ dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
     "firebase-admin>=6.5.0,<8.0.0",
+    "holidays>=0.50",  # India + Kerala (KL) subdivision auto-generates Holiday List dates
 ]
 
 [build-system]

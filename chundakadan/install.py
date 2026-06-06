@@ -51,6 +51,41 @@ def ensure_firebase_admin_installed(*args, **kwargs):
         )
 
 
+_HOLIDAYS_PIN = "holidays>=0.50"
+
+
+def ensure_holidays_library_installed(*args, **kwargs):
+    """Idempotent: `pip install holidays` if it isn't already importable.
+
+    The `holidays` Python library provides India + Kerala (KL) holiday
+    dates auto-calculated for any year. seed/holiday_list.py uses it
+    to generate Holiday List entries that include Onam, Vishu, Eid,
+    Diwali, etc. without needing manual yearly updates.
+
+    Non-fatal — if install fails, holiday_list.py falls back to its
+    hardcoded _HOLIDAYS_BY_YEAR map (good through 2030).
+    """
+    try:
+        import holidays  # noqa: F401
+        return
+    except ImportError:
+        pass
+
+    print(f"chundakadan.install: installing {_HOLIDAYS_PIN}…")
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", _HOLIDAYS_PIN],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+        print("chundakadan.install: holidays installed ✓")
+    except Exception as e:
+        print(
+            f"chundakadan.install: could not auto-install holidays: {e}\n"
+            "  Falls back to hardcoded 2026-2030 holiday map."
+        )
+
+
 def ensure_fcm_credentials_field(*args, **kwargs):
     """Idempotent: create Chundakadan Settings.fcm_credentials_json
     Custom Field if it doesn't exist. HR pastes the Firebase service-

@@ -20,13 +20,15 @@ from datetime import date, timedelta
 
 
 COMPANY = "Chundakadan Agencies"
+HOLIDAY_LIST_NAME = "CA"   # we maintain ONE Holiday List, append yearly
 
 
 # ─────────────────────────────────────────────────────────────────────
 # HOLIDAY DATA
 # ─────────────────────────────────────────────────────────────────────
 
-# Always-on fixed-date holidays (any year)
+# Always-on fixed-date holidays (any year) — used as fallback when the
+# `holidays` Python library isn't available.
 _FIXED_HOLIDAYS = [
     # (month, day, description)
     (1, 1,  "New Year's Day"),
@@ -36,6 +38,25 @@ _FIXED_HOLIDAYS = [
     (10, 2, "Gandhi Jayanti"),
     (12, 25, "Christmas"),
 ]
+
+
+# Tries the `holidays` package first (which auto-resolves Kerala dates
+# for every year including future ones). Falls back to our hardcoded
+# _HOLIDAYS_BY_YEAR if the library isn't installed.
+def _holidays_from_library(year):
+    """Return [(date, description), ...] from python-holidays for
+    India + Kerala subdivision. None if library not available."""
+    try:
+        import holidays as _holidays
+    except ImportError:
+        return None
+
+    try:
+        # India subdivision KL (Kerala)
+        in_kl = _holidays.India(years=[year], subdiv="KL")
+        return [(d, str(name)) for d, name in sorted(in_kl.items())]
+    except Exception:
+        return None
 
 
 # Variable-date holidays — pre-calculated per year (Kerala calendar).
@@ -125,31 +146,38 @@ def _all_sundays(year):
 
 
 def _holidays_for_year(year):
-    """Return list of (date, description, weekly_off) tuples."""
+    """Return list of (date, description, weekly_off) tuples.
+
+    Preferred source: python-holidays library with India + Kerala (KL)
+    subdivision. Falls back to our hardcoded _HOLIDAYS_BY_YEAR +
+    _FIXED_HOLIDAYS map if the library isn't installed.
+    """
     rows = []
 
     # Weekly off (Sundays)
     for sun in _all_sundays(year):
         rows.append((sun, "Sunday", 1))
 
-    # Fixed-date holidays
-    for month, day, desc in _FIXED_HOLIDAYS:
-        try:
-            d = date(year, month, day)
+    # Try the library first — it handles all India + Kerala holidays
+    # algorithmically for any year (no manual extension needed).
+    lib_rows = _holidays_from_library(year)
+    if lib_rows is not None:
+        for d, desc in lib_rows:
             rows.append((d, desc, 0))
-        except ValueError:
-            # e.g., Feb 29 on non-leap year — skip silently
-            pass
+    else:
+        # Fallback: hardcoded data
+        for month, day, desc in _FIXED_HOLIDAYS:
+            try:
+                rows.append((date(year, month, day), desc, 0))
+            except ValueError:
+                pass
+        for d, desc in _HOLIDAYS_BY_YEAR.get(year, []):
+            rows.append((d, desc, 0))
 
-    # Variable-date holidays from the year-specific table
-    for d, desc in _HOLIDAYS_BY_YEAR.get(year, []):
-        rows.append((d, desc, 0))
-
-    # Deduplicate by date — keep the more specific description
+    # Deduplicate by date — prefer specific holiday names over "Sunday"
     by_date = {}
     for d, desc, weekly in rows:
         if d in by_date:
-            # Prefer specific holiday names over "Sunday"
             existing = by_date[d]
             if existing[1] == "Sunday" and desc != "Sunday":
                 by_date[d] = (d, desc, weekly)
@@ -159,37 +187,77 @@ def _holidays_for_year(year):
     return sorted(by_date.values())
 
 
-def generate_holiday_list(year, force=False):
-    """Create (or replace if force=True) a Holiday List for the given
-    year. Returns the doctype name.
+def upsert_holidays(target_list=HOLIDAY_LIST_NAME, years=None):
+    """Append missing year-holidays to the existing `CA` Holiday List
+    (or create it if missing). Idempotent — re-running for the same
+    year is a no-op because we dedupe by date.
 
-    Idempotent: skips if a list for the year already exists, unless
-    force=True.
+    `years` defaults to [current_year, next_year]. Extends to_date so
+    the list always covers the latest year we have data for.
+
+    Returns the Holiday List name.
     """
-    name = f"CDN-{year}"
+    from datetime import date as _date
+    if years is None:
+        today = _date.today()
+        years = [today.year, today.year + 1]
 
-    if frappe.db.exists("Holiday List", name):
-        if not force:
-            print(f"  · {name} already exists — skip (use force=True to regenerate)")
-            return name
-        # Force regenerate — delete the existing one (if no Allocations)
-        try:
-            frappe.delete_doc("Holiday List", name,
-                              ignore_permissions=True, force=1)
-            print(f"  - deleted existing {name} to regenerate")
-        except Exception as e:
-            print(f"  ✗ could not delete {name}: {e}")
-            return name
+    # Collect all (date, description, weekly_off) tuples for the years
+    all_rows = []
+    for year in years:
+        all_rows.extend(_holidays_for_year(year))
+    all_rows.sort(key=lambda r: r[0])
 
-    rows = _holidays_for_year(year)
+    if not all_rows:
+        print(f"  ⚠ no holiday data for years {years}")
+        return target_list
 
+    target_from = all_rows[0][0]
+    target_to = all_rows[-1][0]
+
+    if frappe.db.exists("Holiday List", target_list):
+        # Update existing — extend dates + append missing holidays
+        doc = frappe.get_doc("Holiday List", target_list)
+        existing_dates = {h.holiday_date for h in doc.holidays}
+
+        # Extend date range to cover the new years (don't shrink it)
+        if doc.from_date is None or _date.fromisoformat(str(doc.from_date)) > target_from:
+            doc.from_date = str(target_from)
+        if doc.to_date is None or _date.fromisoformat(str(doc.to_date)) < target_to:
+            doc.to_date = str(target_to)
+
+        added = 0
+        for d, desc, weekly in all_rows:
+            if d in existing_dates:
+                continue
+            doc.append("holidays", {
+                "holiday_date": str(d),
+                "description": desc,
+                "weekly_off": weekly,
+            })
+            added += 1
+
+        if added == 0:
+            print(f"  · {target_list}: nothing to add for {years} "
+                  f"(date range: {doc.from_date} → {doc.to_date})")
+            return target_list
+
+        doc.flags.ignore_permissions = True
+        doc.save()
+        print(f"  ✓ {target_list}: appended {added} new entries "
+              f"(now covers {doc.from_date} → {doc.to_date})")
+        return target_list
+
+    # Doesn't exist — create fresh
     doc = frappe.get_doc({
         "doctype": "Holiday List",
-        "holiday_list_name": name,
-        "from_date": str(date(year, 1, 1)),
-        "to_date":   str(date(year, 12, 31)),
+        "holiday_list_name": target_list,
+        "from_date": str(target_from),
+        "to_date":   str(target_to),
         "weekly_off": "Sunday",
-        "color": "#b8860b",  # chundakadan gold
+        "country": "India",
+        "subdivision": "KL",   # Kerala
+        "color": "#b8860b",
         "holidays": [
             {
                 "doctype": "Holiday",
@@ -197,16 +265,21 @@ def generate_holiday_list(year, force=False):
                 "description": desc,
                 "weekly_off": weekly,
             }
-            for d, desc, weekly in rows
+            for d, desc, weekly in all_rows
         ],
     })
     doc.flags.ignore_permissions = True
     doc.insert()
+    n_weekly = sum(1 for _, _, w in all_rows if w)
+    n_holidays = len(all_rows) - n_weekly
+    print(f"  ✓ Created {target_list}: {n_weekly} Sundays + "
+          f"{n_holidays} holidays ({target_from} → {target_to})")
+    return target_list
 
-    n_weekly = sum(1 for _, _, w in rows if w)
-    n_holidays = len(rows) - n_weekly
-    print(f"  ✓ Created {name}: {n_weekly} Sundays + {n_holidays} holidays")
-    return name
+
+# Legacy alias — callers from before the CA-single-list refactor
+def generate_holiday_list(year, force=False):
+    return upsert_holidays(HOLIDAY_LIST_NAME, years=[year])
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -214,91 +287,48 @@ def generate_holiday_list(year, force=False):
 # ─────────────────────────────────────────────────────────────────────
 
 def ensure_current_and_next_year(*args, **kwargs):
-    """Wired as before_migrate. Ensures Holiday Lists exist for both
-    the current calendar year AND the next year (so HR can apply leave
-    + payroll without waiting for the Jan 1 cron).
-
-    Also sets the current year's list as Company default if Company
-    doesn't already have one.
+    """Wired as before_migrate. Updates the existing `CA` Holiday List
+    (or creates it if missing) covering current year + next year.
+    Idempotent.
     """
     from datetime import date
     today = date.today()
     years = [today.year, today.year + 1]
 
-    print(f"chundakadan.seed.holiday_list: ensuring lists for {years}")
-    last_created = None
-    for year in years:
-        # Only generate if we have data for it (or if it's a year we
-        # can compute fixed-date holidays for)
-        if year not in _HOLIDAYS_BY_YEAR and year > 2030:
-            print(f"  ⚠ year {year}: no variable-date holidays defined — "
-                  f"will only have Sundays + fixed-date holidays. "
-                  f"Update _HOLIDAYS_BY_YEAR in seed/holiday_list.py.")
-        try:
-            last_created = generate_holiday_list(year)
-        except Exception as e:
-            print(f"  ✗ year {year}: {e}")
+    print(f"chundakadan.seed.holiday_list: ensuring {HOLIDAY_LIST_NAME} covers {years}")
+    try:
+        upsert_holidays(HOLIDAY_LIST_NAME, years=years)
+    except Exception as e:
+        print(f"  ✗ {e}")
 
-    # Set as Company default if not already set
+    # Set as Company default if not already
     if frappe.db.exists("Company", COMPANY):
         current = frappe.db.get_value("Company", COMPANY,
                                       "default_holiday_list")
-        current_year_list = f"CDN-{today.year}"
-        if not current and frappe.db.exists("Holiday List", current_year_list):
+        if not current and frappe.db.exists("Holiday List", HOLIDAY_LIST_NAME):
             frappe.db.set_value("Company", COMPANY,
-                                "default_holiday_list", current_year_list)
-            print(f"  ✓ Set Company default = {current_year_list}")
+                                "default_holiday_list", HOLIDAY_LIST_NAME)
+            print(f"  ✓ Set Company default = {HOLIDAY_LIST_NAME}")
 
 
 def annual_holiday_refresh():
-    """Wired as a yearly Jan 1 cron. Generates the NEW current year's
-    Holiday List + updates Company default + propagates to Employees
-    that still hold the previous year's list.
+    """Wired as the Dec 31 23:00 cron. Appends the NEW upcoming year's
+    holidays to the existing `CA` list, so when Jan 1 ticks over, the
+    list already covers the new year.
 
-    Standard scheduler config (chundakadan/hooks.py):
-        scheduler_events = {
-            "cron": {
-                "0 0 1 1 *":
-                    ["chundakadan.seed.holiday_list.annual_holiday_refresh"],
-            }
-        }
+    Schedule (chundakadan/hooks.py):
+        scheduler_events.cron["0 23 31 12 *"]:
+            "chundakadan.seed.holiday_list.annual_holiday_refresh"
     """
     from datetime import date
     today = date.today()
-    current_year = today.year
-    current_list = f"CDN-{current_year}"
+    next_year = today.year + 1
 
-    print(f"chundakadan.seed.holiday_list: annual refresh for {current_year}")
-
-    # 1. Create this year's list if missing
-    if not frappe.db.exists("Holiday List", current_list):
-        generate_holiday_list(current_year)
-
-    # 2. Pre-create next year's list too (so leave allocation cycles
-    #    don't break on Dec 31)
-    next_year = current_year + 1
-    next_list = f"CDN-{next_year}"
-    if not frappe.db.exists("Holiday List", next_list):
-        generate_holiday_list(next_year)
-
-    # 3. Update Company default if it's still pointing at a past list
-    company_default = frappe.db.get_value("Company", COMPANY,
-                                           "default_holiday_list")
-    if company_default != current_list:
-        frappe.db.set_value("Company", COMPANY,
-                            "default_holiday_list", current_list)
-        print(f"  ✓ Company default updated: {company_default} → {current_list}")
-
-    # 4. Update Employees still on the previous year's list
-    prev_list = f"CDN-{current_year - 1}"
-    if frappe.db.exists("Holiday List", prev_list):
-        updated = frappe.db.sql("""
-            UPDATE `tabEmployee`
-            SET holiday_list = %s
-            WHERE status = 'Active' AND holiday_list = %s
-        """, (current_list, prev_list))
-        n = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
-        if n:
-            print(f"  ✓ Migrated {n} Employees: {prev_list} → {current_list}")
+    print(f"chundakadan.seed.holiday_list: Dec-31 refresh — "
+          f"extending {HOLIDAY_LIST_NAME} to cover {next_year}")
+    try:
+        upsert_holidays(HOLIDAY_LIST_NAME, years=[next_year])
+    except Exception as e:
+        print(f"  ✗ {e}")
 
     frappe.db.commit()
