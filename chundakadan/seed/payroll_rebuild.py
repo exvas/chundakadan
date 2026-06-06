@@ -170,10 +170,14 @@ def cleanup_all_payroll():
             print(f"  ✗ SSA {s['name']}: {e}")
     print(f"  ✓ SSAs: {counts['ssas']} deleted")
 
-    # 4. Salary Structures
+    # 4. Salary Structures — cancel if submitted before delete
     for s in frappe.get_all("Salary Structure",
-                            fields=["name"], limit_page_length=1000):
+                            fields=["name", "docstatus"],
+                            limit_page_length=1000):
         try:
+            if s.get("docstatus") == 1:
+                doc = frappe.get_doc("Salary Structure", s["name"])
+                doc.cancel()
             frappe.delete_doc("Salary Structure", s["name"],
                               ignore_permissions=True, force=1)
             counts["structures"] += 1
@@ -521,9 +525,10 @@ NEW_EMPLOYEES = [
         "date_of_birth": "1995-01-01",       # placeholder — HR updates
         "date_of_joining": "2026-05-01",     # placeholder
         "company": COMPANY,
-        "designation": "BDE",
-        "department": "SALES & MARKETING",
-        "branch": "SOUTH",
+        "designation": "Business Development Executive",
+        # department + branch intentionally omitted — ERPNext Department
+        # naming is hierarchical (e.g. "Sales & Marketing - CA") and varies
+        # per install. HR fills these via desk after creation.
         "status": "Active",
         "employment_type": "Full-time",
     },
@@ -534,9 +539,7 @@ NEW_EMPLOYEES = [
         "date_of_birth": "1995-01-01",
         "date_of_joining": "2026-05-01",
         "company": COMPANY,
-        "designation": "BDE",
-        "department": "SALES & MARKETING",
-        "branch": "SOUTH",
+        "designation": "Business Development Executive",
         "status": "Active",
         "employment_type": "Full-time",
     },
@@ -593,8 +596,9 @@ DESIGNATION_TO_STRUCTURE = [
     ("sales hod",         "CDN Sales Executive Structure"),
     ("marketing manager", "CDN Sales Executive Structure"),
     ("sales & marketing", "CDN Sales Executive Structure"),
-    ("sales executive",   "CDN Sales Executive Structure"),
-    ("bde",               "CDN Sales Executive Structure"),
+    ("sales executive",       "CDN Sales Executive Structure"),
+    ("business development",  "CDN Sales Executive Structure"),  # Business Development Executive
+    ("bde",                   "CDN Sales Executive Structure"),
     ("floor manager",     "CDN Floor Structure"),
     ("floor asst",        "CDN Floor Structure"),
     ("floor ass",         "CDN Floor Structure"),

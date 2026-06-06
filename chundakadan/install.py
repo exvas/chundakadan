@@ -194,6 +194,33 @@ def ensure_payroll_config_fields(*args, **kwargs):
         except Exception as e:
             print(f"chundakadan.install: could not create {cf_name}: {e}")
 
+    # Custom Field `default` only applies to new docs — Chundakadan
+    # Settings is an existing Singleton, so its values stay NULL / 0
+    # unless we explicitly set them. Backfill any field whose Singleton
+    # value is empty.
+    if frappe.db.exists("DocType", "Chundakadan Settings"):
+        defaults = {
+            "esi_wage_ceiling": 21000,
+            "esi_extended_ceiling": 42000,
+            "pf_wage_ceiling": 15000,
+            "payroll_basis": "Fixed 30 Days",
+        }
+        try:
+            settings = frappe.get_single("Chundakadan Settings")
+            changed = False
+            for fn, default_val in defaults.items():
+                current = settings.get(fn)
+                if not current:
+                    settings.set(fn, default_val)
+                    changed = True
+            if changed:
+                settings.flags.ignore_permissions = True
+                settings.save()
+                print("chundakadan.install: backfilled payroll defaults "
+                      "on Chundakadan Settings singleton")
+        except Exception as e:
+            print(f"chundakadan.install: could not backfill defaults: {e}")
+
     if created:
         frappe.db.commit()
         print(f"chundakadan.install: created {created} payroll config fields")
