@@ -148,6 +148,9 @@ doc_events = {
     },
     "Newsletter": {
         "after_insert": "chundakadan.doc_events.notifications.newsletter_sent"
+    },
+    "Salary Slip": {
+        "validate": "chundakadan.doc_events.salary_slip.apply_payroll_basis"
     }
 }
 # Install / migrate hooks. Idempotent — they no-op when there's
