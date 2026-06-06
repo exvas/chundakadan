@@ -176,6 +176,7 @@ before_migrate = [
     "chundakadan.seed.role_profiles.seed_profiles",
     "chundakadan.seed.role_profiles.cleanup_unused_profiles",
     "chundakadan.seed.payroll_period.ensure_current_fy_period",
+    "chundakadan.seed.holiday_list.ensure_current_and_next_year",
 ]
 
 # Uninstallation
@@ -256,6 +257,12 @@ scheduler_events = {
 		# fires the annual leave allocation only on the configured day.
 		"0 1 * * *": [
 			"chundakadan.chundakadan.api.leave.maybe_auto_allocate"
+		],
+		# Jan 1 at 00:00 — auto-generate the new year's Holiday List,
+		# set as Company default, migrate Employees from last year's
+		# list to the new one.
+		"0 0 1 1 *": [
+			"chundakadan.seed.holiday_list.annual_holiday_refresh"
 		]
 	}
 }
