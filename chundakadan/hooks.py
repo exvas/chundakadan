@@ -157,6 +157,7 @@ before_install = [
     "chundakadan.install.ensure_fcm_credentials_field",
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
+    "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_employee_payroll_fields",
 ]
 before_migrate = [
@@ -164,6 +165,7 @@ before_migrate = [
     "chundakadan.install.ensure_fcm_credentials_field",
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
+    "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.seed.privacy_policy.upsert_page",
     "chundakadan.seed.role_profiles.seed_profiles",

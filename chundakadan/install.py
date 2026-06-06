@@ -191,6 +191,70 @@ def ensure_employee_payroll_fields(*args, **kwargs):
         print(f"chundakadan.install: created {created} Employee payroll fields")
 
 
+def ensure_visit_log_sales_user_create_perm(*args, **kwargs):
+    """Grant Sales User create + delete on Customer Visit Log.
+
+    Hit 2026-06-06: Razeel (sales@chundakadan.in) holds Sales User
+    role via CDN Sales Admin profile and tried to log a Field Visit
+    Logger entry from the mobile app — got 403 'No permission for
+    Customer Visit Log'. Audit showed the doctype's Custom DocPerm
+    rows give Sales User read+write but NOT create:
+
+      Sales Person:  read write create delete
+      System Manager: read write create delete
+      Sales User:    read write   ✗     ✗     ← create blocked
+      HR User:       read write create delete
+
+    The mobile endpoint already uses ignore_permissions=True (field_sales
+    commit cbb2415) so that path works, but the desk UI still rejects
+    Sales User creates. Grant create + delete here so both paths work.
+
+    Idempotent: skips if Sales User already has create=1.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Customer Visit Log"):
+        return
+
+    existing = frappe.db.get_value(
+        "Custom DocPerm",
+        {"parent": "Customer Visit Log", "role": "Sales User"},
+        ["name", "create", "delete"],
+        as_dict=True,
+    )
+
+    if existing and existing.get("create") and existing.get("delete"):
+        return
+
+    try:
+        if existing:
+            # Upgrade the existing Sales User row in place
+            doc = frappe.get_doc("Custom DocPerm", existing["name"])
+            doc.create = 1
+            doc.delete = 1
+            doc.flags.ignore_permissions = True
+            doc.save()
+            print("chundakadan.install: upgraded Sales User Custom DocPerm "
+                  "on Customer Visit Log (added create + delete)")
+        else:
+            # Should not happen given the audit showed a row exists,
+            # but handle defensively.
+            frappe.get_doc({
+                "doctype": "Custom DocPerm",
+                "parent": "Customer Visit Log",
+                "parenttype": "DocType",
+                "parentfield": "permissions",
+                "role": "Sales User",
+                "read": 1, "write": 1, "create": 1, "delete": 1,
+            }).insert(ignore_permissions=True)
+            print("chundakadan.install: created Sales User Custom DocPerm "
+                  "on Customer Visit Log")
+        frappe.db.commit()
+        frappe.clear_cache(doctype="Customer Visit Log")
+    except Exception as e:
+        print(f"chundakadan.install: could not adjust visit-log perm: {e}")
+
+
 def ensure_visit_log_visit_type_field(*args, **kwargs):
     """Idempotent: create Customer Visit Log.visit_type Custom Field
     so HR can filter "real customer visits" vs "mobile check-in /
