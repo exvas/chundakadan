@@ -213,20 +213,35 @@ def _get_ceilings():
 def _esi_formula(rate):
     """Build the Chundakadan-specific 3-tier ESI formula.
 
-    Tier 1: gross > extended_ceiling  → no ESI (0)
-    Tier 2: gross > wage_ceiling      → ESI on capped wage_ceiling
-    Tier 3: gross <= wage_ceiling     → ESI on (gross - Arrear - Incentive - Collection Incentive)
+    ESI Base = (Basic + DA) × payment_days / total_working_days
 
-    Arrear/Incentive/Collection Incentive references use their default
-    Frappe-auto-generated abbreviations (AR / IN / CI) which Frappe's
-    formula eval automatically resolves to 0 when the component
-    doesn't appear on a particular slip.
+    Per Najeeb's voice clarification 2026-06-06:
+      - ESI EXCLUDES Travel Allowance, House Rent Allowance, Food Allowance
+      - ESI base = Basic + DA only
+      - Arrears + Incentives also excluded (typical, separate from Basic)
+
+    We approximate "Basic + DA" with the SSA `base` field — in chundakadan's
+    setup, the `base` salary represents Basic-equivalent. DA is configured
+    as a separate component but typically ₹0; HR can add it via DA
+    Salary Component if/when it becomes part of the structure.
+
+    LOP handling: multiply by payment_days/total_working_days ratio so
+    ESI prorates with attendance (standard Indian practice — ESI on
+    actually-paid wages).
+
+    3-tier rule:
+      esi_base > 42K (extended_ceiling)  → no ESI
+      21K < esi_base ≤ 42K               → ESI on capped 21K
+      esi_base ≤ 21K                     → ESI on esi_base directly
     """
     esi_ceiling, esi_ext, _ = _get_ceilings()
+    # esi_base = (Basic + DA) prorated; use `base` (SSA base) as proxy
     return (
-        f"0 if gross_pay > {esi_ext} "
-        f"else (round({esi_ceiling} * {rate}) if gross_pay > {esi_ceiling} "
-        f"else round(max(gross_pay - AR - IN - CI, 0) * {rate}))"
+        f"(lambda esi_base: "
+        f"0 if esi_base > {esi_ext} "
+        f"else (round({esi_ceiling} * {rate}) if esi_base > {esi_ceiling} "
+        f"else round(max(esi_base, 0) * {rate})))"
+        f"(base * payment_days / total_working_days)"
     )
 
 
@@ -240,21 +255,24 @@ def _components_spec():
           f"PF ceiling = ₹{pf_ceiling:,}")
 
     return [
-    # ─── Earnings ─────────────────────────────────────────────────
+    # ─── Earnings (all static — depends_on_payment_days=0) ────────
+    # Static earnings + separate LOP Deduction line matches Chundakadan's
+    # May 2026 Excel layout. Najeeb 2026-06-06: "Basic stays at full ₹X,
+    # LOP appears as separate column. ESI on Basic+DA only."
     {"salary_component": "Basic", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "House Rent Allowance", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "Travel Allowance", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "Food Allowance", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "Dearness Allowance", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "Special Allowance", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "Medical  Allowance", "type": "Earning",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     # Abbreviations pinned because the ESI formula references AR/IN/CI
     # by name to subtract their amounts from gross_pay. Without explicit
     # abbrs, Frappe auto-generates from initials and could collide.
@@ -269,33 +287,50 @@ def _components_spec():
      "depends_on_payment_days": 0, "is_additional_component": 1},
 
     # ─── Statistical (employer contributions, NOT deducted) ───────
-    # ESI Employer = 3.25% of ESI base, follows same 3-tier rule
+    # ESI Employer = 3.25% on (Basic+DA prorated). PF Employer = 12%
+    # of min(Basic+DA prorated, ₹15K). Both follow same proration as
+    # the corresponding employee deduction.
     {"salary_component": "ESI Employer Contribution", "type": "Earning",
      "statistical_component": 1, "do_not_include_in_total": 1,
      "amount_based_on_formula": 1,
      "formula": _esi_formula(0.0325),
-     "round_to_the_nearest_integer": 1},
+     "round_to_the_nearest_integer": 1,
+     "depends_on_payment_days": 0},
     {"salary_component": "PF Employer Contribution", "type": "Earning",
      "statistical_component": 1, "do_not_include_in_total": 1,
      "amount_based_on_formula": 1,
-     "formula": f"round(min(base, {pf_ceiling}) * 0.12)",
-     "round_to_the_nearest_integer": 1},
+     "formula": f"round(min(base * payment_days / total_working_days, {pf_ceiling}) * 0.12)",
+     "round_to_the_nearest_integer": 1,
+     "depends_on_payment_days": 0},
 
     # ─── Deductions ───────────────────────────────────────────────
-    # ESI = 0.75% with Chundakadan's 3-tier rule (per Najeeb 2026-06-07):
-    #   gross > ₹42K → 0 (no ESI)
-    #   ₹21K < gross ≤ ₹42K → 0.75% × ₹21K (capped base)
-    #   gross ≤ ₹21K → 0.75% × (gross - Arrears - Incentives)
+    # LOP Deduction MUST appear first in deductions so its value is
+    # available before ESI/PF compute (Frappe evaluates row-by-row).
+    # Formula: prorate FULL earnings (gross_pay) by LOP days.
+    {"salary_component": "LOP Deduction", "type": "Deduction",
+     "amount_based_on_formula": 1,
+     "formula": "round(gross_pay * (total_working_days - payment_days) / total_working_days)",
+     "round_to_the_nearest_integer": 1,
+     "depends_on_payment_days": 0},
+
+    # ESI = 0.75% on (Basic+DA × payment_days/30), with Chundakadan's
+    # 3-tier rule. Per Najeeb 2026-06-06: ESI base excludes HRA, Travel,
+    # Food. Only Basic+DA. We use `base` (SSA base) as Basic+DA proxy.
     {"salary_component": "ESI", "type": "Deduction",
      "amount_based_on_formula": 1,
      "formula": _esi_formula(0.0075),
      "round_to_the_nearest_integer": 1,
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
+
+    # Employee PF = 12% of min(Basic+DA prorated, ₹15K)
     {"salary_component": "Employee PF", "type": "Deduction",
      "amount_based_on_formula": 1,
-     "formula": f"round(min(base, {pf_ceiling}) * 0.12)",
+     "formula": f"round(min(base * payment_days / total_working_days, {pf_ceiling}) * 0.12)",
      "round_to_the_nearest_integer": 1,
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
+
+    # Professional Tax — Kerala slabs on base salary. Static (one full
+    # PT per month worked).
     {"salary_component": "Professional Tax", "type": "Deduction",
      "amount_based_on_formula": 1,
      "formula": (
@@ -309,15 +344,14 @@ def _components_spec():
          "(base > 124999) * 1250"
      ),
      "round_to_the_nearest_integer": 1,
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
+
     {"salary_component": "Welfare Fund", "type": "Deduction",
-     "depends_on_payment_days": 1},
+     "depends_on_payment_days": 0},
     {"salary_component": "Employee Advance Recovery", "type": "Deduction",
      "depends_on_payment_days": 0, "is_additional_component": 1},
     {"salary_component": "Bank Return Charges", "type": "Deduction",
      "depends_on_payment_days": 0, "is_additional_component": 1},
-    {"salary_component": "LOP Deduction", "type": "Deduction",
-     "depends_on_payment_days": 1},
     ]
 
 
@@ -391,25 +425,27 @@ SALARY_STRUCTURES = [
         "name": "CDN Sales Executive Structure",
         "for": "Sales Executive / BDE / Sales HOD / Sales Admin",
         "earnings": [
-            {"salary_component": "Basic",
+            {"salary_component": "Basic", "depends_on_payment_days": 0,
              "amount_based_on_formula": 1, "formula": "base"},
-            {"salary_component": "Travel Allowance",
+            {"salary_component": "Travel Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
-            {"salary_component": "Food Allowance",
+            {"salary_component": "Food Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
-            {"salary_component": "Collection Incentive",
+            {"salary_component": "Collection Incentive", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0,
              "is_additional_component": 1},
             {"salary_component": "ESI Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
         ],
         "deductions": [
-            {"salary_component": "ESI"},
-            {"salary_component": "Employee PF"},
-            {"salary_component": "Professional Tax"},
-            {"salary_component": "Welfare Fund",
+            # LOP Deduction FIRST so it computes before ESI/PF
+            {"salary_component": "LOP Deduction", "depends_on_payment_days": 0},
+            {"salary_component": "ESI", "depends_on_payment_days": 0},
+            {"salary_component": "Employee PF", "depends_on_payment_days": 0},
+            {"salary_component": "Professional Tax", "depends_on_payment_days": 0},
+            {"salary_component": "Welfare Fund", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
         ],
     },
@@ -417,22 +453,23 @@ SALARY_STRUCTURES = [
         "name": "CDN Office Staff Structure",
         "for": "HR / Accounts / Sales Coordinator / Billing / Dispatch / Purchaser",
         "earnings": [
-            {"salary_component": "Basic",
+            {"salary_component": "Basic", "depends_on_payment_days": 0,
              "amount_based_on_formula": 1, "formula": "base"},
-            {"salary_component": "House Rent Allowance",
+            {"salary_component": "House Rent Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 1, "formula": "base * 0.4"},
-            {"salary_component": "Food Allowance",
+            {"salary_component": "Food Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
             {"salary_component": "ESI Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
         ],
         "deductions": [
-            {"salary_component": "ESI"},
-            {"salary_component": "Employee PF"},
-            {"salary_component": "Professional Tax"},
-            {"salary_component": "Welfare Fund",
+            {"salary_component": "LOP Deduction", "depends_on_payment_days": 0},
+            {"salary_component": "ESI", "depends_on_payment_days": 0},
+            {"salary_component": "Employee PF", "depends_on_payment_days": 0},
+            {"salary_component": "Professional Tax", "depends_on_payment_days": 0},
+            {"salary_component": "Welfare Fund", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
         ],
     },
@@ -440,20 +477,21 @@ SALARY_STRUCTURES = [
         "name": "CDN Floor Structure",
         "for": "Floor Assistant / Floor Manager / House Keeping",
         "earnings": [
-            {"salary_component": "Basic",
+            {"salary_component": "Basic", "depends_on_payment_days": 0,
              "amount_based_on_formula": 1, "formula": "base"},
-            {"salary_component": "Food Allowance",
+            {"salary_component": "Food Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
             {"salary_component": "ESI Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
         ],
         "deductions": [
-            {"salary_component": "ESI"},
-            {"salary_component": "Employee PF"},
-            {"salary_component": "Professional Tax"},
-            {"salary_component": "Welfare Fund",
+            {"salary_component": "LOP Deduction", "depends_on_payment_days": 0},
+            {"salary_component": "ESI", "depends_on_payment_days": 0},
+            {"salary_component": "Employee PF", "depends_on_payment_days": 0},
+            {"salary_component": "Professional Tax", "depends_on_payment_days": 0},
+            {"salary_component": "Welfare Fund", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
         ],
     },
@@ -461,19 +499,20 @@ SALARY_STRUCTURES = [
         "name": "CDN Management Structure",
         "for": "GM / MD / Senior Manager",
         "earnings": [
-            {"salary_component": "Basic",
+            {"salary_component": "Basic", "depends_on_payment_days": 0,
              "amount_based_on_formula": 1, "formula": "base"},
-            {"salary_component": "House Rent Allowance",
+            {"salary_component": "House Rent Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 1, "formula": "base * 0.5"},
-            {"salary_component": "Travel Allowance",
+            {"salary_component": "Travel Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
             {"salary_component": "PF Employer Contribution",
-             "statistical_component": 1},
+             "statistical_component": 1, "depends_on_payment_days": 0},
         ],
         "deductions": [
-            {"salary_component": "Employee PF"},
-            {"salary_component": "Professional Tax"},
-            {"salary_component": "Welfare Fund",
+            {"salary_component": "LOP Deduction", "depends_on_payment_days": 0},
+            {"salary_component": "Employee PF", "depends_on_payment_days": 0},
+            {"salary_component": "Professional Tax", "depends_on_payment_days": 0},
+            {"salary_component": "Welfare Fund", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
         ],
     },
@@ -736,3 +775,67 @@ def run_all_phases():
     print("\n" + "=" * 60)
     print("✓ All phases complete. Run a Payroll Entry for May 2026 to verify.")
     print("=" * 60)
+
+
+# ═════════════════════════════════════════════════════════════════════
+# REFRESH — re-apply component formulas + structures after spec edits
+# ═════════════════════════════════════════════════════════════════════
+
+def refresh_structures():
+    """Hot-update: drop the 4 canonical Salary Structures + recreate
+    them with the current SALARY_STRUCTURES spec. Preserves SSAs by
+    cancelling them first, deleting + recreating structures, then
+    re-creating SSAs from the latest backup.
+
+    Use this when you've edited the SALARY_STRUCTURES or SALARY_COMPONENTS
+    spec in payroll_rebuild.py and want existing structures to reflect
+    the changes.
+    """
+    print("Refreshing Salary Components + Structures…\n")
+
+    # 1. Update components first (no structure dependency)
+    seed_salary_components()
+
+    # 2. Snapshot current SSAs so we can recreate them
+    backup_state()
+
+    # 3. Cancel + delete SSAs (they reference structures by name)
+    print("\nCancelling + deleting current SSAs…")
+    for s in frappe.get_all("Salary Structure Assignment",
+                            fields=["name", "docstatus"],
+                            limit_page_length=10000):
+        try:
+            if s["docstatus"] == 1:
+                doc = frappe.get_doc("Salary Structure Assignment", s["name"])
+                doc.cancel()
+            frappe.delete_doc("Salary Structure Assignment", s["name"],
+                              ignore_permissions=True, force=1)
+        except Exception as e:
+            print(f"  ✗ SSA {s['name']}: {str(e)[:80]}")
+
+    # 4. Cancel + delete the 4 canonical structures
+    print("\nCancelling + deleting 4 canonical structures…")
+    for spec in SALARY_STRUCTURES:
+        if not frappe.db.exists("Salary Structure", spec["name"]):
+            continue
+        try:
+            doc = frappe.get_doc("Salary Structure", spec["name"])
+            if doc.docstatus == 1:
+                doc.cancel()
+            frappe.delete_doc("Salary Structure", spec["name"],
+                              ignore_permissions=True, force=1)
+            print(f"  ✓ deleted {spec['name']}")
+        except Exception as e:
+            print(f"  ✗ {spec['name']}: {str(e)[:80]}")
+
+    frappe.db.commit()
+
+    # 5. Recreate structures with new spec
+    print("\nRecreating structures with new spec…")
+    seed_salary_structures()
+
+    # 6. Recreate SSAs from backup
+    print("\nRecreating SSAs from latest backup…")
+    recreate_ssas_from_backup()
+
+    print("\n✓ refresh_structures() complete")
