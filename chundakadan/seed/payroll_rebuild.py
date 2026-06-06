@@ -220,28 +220,21 @@ def _esi_formula(rate):
       - ESI base = Basic + DA only
       - Arrears + Incentives also excluded (typical, separate from Basic)
 
-    We approximate "Basic + DA" with the SSA `base` field — in chundakadan's
-    setup, the `base` salary represents Basic-equivalent. DA is configured
-    as a separate component but typically ₹0; HR can add it via DA
-    Salary Component if/when it becomes part of the structure.
-
-    LOP handling: multiply by payment_days/total_working_days ratio so
-    ESI prorates with attendance (standard Indian practice — ESI on
-    actually-paid wages).
-
     3-tier rule:
       esi_base > 42K (extended_ceiling)  → no ESI
       21K < esi_base ≤ 42K               → ESI on capped 21K
       esi_base ≤ 21K                     → ESI on esi_base directly
+
+    AVOIDS max() and lambda — Frappe's _safe_eval doesn't whitelist them
+    in this install (hit 2026-06-06 with 'name max is not defined').
+    Repeats base_expr inline 3× instead.
     """
     esi_ceiling, esi_ext, _ = _get_ceilings()
-    # esi_base = (Basic + DA) prorated; use `base` (SSA base) as proxy
+    base_expr = "(base * payment_days / total_working_days)"
     return (
-        f"(lambda esi_base: "
-        f"0 if esi_base > {esi_ext} "
-        f"else (round({esi_ceiling} * {rate}) if esi_base > {esi_ceiling} "
-        f"else round(max(esi_base, 0) * {rate})))"
-        f"(base * payment_days / total_working_days)"
+        f"0 if {base_expr} > {esi_ext} "
+        f"else (round({esi_ceiling} * {rate}) if {base_expr} > {esi_ceiling} "
+        f"else round({base_expr} * {rate}))"
     )
 
 
@@ -299,7 +292,7 @@ def _components_spec():
     {"salary_component": "PF Employer Contribution", "type": "Earning",
      "statistical_component": 1, "do_not_include_in_total": 1,
      "amount_based_on_formula": 1,
-     "formula": f"round(min(base * payment_days / total_working_days, {pf_ceiling}) * 0.12)",
+     "formula": f"round(((base * payment_days / total_working_days) if (base * payment_days / total_working_days) < {pf_ceiling} else {pf_ceiling}) * 0.12)",
      "round_to_the_nearest_integer": 1,
      "depends_on_payment_days": 0},
 
@@ -325,7 +318,7 @@ def _components_spec():
     # Employee PF = 12% of min(Basic+DA prorated, ₹15K)
     {"salary_component": "Employee PF", "type": "Deduction",
      "amount_based_on_formula": 1,
-     "formula": f"round(min(base * payment_days / total_working_days, {pf_ceiling}) * 0.12)",
+     "formula": f"round(((base * payment_days / total_working_days) if (base * payment_days / total_working_days) < {pf_ceiling} else {pf_ceiling}) * 0.12)",
      "round_to_the_nearest_integer": 1,
      "depends_on_payment_days": 0},
 
@@ -519,6 +512,30 @@ SALARY_STRUCTURES = [
 ]
 
 
+def _propagate_component_formulas(spec_rows):
+    """For any Salary Detail spec referring to a formula-based Salary
+    Component, copy the Component's formula + amount_based_on_formula
+    flag onto the row. Without this, HRMS treats the row as static
+    amount=0 and skips it on the Salary Slip.
+
+    Mutates `spec_rows` in place.
+    """
+    for row in spec_rows:
+        comp_name = row.get("salary_component")
+        if not comp_name:
+            continue
+        # Skip if the spec already provides amount/formula
+        if row.get("formula") or row.get("amount_based_on_formula") is not None:
+            continue
+        comp = frappe.db.get_value(
+            "Salary Component", comp_name,
+            ["amount_based_on_formula", "formula"], as_dict=True,
+        )
+        if comp and comp.amount_based_on_formula and comp.formula:
+            row["amount_based_on_formula"] = 1
+            row["formula"] = comp.formula
+
+
 def seed_salary_structures():
     """Create the 4 canonical Salary Structures. Idempotent — replaces
     existing structure with the same name if it exists."""
@@ -528,6 +545,13 @@ def seed_salary_structures():
         if frappe.db.exists("Salary Structure", name):
             frappe.delete_doc("Salary Structure", name,
                               ignore_permissions=True, force=1)
+
+        # Copy formula + amount_based_on_formula from Component onto every
+        # Salary Detail row that doesn't already provide them. Without
+        # this, HRMS treats formula-based components as static amount=0
+        # and skips them on the Salary Slip.
+        _propagate_component_formulas(spec["earnings"])
+        _propagate_component_formulas(spec["deductions"])
 
         doc = frappe.get_doc({
             "doctype": "Salary Structure",
