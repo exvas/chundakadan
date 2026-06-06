@@ -97,6 +97,95 @@ def ensure_fcm_credentials_field(*args, **kwargs):
         print(f"chundakadan.install: could not create FCM field: {e}")
 
 
+def ensure_payroll_config_fields(*args, **kwargs):
+    """Idempotent: add 3 Custom Fields to Chundakadan Settings that
+    drive payroll behaviour dynamically:
+
+      esi_wage_ceiling   Int    Default 21000  — ESI cuts off above this
+      pf_wage_ceiling    Int    Default 15000  — PF capped at this
+      payroll_basis      Select Calendar / Working / Fixed 30 days
+
+    seed_salary_components() reads these at run time + bakes the
+    current values into Salary Component formulas. To change a
+    ceiling: HR edits Chundakadan Settings then re-runs
+    seed_salary_components() — no code redeploy needed.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Chundakadan Settings"):
+        return
+
+    fields = [
+        {
+            "fieldname": "payroll_config_section",
+            "label": "Payroll Configuration",
+            "fieldtype": "Section Break",
+            "insert_after": "fcm_credentials_json",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "esi_wage_ceiling",
+            "label": "ESI Wage Ceiling (₹)",
+            "fieldtype": "Int",
+            "default": "21000",
+            "insert_after": "payroll_config_section",
+            "description": (
+                "Monthly gross-wages threshold below which ESI applies. "
+                "Indian statutory ceiling = ₹21,000 (₹25,000 for persons "
+                "with disability). Update + re-run "
+                "chundakadan.seed.payroll_rebuild.seed_salary_components "
+                "to propagate."
+            ),
+        },
+        {
+            "fieldname": "pf_wage_ceiling",
+            "label": "PF Wage Ceiling (₹)",
+            "fieldtype": "Int",
+            "default": "15000",
+            "insert_after": "esi_wage_ceiling",
+            "description": (
+                "Cap on Basic+DA for PF computation. Indian statutory "
+                "ceiling = ₹15,000. PF = 12% of min(basic, ceiling)."
+            ),
+        },
+        {
+            "fieldname": "payroll_basis",
+            "label": "Payroll Basis",
+            "fieldtype": "Select",
+            "options": "Fixed 30 Days\nCalendar Days\nWorking Days",
+            "default": "Fixed 30 Days",
+            "insert_after": "pf_wage_ceiling",
+            "description": (
+                "How days are counted on Salary Slips. "
+                "Fixed 30 — always divides by 30 regardless of month length. "
+                "Calendar — actual days in month (28-31). "
+                "Working — excludes holidays + weekly off."
+            ),
+        },
+    ]
+
+    created = 0
+    for spec in fields:
+        cf_name = f"Chundakadan Settings-{spec['fieldname']}"
+        if frappe.db.exists("Custom Field", cf_name):
+            continue
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Chundakadan Settings",
+                "module": "Chundakadan",
+                "translatable": 0,
+                **spec,
+            }).insert(ignore_permissions=True)
+            created += 1
+        except Exception as e:
+            print(f"chundakadan.install: could not create {cf_name}: {e}")
+
+    if created:
+        frappe.db.commit()
+        print(f"chundakadan.install: created {created} payroll config fields")
+
+
 def ensure_employee_payroll_fields(*args, **kwargs):
     """Idempotent: add 5 Custom Fields to Employee for payroll disbursement.
 

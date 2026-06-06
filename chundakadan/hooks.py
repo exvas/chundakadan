@@ -159,6 +159,7 @@ before_install = [
     "chundakadan.install.ensure_visit_log_visit_type_field",
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_employee_payroll_fields",
+    "chundakadan.install.ensure_payroll_config_fields",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
@@ -167,6 +168,7 @@ before_migrate = [
     "chundakadan.install.ensure_visit_log_visit_type_field",
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_employee_payroll_fields",
+    "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.seed.privacy_policy.upsert_page",
     "chundakadan.seed.role_profiles.seed_profiles",
     "chundakadan.seed.role_profiles.cleanup_unused_profiles",
