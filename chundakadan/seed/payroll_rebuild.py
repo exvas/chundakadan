@@ -544,11 +544,15 @@ SALARY_STRUCTURES = [
             {"salary_component": "Arrear", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0,
              "is_additional_component": 1},
+            {"salary_component": "ESI Employer Contribution",
+             "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
              "statistical_component": 1, "depends_on_payment_days": 0},
         ],
         "deductions": [
             {"salary_component": "LOP Deduction", "depends_on_payment_days": 0},
+            # ESI self-zeros for MDs above 42K; needed for GMs in 21K-42K band.
+            {"salary_component": "ESI", "depends_on_payment_days": 0},
             {"salary_component": "Employee PF", "depends_on_payment_days": 0},
             {"salary_component": "Professional Tax", "depends_on_payment_days": 0},
             {"salary_component": "Welfare Fund", "depends_on_payment_days": 0,
