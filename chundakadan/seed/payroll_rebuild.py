@@ -213,24 +213,36 @@ def _get_ceilings():
 def _esi_formula(rate):
     """Build the Chundakadan-specific 3-tier ESI formula.
 
-    ESI Base = (Basic + DA) × payment_days / total_working_days
+    ESI Base = (gross_pay - Arrear - Incentive - Collection Incentive)
+               × payment_days / total_working_days
 
-    Per Najeeb's voice clarification 2026-06-06:
-      - ESI EXCLUDES Travel Allowance, House Rent Allowance, Food Allowance
-      - ESI base = Basic + DA only
-      - Arrears + Incentives also excluded (typical, separate from Basic)
+    Per Najeeb's WhatsApp text 2026-06-06 (Q1):
+      "ESI will be calculated on Gross Salary excluding Arrears and
+       Incentives for employees whose gross salary is up to Rs 21,000.
+       For employees whose gross exceeds Rs 21,000, ESI on capped
+       salary of Rs 21,000."
 
-    3-tier rule:
-      esi_base > 42K (extended_ceiling)  → no ESI
-      21K < esi_base ≤ 42K               → ESI on capped 21K
-      esi_base ≤ 21K                     → ESI on esi_base directly
+    3-tier rule (Q1 + Q2 combined):
+      esi_base > 42K (extended cutoff)   → no ESI (Q2)
+      21K < esi_base ≤ 42K               → ESI on capped 21K (Q1+Q2)
+      esi_base ≤ 21K                     → ESI on esi_base directly (Q1)
 
-    AVOIDS max() and lambda — Frappe's _safe_eval doesn't whitelist them
-    in this install (hit 2026-06-06 with 'name max is not defined').
-    Repeats base_expr inline 3× instead.
+    LOP-adjusted via payment_days / total_working_days ratio.
+
+    AVOIDS max() / min() / lambda — Frappe's _safe_eval doesn't
+    whitelist them. Uses bare arithmetic + ternaries only.
+
+    AR / IN / CI abbreviations: Arrear / Incentive / Collection
+    Incentive. These MUST be on every Salary Structure (even as
+    zero-amount additional components) so the formula doesn't trip
+    NameError on slips where the company never paid arrears or
+    incentives.
     """
     esi_ceiling, esi_ext, _ = _get_ceilings()
-    base_expr = "(base * payment_days / total_working_days)"
+    # ESI base = (gross MINUS arrears/incentives) prorated by attendance
+    base_expr = (
+        "((gross_pay - AR - IN - CI) * payment_days / total_working_days)"
+    )
     return (
         f"0 if {base_expr} > {esi_ext} "
         f"else (round({esi_ceiling} * {rate}) if {base_expr} > {esi_ceiling} "
@@ -427,6 +439,12 @@ SALARY_STRUCTURES = [
             {"salary_component": "Collection Incentive", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0,
              "is_additional_component": 1},
+            {"salary_component": "Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Arrear", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
             {"salary_component": "ESI Employer Contribution",
              "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
@@ -452,6 +470,16 @@ SALARY_STRUCTURES = [
              "amount_based_on_formula": 1, "formula": "base * 0.4"},
             {"salary_component": "Food Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
+            # AR/IN/CI as zero placeholders so ESI formula doesn't NameError.
+            {"salary_component": "Collection Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Arrear", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
             {"salary_component": "ESI Employer Contribution",
              "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
@@ -474,6 +502,15 @@ SALARY_STRUCTURES = [
              "amount_based_on_formula": 1, "formula": "base"},
             {"salary_component": "Food Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
+            {"salary_component": "Collection Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Arrear", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
             {"salary_component": "ESI Employer Contribution",
              "statistical_component": 1, "depends_on_payment_days": 0},
             {"salary_component": "PF Employer Contribution",
@@ -498,6 +535,15 @@ SALARY_STRUCTURES = [
              "amount_based_on_formula": 1, "formula": "base * 0.5"},
             {"salary_component": "Travel Allowance", "depends_on_payment_days": 0,
              "amount_based_on_formula": 0, "amount": 0},
+            {"salary_component": "Collection Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Incentive", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
+            {"salary_component": "Arrear", "depends_on_payment_days": 0,
+             "amount_based_on_formula": 0, "amount": 0,
+             "is_additional_component": 1},
             {"salary_component": "PF Employer Contribution",
              "statistical_component": 1, "depends_on_payment_days": 0},
         ],
