@@ -177,6 +177,7 @@ before_install = [
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.install.ensure_expense_approval_fields",
+    "chundakadan.install.ensure_employee_advance_defaults",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
@@ -194,6 +195,7 @@ before_migrate = [
     "chundakadan.seed.holiday_list.ensure_current_and_next_year",
     "chundakadan.seed.expense_ledgers.seed_expense_ledgers",
     "chundakadan.install.ensure_expense_approval_fields",
+    "chundakadan.install.ensure_employee_advance_defaults",
 ]
 
 # Uninstallation

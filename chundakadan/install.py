@@ -670,3 +670,48 @@ def ensure_expense_approval_fields(*args, **kwargs):
     if created:
         frappe.db.commit()
         print(f"chundakadan.install: created {created} approval workflow custom fields")
+
+
+def ensure_employee_advance_defaults(*args, **kwargs):
+    """Tick 'Repay Unclaimed Amount from Salary' by default on Employee
+    Advance — unclaimed advances should be recovered automatically
+    instead of being written off.
+
+    Uses a Property Setter (not a Custom Field) so the override sits
+    on ERPNext's standard field. Idempotent.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Employee Advance"):
+        return
+
+    ps_name = "Employee Advance-repay_unclaimed_amount_from_salary-default"
+    if frappe.db.exists("Property Setter", ps_name):
+        # Make sure the value is the one we want — someone might have
+        # toggled it back manually
+        ps = frappe.get_doc("Property Setter", ps_name)
+        if ps.value != "1":
+            ps.value = "1"
+            ps.save(ignore_permissions=True)
+            frappe.db.commit()
+            print("chundakadan.install: Property Setter "
+                  f"{ps_name} set to '1'")
+        return
+
+    try:
+        frappe.get_doc({
+            "doctype": "Property Setter",
+            "doctype_or_field": "DocField",
+            "doc_type": "Employee Advance",
+            "field_name": "repay_unclaimed_amount_from_salary",
+            "property": "default",
+            "property_type": "Text",
+            "value": "1",
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+        print("chundakadan.install: enabled "
+              "'Repay Unclaimed Amount from Salary' by default on "
+              "Employee Advance")
+    except Exception as e:
+        print(f"chundakadan.install: could not set default on "
+              f"repay_unclaimed_amount_from_salary: {e}")
