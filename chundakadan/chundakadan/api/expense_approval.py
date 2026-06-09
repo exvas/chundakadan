@@ -263,21 +263,28 @@ def _autofill_cost_center(doc):
 
     cc = None
 
+    def _has(dt: str, field: str) -> bool:
+        try:
+            return frappe.get_meta(dt).has_field(field)
+        except Exception:
+            return False
+
     # 1. Employee's payroll_cost_center
     employee = doc.get("employee")
-    if employee:
+    if employee and _has("Employee", "payroll_cost_center"):
         cc = frappe.db.get_value("Employee", employee, "payroll_cost_center")
 
-    # 2. Department.cost_center
-    if not cc:
-        dept = doc.get("department") or frappe.db.get_value(
-            "Employee", employee, "department") if employee else None
+    # 2. Department.cost_center (some installs don't have it)
+    if not cc and _has("Department", "cost_center"):
+        dept = doc.get("department")
+        if not dept and employee:
+            dept = frappe.db.get_value("Employee", employee, "department")
         if dept:
             cc = frappe.db.get_value("Department", dept, "cost_center")
 
     # 3. Company.cost_center
     company = doc.get("company")
-    if not cc and company:
+    if not cc and company and _has("Company", "cost_center"):
         cc = frappe.db.get_value("Company", company, "cost_center")
 
     # 4. Any non-group Cost Center for the company
