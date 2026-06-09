@@ -184,6 +184,7 @@ def validate(doc, method=None):
         doc.current_approver = (
             row.approver if hasattr(row, "approver") else row.get("approver")
         )
+        _sync_standard_approver_field(doc)
 
 
 def _generate_approval_flow(doc, roles: list[str]):
@@ -206,6 +207,21 @@ def _generate_approval_flow(doc, roles: list[str]):
     doc.current_approval_index = 0
     doc.current_approver = doc.approval_flow[0].approver
     doc.custom_approval_status = "Pending"
+    _sync_standard_approver_field(doc)
+
+
+def _sync_standard_approver_field(doc):
+    """Mirror our current_approver into ERPNext's standard approver
+    field (if the doctype has one) so standard mandatory validation
+    passes without the user touching it manually.
+
+      Expense Claim   → expense_approver
+      Employee Advance → no standard approver field; no-op
+      Payment Request → no standard approver field; no-op
+    """
+    if doc.doctype == "Expense Claim" and doc.meta.has_field("expense_approver"):
+        if doc.get("current_approver"):
+            doc.expense_approver = doc.current_approver
 
 
 # --- API: approve / reject --------------------------------------------
@@ -264,6 +280,7 @@ def approve(doctype: str, docname: str):
             doc.current_approval_index = next_idx
             doc.current_approver = flow[next_idx].approver
             doc.custom_approval_status = "Partially Approved"
+            _sync_standard_approver_field(doc)
             doc.save(ignore_permissions=True)
     finally:
         frappe.set_user(original_user)
