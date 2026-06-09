@@ -251,6 +251,10 @@ def approve(doctype: str, docname: str):
         if is_final:
             doc.custom_approval_status = "Approved"
             doc.current_approver = None
+            # Expense Claim's standard `approval_status` field must be
+            # 'Approved' or 'Rejected' before submit() will succeed
+            if doc.meta.has_field("approval_status"):
+                doc.approval_status = "Approved"
             if int(doc.docstatus or 0) == 0 and cfg.get("submit_on_final"):
                 doc.submit()
             else:
@@ -296,6 +300,9 @@ def reject(doctype: str, docname: str, remarks: str | None = None):
 
     doc.custom_approval_status = "Rejected"
     doc.current_approver = None
+    # Mirror to standard ERPNext approval_status if it exists
+    if doc.meta.has_field("approval_status"):
+        doc.approval_status = "Rejected"
 
     original_user = frappe.session.user
     try:
