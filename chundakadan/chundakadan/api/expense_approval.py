@@ -157,9 +157,26 @@ def _ensure_supported(doctype: str) -> None:
 def validate(doc, method=None):
     """`validate` hook. Generates the approval chain on first save
     OR when the amount changes such that the chain length should change.
-    Skips already-submitted/cancelled docs."""
+    Skips already-submitted/cancelled docs.
+
+    Also guards against direct Submit (docstatus 0→1 transition by
+    someone who isn't using our approve() API): blocks the standard
+    Submit button path when the chain isn't fully Approved yet.
+    """
     if doc.doctype not in DOCTYPE_CONFIG:
         return
+
+    # Submit-time guard: if the doc is transitioning to docstatus=1 but
+    # our chain hasn't been finalised, route the user to Approve button.
+    if doc.get("docstatus") == 1 and doc.get("custom_approval_status") != "Approved":
+        # Allow approve()'s set_user("Administrator") wrapped submit to pass
+        if frappe.session.user != "Administrator":
+            frappe.throw(_(
+                "This {0} can only be submitted via the Approve workflow. "
+                "Use the <b>Actions → Approve</b> button instead of Submit. "
+                "Current approver: {1}"
+            ).format(doc.doctype, doc.get("current_approver") or "—"))
+
     if int(doc.get("docstatus") or 0) > 0:
         return
 
