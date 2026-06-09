@@ -167,7 +167,8 @@ def _account_name(leaf_or_group: str, abbr: str) -> str:
     return f"{leaf_or_group} - {abbr}"
 
 
-def _ensure_group(code: str, leaf: str, abbr: str, parent: str) -> str:
+def _ensure_group(code: str, leaf: str, abbr: str, parent: str,
+                  company: str) -> str:
     """Create a group account if missing. Returns the full account name."""
     full = f"{code} - {leaf} - {abbr}"
     if frappe.db.exists("Account", full):
@@ -179,13 +180,14 @@ def _ensure_group(code: str, leaf: str, abbr: str, parent: str) -> str:
         "is_group": 1,
         "root_type": "Expense",
         "report_type": "Profit and Loss",
-        "company": frappe.db.get_value("Account", parent, "company"),
+        "company": company,
     })
     doc.insert(ignore_permissions=True)
     return doc.name
 
 
-def _ensure_leaf(leaf_name: str, parent: str, abbr: str) -> str:
+def _ensure_leaf(leaf_name: str, parent: str, abbr: str,
+                 company: str) -> str:
     """Create a non-group expense account under `parent`. Idempotent."""
     full = f"{leaf_name} - {abbr}"
     if frappe.db.exists("Account", full):
@@ -197,7 +199,7 @@ def _ensure_leaf(leaf_name: str, parent: str, abbr: str) -> str:
         "is_group": 0,
         "root_type": "Expense",
         "report_type": "Profit and Loss",
-        "company": frappe.db.get_value("Account", parent, "company"),
+        "company": company,
     })
     doc.insert(ignore_permissions=True)
     return doc.name
@@ -240,13 +242,12 @@ def seed_expense_ledgers():
         for code, group_name in EXPENSE_GROUPS:
             try:
                 group_full = _ensure_group(code, group_name, abbr,
-                                           parent_indirect)
-                if not frappe.db.get_value("Account", group_full, "creation"):
-                    pass
+                                           parent_indirect, company)
                 created_groups += 1
                 for leaf_name in LEAVES.get(code, []):
                     try:
-                        full = _ensure_leaf(leaf_name, group_full, abbr)
+                        full = _ensure_leaf(leaf_name, group_full, abbr,
+                                            company)
                         leaf_by_company[company][leaf_name] = full
                         created_leaves += 1
                     except Exception as e:
