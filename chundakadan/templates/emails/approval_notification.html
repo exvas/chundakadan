@@ -1,0 +1,263 @@
+{# Shared approval-workflow email template.
+   Renders for Leave Application / Expense Claim / Employee Advance / Payment Request
+   across 4 events: created, intermediate_approved, finalised_approved, rejected.
+
+   Required context:
+     event              one of "created" / "advanced" / "approved" / "rejected"
+     doctype_label      pretty doctype label (e.g. "Expense Claim")
+     doctype_slug       URL slug (e.g. "expense-claim")
+     doc                the full doc (with .name, .employee_name, amount, etc.)
+     applicant_name     full name of original applicant
+     amount_label       e.g. "₹10,000.00"
+     site_url           "https://erp.chundakadan.in"
+     logo_url           "https://erp.chundakadan.in/files/CDN.png"
+     recipient_name     who the email is going to (used in greeting)
+     approval_flow      list of dicts [{role, approver, status, approved_on, remarks}]
+     current_approver   email of person who needs to act now (created/advanced events)
+     reject_remarks     reason text (rejected event only)
+#}
+{%- set palette = {
+    "red":       "#B91C1C",
+    "red_dark":  "#7F1D1D",
+    "gold":      "#D4AF37",
+    "gold_soft": "#F5E6A8",
+    "cream":     "#FFFBEB",
+    "ink":       "#1F2937",
+    "muted":     "#6B7280",
+    "border":    "#E5E7EB",
+    "green":     "#15803D",
+    "green_bg":  "#DCFCE7",
+    "red_bg":    "#FEE2E2",
+    "amber":     "#B45309",
+    "amber_bg":  "#FEF3C7",
+} -%}
+
+{%- if event == "created" -%}
+    {%- set headline = "Action needed: review " ~ doctype_label -%}
+    {%- set subhead  = applicant_name ~ " submitted a new " ~ doctype_label ~ " for your approval." -%}
+    {%- set badge_text = "PENDING YOUR APPROVAL" -%}
+    {%- set badge_bg = palette.amber_bg -%}
+    {%- set badge_fg = palette.amber -%}
+    {%- set cta_text = "Review " ~ doctype_label -%}
+{%- elif event == "advanced" -%}
+    {%- set headline = "Final approval needed for " ~ doctype_label -%}
+    {%- set subhead  = "Accounts Manager has approved this. It now requires your final sign-off as GM." -%}
+    {%- set badge_text = "AWAITING FINAL APPROVAL" -%}
+    {%- set badge_bg = palette.amber_bg -%}
+    {%- set badge_fg = palette.amber -%}
+    {%- set cta_text = "Approve " ~ doctype_label -%}
+{%- elif event == "approved" -%}
+    {%- set headline = "Your " ~ doctype_label ~ " was approved" -%}
+    {%- set subhead  = "Your request has been approved and submitted. Accounting will process it shortly." -%}
+    {%- set badge_text = "APPROVED" -%}
+    {%- set badge_bg = palette.green_bg -%}
+    {%- set badge_fg = palette.green -%}
+    {%- set cta_text = "View " ~ doctype_label -%}
+{%- elif event == "rejected" -%}
+    {%- set headline = "Your " ~ doctype_label ~ " was rejected" -%}
+    {%- set subhead  = "Please review the reason below. You can edit and resubmit if appropriate." -%}
+    {%- set badge_text = "REJECTED" -%}
+    {%- set badge_bg = palette.red_bg -%}
+    {%- set badge_fg = palette.red -%}
+    {%- set cta_text = "Edit & Resubmit" -%}
+{%- endif -%}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>{{ headline }}</title>
+</head>
+<body style="margin:0; padding:0; background:{{ palette.cream }}; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:{{ palette.ink }};">
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:{{ palette.cream }}; padding:24px 12px;">
+    <tr>
+        <td align="center">
+
+            <!-- ============ Email Body ============ -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px; width:100%; background:#FFFFFF; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+
+                <!-- Header: red band + logo -->
+                <tr>
+                    <td style="background:{{ palette.red }}; padding:20px 28px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                                <td align="left" valign="middle">
+                                    <img src="{{ logo_url }}" alt="Chundakadan Agencies" height="36" style="display:block; height:36px; max-height:36px; border:0;">
+                                </td>
+                                <td align="right" valign="middle" style="color:{{ palette.gold_soft }}; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600;">
+                                    Chundakadan Agencies
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Gold accent stripe -->
+                <tr>
+                    <td style="background:{{ palette.gold }}; height:4px; line-height:4px; font-size:0;">&nbsp;</td>
+                </tr>
+
+                <!-- Hero -->
+                <tr>
+                    <td style="padding:32px 32px 8px 32px;">
+                        <div style="display:inline-block; padding:5px 12px; border-radius:99px; background:{{ badge_bg }}; color:{{ badge_fg }}; font-size:11px; font-weight:700; letter-spacing:0.06em;">
+                            {{ badge_text }}
+                        </div>
+                        <h1 style="margin:14px 0 6px 0; font-size:24px; line-height:1.25; color:{{ palette.ink }}; font-weight:700;">
+                            {{ headline }}
+                        </h1>
+                        <p style="margin:0 0 8px 0; font-size:15px; line-height:1.5; color:{{ palette.muted }};">
+                            {{ subhead }}
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Greeting -->
+                <tr>
+                    <td style="padding:18px 32px 0 32px;">
+                        <p style="margin:0 0 14px 0; font-size:15px; color:{{ palette.ink }};">
+                            Hi {{ recipient_name }},
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Key details card -->
+                <tr>
+                    <td style="padding:0 32px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:{{ palette.cream }}; border:1px solid {{ palette.gold_soft }}; border-radius:8px;">
+                            <tr>
+                                <td style="padding:18px 20px;">
+                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                        <tr>
+                                            <td width="40%" style="font-size:12px; color:{{ palette.muted }}; text-transform:uppercase; letter-spacing:0.05em; padding:4px 0;">Reference</td>
+                                            <td width="60%" style="font-size:14px; color:{{ palette.ink }}; font-weight:600; padding:4px 0;">{{ doc.name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-size:12px; color:{{ palette.muted }}; text-transform:uppercase; letter-spacing:0.05em; padding:4px 0;">Applicant</td>
+                                            <td style="font-size:14px; color:{{ palette.ink }}; padding:4px 0;">{{ applicant_name }}</td>
+                                        </tr>
+                                        {% if amount_label %}
+                                        <tr>
+                                            <td style="font-size:12px; color:{{ palette.muted }}; text-transform:uppercase; letter-spacing:0.05em; padding:4px 0;">Amount</td>
+                                            <td style="font-size:18px; color:{{ palette.red_dark }}; font-weight:700; padding:4px 0;">{{ amount_label }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if doc.purpose or doc.description %}
+                                        <tr>
+                                            <td valign="top" style="font-size:12px; color:{{ palette.muted }}; text-transform:uppercase; letter-spacing:0.05em; padding:4px 0;">Purpose</td>
+                                            <td style="font-size:14px; color:{{ palette.ink }}; padding:4px 0;">{{ doc.purpose or doc.description }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if doc.from_date %}
+                                        <tr>
+                                            <td style="font-size:12px; color:{{ palette.muted }}; text-transform:uppercase; letter-spacing:0.05em; padding:4px 0;">Dates</td>
+                                            <td style="font-size:14px; color:{{ palette.ink }}; padding:4px 0;">{{ doc.from_date }} → {{ doc.to_date }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                {% if event == "rejected" and reject_remarks %}
+                <!-- Rejection remarks block -->
+                <tr>
+                    <td style="padding:16px 32px 0 32px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:{{ palette.red_bg }}; border-left:4px solid {{ palette.red }}; border-radius:4px;">
+                            <tr>
+                                <td style="padding:14px 18px;">
+                                    <div style="font-size:11px; color:{{ palette.red_dark }}; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Reason for Rejection</div>
+                                    <div style="font-size:14px; color:{{ palette.ink }}; line-height:1.5;">{{ reject_remarks }}</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                {% endif %}
+
+                <!-- Approval chain -->
+                {% if approval_flow %}
+                <tr>
+                    <td style="padding:24px 32px 8px 32px;">
+                        <div style="font-size:12px; color:{{ palette.muted }}; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px;">Approval Chain</div>
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                            {% for step in approval_flow %}
+                            <tr>
+                                <td width="30" valign="top" style="padding:8px 0;">
+                                    {%- if step.status == "Approved" -%}
+                                        <div style="width:22px; height:22px; border-radius:50%; background:{{ palette.green }}; color:#FFF; text-align:center; line-height:22px; font-size:13px; font-weight:700;">&#10003;</div>
+                                    {%- elif step.status == "Rejected" -%}
+                                        <div style="width:22px; height:22px; border-radius:50%; background:{{ palette.red }}; color:#FFF; text-align:center; line-height:22px; font-size:13px; font-weight:700;">&#10005;</div>
+                                    {%- else -%}
+                                        <div style="width:22px; height:22px; border-radius:50%; background:#FFF; border:2px solid {{ palette.gold }}; color:{{ palette.amber }}; text-align:center; line-height:18px; font-size:11px; font-weight:700;">{{ loop.index }}</div>
+                                    {%- endif -%}
+                                </td>
+                                <td style="padding:8px 0 8px 14px; border-bottom:{% if not loop.last %}1px solid {{ palette.border }}{% else %}none{% endif %};">
+                                    <div style="font-size:14px; font-weight:600; color:{{ palette.ink }};">{{ step.role }}</div>
+                                    <div style="font-size:12px; color:{{ palette.muted }};">{{ step.approver }}</div>
+                                    {% if step.approved_on %}
+                                    <div style="font-size:12px; color:{{ palette.muted }}; margin-top:2px;">
+                                        {{ step.status }} on {{ step.approved_on }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                </tr>
+                {% endif %}
+
+                <!-- CTA button -->
+                <tr>
+                    <td style="padding:24px 32px 32px 32px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                                <td align="left">
+                                    <a href="{{ site_url }}/app/{{ doctype_slug }}/{{ doc.name }}"
+                                       style="display:inline-block; background:{{ palette.red }}; color:#FFFFFF; font-size:15px; font-weight:600; padding:14px 28px; border-radius:8px; text-decoration:none; box-shadow:0 2px 4px rgba(185,28,28,0.25);">
+                                        {{ cta_text }} &nbsp;&rarr;
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr>
+                    <td style="padding:0 32px;">
+                        <div style="height:1px; background:{{ palette.border }};">&nbsp;</div>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="padding:18px 32px 24px 32px;">
+                        <p style="margin:0; font-size:12px; line-height:1.5; color:{{ palette.muted }};">
+                            This is an automated message from <strong style="color:{{ palette.ink }};">Chundakadan Agencies ERP</strong>. Please do not reply — the inbox is unmonitored.<br>
+                            If you weren't expecting this email, please contact <a href="mailto:hr@chundakadan.in" style="color:{{ palette.red }}; text-decoration:none;">hr@chundakadan.in</a>.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Outer footer note -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px; width:100%;">
+                <tr>
+                    <td align="center" style="padding:16px 12px 0 12px; font-size:11px; color:{{ palette.muted }};">
+                        Chundakadan Agencies &middot; Kerala, India
+                    </td>
+                </tr>
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

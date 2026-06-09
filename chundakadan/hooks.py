@@ -134,7 +134,8 @@ doc_events = {
     },
     "Leave Application": {
         "before_validate": "chundakadan.chundakadan.api.leave.convert_conflicting_attendance_to_on_leave",
-        "validate": "chundakadan.chundakadan.api.leave.validate_leave"
+        "validate": "chundakadan.chundakadan.api.leave.validate_leave",
+        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
     },
     "Employee Checkin": {
         "after_insert": [
@@ -156,13 +157,16 @@ doc_events = {
         "validate": "chundakadan.doc_events.salary_slip.apply_payroll_basis"
     },
     "Expense Claim": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate"
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
+        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
     },
     "Employee Advance": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate"
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
+        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
     },
     "Payment Request": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate"
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
+        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
     }
 }
 # Install / migrate hooks. Idempotent — they no-op when there's

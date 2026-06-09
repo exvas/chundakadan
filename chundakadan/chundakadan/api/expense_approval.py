@@ -23,6 +23,8 @@ import frappe
 from frappe import _
 from frappe.utils import flt, now
 
+from chundakadan.chundakadan.api import approval_email
+
 
 # --- Per-doctype config -------------------------------------------------
 # `amount_field` is the field on the parent doc we compare to the
@@ -353,6 +355,8 @@ def approve(doctype: str, docname: str):
                 doc.submit()
             else:
                 doc.save(ignore_permissions=True)
+            next_approver_email = None
+            send_approved = True
         else:
             next_idx = idx + 1
             doc.current_approval_index = next_idx
@@ -360,8 +364,21 @@ def approve(doctype: str, docname: str):
             doc.custom_approval_status = "Partially Approved"
             _sync_standard_approver_field(doc)
             doc.save(ignore_permissions=True)
+            next_approver_email = doc.current_approver
+            send_approved = False
     finally:
         frappe.set_user(original_user)
+
+    # Fire email AFTER state is committed (and back as original user so
+    # frappe.session.user is sane for the email's sent_by metadata).
+    try:
+        if send_approved:
+            approval_email.notify_approved(doc)
+        elif next_approver_email:
+            approval_email.notify_advanced(doc, next_approver_email)
+    except Exception as e:
+        frappe.log_error(f"approval_email after approve failed: {e}",
+                         "approval_email")
 
     return {"success": True, "status": doc.custom_approval_status,
             "current_approver": doc.current_approver}
@@ -405,6 +422,12 @@ def reject(doctype: str, docname: str, remarks: str | None = None):
         doc.save(ignore_permissions=True)
     finally:
         frappe.set_user(original_user)
+
+    try:
+        approval_email.notify_rejected(doc, remarks=remarks)
+    except Exception as e:
+        frappe.log_error(f"approval_email after reject failed: {e}",
+                         "approval_email")
 
     return {"success": True, "status": "Rejected"}
 

@@ -388,9 +388,23 @@ def approve_leave(docname):
                 doc.save()
                 msg = _("Leave Application fully approved!")
             frappe.msgprint(msg, indicator="green")
+        next_approver_email_for_email = (
+            doc.current_approver if next_idx < len(doc.approval_flow) else None
+        )
+        send_approved_for_email = next_idx >= len(doc.approval_flow)
     finally:
         frappe.set_user(original_user)
         frappe.flags.ignore_permissions = saved_flag
+
+    try:
+        from chundakadan.chundakadan.api import approval_email
+        if send_approved_for_email:
+            approval_email.notify_approved(doc)
+        elif next_approver_email_for_email:
+            approval_email.notify_advanced(doc, next_approver_email_for_email)
+    except Exception as e:
+        frappe.log_error(f"approval_email after approve_leave failed: {e}",
+                         "approval_email")
 
     return {"success": True}
 
@@ -457,12 +471,19 @@ def reject_leave(docname, remarks=None):
     finally:
         frappe.set_user(original_user)
         frappe.flags.ignore_permissions = saved_flag
-    
+
+    try:
+        from chundakadan.chundakadan.api import approval_email
+        approval_email.notify_rejected(doc, remarks=remarks)
+    except Exception as e:
+        frappe.log_error(f"approval_email after reject_leave failed: {e}",
+                         "approval_email")
+
     frappe.msgprint(
         _("Leave Application has been rejected."),
         indicator="red"
     )
-    
+
     return {"success": True}
 
 
