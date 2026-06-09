@@ -61,6 +61,9 @@ doctype_js = {
     "Interview" : "public/js/interview.js",
     "Period Salary Slip" : "public/js/period_salary_slip.js",
     "Employee" : "public/js/employee.js",
+    "Expense Claim" : "public/js/expense_approval.js",
+    "Employee Advance" : "public/js/expense_approval.js",
+    "Payment Request" : "public/js/expense_approval.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",
@@ -151,6 +154,15 @@ doc_events = {
     },
     "Salary Slip": {
         "validate": "chundakadan.doc_events.salary_slip.apply_payroll_basis"
+    },
+    "Expense Claim": {
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate"
+    },
+    "Employee Advance": {
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate"
+    },
+    "Payment Request": {
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate"
     }
 }
 # Install / migrate hooks. Idempotent — they no-op when there's
@@ -164,6 +176,7 @@ before_install = [
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
+    "chundakadan.install.ensure_expense_approval_fields",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
@@ -180,6 +193,7 @@ before_migrate = [
     "chundakadan.seed.payroll_period.ensure_current_fy_period",
     "chundakadan.seed.holiday_list.ensure_current_and_next_year",
     "chundakadan.seed.expense_ledgers.seed_expense_ledgers",
+    "chundakadan.install.ensure_expense_approval_fields",
 ]
 
 # Uninstallation
@@ -216,10 +230,16 @@ before_migrate = [
 
 permission_query_conditions = {
     "Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
+    "Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",
+    "Employee Advance": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_employee_advance",
+    "Payment Request": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_payment_request",
 }
 
 has_permission = {
     "Leave Application": "chundakadan.chundakadan.api.leave.has_permission",
+    "Expense Claim": "chundakadan.chundakadan.api.expense_approval.has_permission",
+    "Employee Advance": "chundakadan.chundakadan.api.expense_approval.has_permission",
+    "Payment Request": "chundakadan.chundakadan.api.expense_approval.has_permission",
 }
 
 # DocType Class

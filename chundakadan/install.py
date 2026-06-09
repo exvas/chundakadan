@@ -543,3 +543,130 @@ def ensure_visit_log_location_field(*args, **kwargs):
         print(
             f"chundakadan.install: could not create visit log location field: {e}"
         )
+
+
+# ----------------------------------------------------------------------
+# Expense / Advance / Payment Request approval workflow
+# ----------------------------------------------------------------------
+# Adds the same 4 custom fields to all 3 doctypes plus a threshold
+# field on Chundakadan Settings. Mirrors the Leave Application multi-
+# step approval shape but with an amount-based chain length.
+
+_APPROVAL_DOCTYPES = [
+    ("Expense Claim",     "total_claimed_amount", "total_sanctioned_amount"),
+    ("Employee Advance",  "advance_amount",       "purpose"),
+    ("Payment Request",   "grand_total",          "subject"),
+]
+
+
+def ensure_expense_approval_fields(*args, **kwargs):
+    """Idempotent: add custom fields to Expense Claim / Employee Advance /
+    Payment Request for the multi-step approval workflow, plus an
+    `expense_approval_threshold` field on Chundakadan Settings."""
+    import frappe
+
+    common_fields = [
+        {
+            "fieldname": "approval_section",
+            "label": "Approval Workflow",
+            "fieldtype": "Section Break",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "custom_approval_status",
+            "label": "Approval Status",
+            "fieldtype": "Select",
+            "options": "\nPending\nPartially Approved\nApproved\nRejected",
+            "read_only": 1,
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+        },
+        {
+            "fieldname": "current_approver",
+            "label": "Current Approver",
+            "fieldtype": "Link",
+            "options": "User",
+            "read_only": 1,
+            "in_list_view": 1,
+        },
+        {
+            "fieldname": "current_approval_index",
+            "label": "Current Approval Step",
+            "fieldtype": "Int",
+            "read_only": 1,
+            "hidden": 1,
+            "default": "0",
+        },
+        {
+            "fieldname": "approval_flow",
+            "label": "Approval Flow",
+            "fieldtype": "Table",
+            "options": "Chundakadan Approval Detail",
+            "read_only": 1,
+        },
+    ]
+
+    created = 0
+    for dt, _amount_field, insert_after in _APPROVAL_DOCTYPES:
+        if not frappe.db.exists("DocType", dt):
+            print(f"chundakadan.install: DocType '{dt}' not found, skipping")
+            continue
+
+        prev = insert_after
+        for spec in common_fields:
+            field_spec = {**spec, "insert_after": prev}
+            cf_name = f"{dt}-{spec['fieldname']}"
+            prev = spec["fieldname"]  # chain so order is preserved
+
+            if frappe.db.exists("Custom Field", cf_name):
+                continue
+            try:
+                frappe.get_doc({
+                    "doctype": "Custom Field",
+                    "dt": dt,
+                    "module": "Chundakadan",
+                    "translatable": 0,
+                    **field_spec,
+                }).insert(ignore_permissions=True)
+                created += 1
+            except Exception as e:
+                print(f"chundakadan.install: could not create {cf_name}: {e}")
+
+    # Threshold field on Chundakadan Settings
+    if frappe.db.exists("DocType", "Chundakadan Settings"):
+        threshold_cf = "Chundakadan Settings-expense_approval_threshold"
+        if not frappe.db.exists("Custom Field", threshold_cf):
+            try:
+                frappe.get_doc({
+                    "doctype": "Custom Field",
+                    "dt": "Chundakadan Settings",
+                    "module": "Chundakadan",
+                    "translatable": 0,
+                    "fieldname": "expense_approval_threshold",
+                    "label": "Expense Approval Threshold (₹)",
+                    "fieldtype": "Currency",
+                    "default": "5000",
+                    "insert_after": "payroll_basis",
+                    "description": (
+                        "Above this amount, expense claims / employee advances "
+                        "/ payment requests need both Accounts Manager AND GM "
+                        "approval. At-or-below, only Accounts Manager is needed."
+                    ),
+                }).insert(ignore_permissions=True)
+                created += 1
+            except Exception as e:
+                print(f"chundakadan.install: could not create threshold field: {e}")
+
+        # Backfill the Singleton value
+        try:
+            settings = frappe.get_single("Chundakadan Settings")
+            if not settings.get("expense_approval_threshold"):
+                settings.set("expense_approval_threshold", 5000)
+                settings.flags.ignore_permissions = True
+                settings.save()
+        except Exception as e:
+            print(f"chundakadan.install: could not backfill threshold: {e}")
+
+    if created:
+        frappe.db.commit()
+        print(f"chundakadan.install: created {created} approval workflow custom fields")
