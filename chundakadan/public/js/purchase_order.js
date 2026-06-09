@@ -9,6 +9,16 @@ frappe.ui.form.on('Purchase Order', {
                 });
             }
         }
+
+        // Force users into the Payment Request approval workflow — hide
+        // the direct "Payment" (Payment Entry) button under Create.
+        // We use setTimeout because ERPNext adds the standard buttons
+        // asynchronously after our refresh handler runs.
+        setTimeout(() => {
+            try {
+                frm.remove_custom_button(__('Payment'), __('Create'));
+            } catch (e) { /* button may not be present on this state */ }
+        }, 100);
     }
 });
 

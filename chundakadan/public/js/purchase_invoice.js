@@ -9,6 +9,15 @@ frappe.ui.form.on('Purchase Invoice', {
                 });
             }
         }
+
+        // Force users into the Payment Request approval workflow — hide
+        // the direct "Payment" (Payment Entry) button under Create.
+        // ERPNext adds standard buttons after our refresh runs, so wait.
+        setTimeout(() => {
+            try {
+                frm.remove_custom_button(__('Payment'), __('Create'));
+            } catch (e) { /* button may not be present on this state */ }
+        }, 100);
     }
 });
 
