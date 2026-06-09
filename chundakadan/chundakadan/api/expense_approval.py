@@ -166,6 +166,10 @@ def validate(doc, method=None):
     if doc.doctype not in DOCTYPE_CONFIG:
         return
 
+    # Auto-fill missing system requirements so users never hit
+    # "X is required" errors mid-workflow. Idempotent — only fills blanks.
+    _autofill_cost_center(doc)
+
     # Submit-time guard: if the doc is transitioning to docstatus=1 but
     # our chain hasn't been finalised, route the user to Approve button.
     if doc.get("docstatus") == 1 and doc.get("custom_approval_status") != "Approved":
@@ -239,6 +243,56 @@ def _sync_standard_approver_field(doc):
     if doc.doctype == "Expense Claim" and doc.meta.has_field("expense_approver"):
         if doc.get("current_approver"):
             doc.expense_approver = doc.current_approver
+
+
+def _autofill_cost_center(doc):
+    """Auto-fill Cost Center on expense rows where it's missing.
+
+    Resolution chain:
+      1. Employee.payroll_cost_center (HR field on Employee)
+      2. Department.cost_center (Cost Center linked to Department)
+      3. Company.cost_center (default on Company)
+      4. First non-group Cost Center belonging to the company
+    """
+    if doc.doctype != "Expense Claim":
+        return
+    rows_needing_cc = [r for r in (doc.get("expenses") or [])
+                       if not r.get("cost_center")]
+    if not rows_needing_cc:
+        return
+
+    cc = None
+
+    # 1. Employee's payroll_cost_center
+    employee = doc.get("employee")
+    if employee:
+        cc = frappe.db.get_value("Employee", employee, "payroll_cost_center")
+
+    # 2. Department.cost_center
+    if not cc:
+        dept = doc.get("department") or frappe.db.get_value(
+            "Employee", employee, "department") if employee else None
+        if dept:
+            cc = frappe.db.get_value("Department", dept, "cost_center")
+
+    # 3. Company.cost_center
+    company = doc.get("company")
+    if not cc and company:
+        cc = frappe.db.get_value("Company", company, "cost_center")
+
+    # 4. Any non-group Cost Center for the company
+    if not cc and company:
+        cc = frappe.db.get_value(
+            "Cost Center",
+            {"company": company, "is_group": 0, "disabled": 0},
+            "name",
+        )
+
+    if not cc:
+        return  # nothing to fill with, let ERPNext surface its error
+
+    for r in rows_needing_cc:
+        r.cost_center = cc
 
 
 # --- API: approve / reject --------------------------------------------
