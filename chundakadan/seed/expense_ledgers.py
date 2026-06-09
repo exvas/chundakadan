@@ -63,6 +63,7 @@ LEAVES = {
         "Festival Allowance",
         "EPF Administration Charge",
         "Staff Welfare Expenses",
+        "Travelling Expense",
         "Training Expenses",
         "ID Card Printing Expense",
         "Uniform Expense",
@@ -139,24 +140,24 @@ LEAVES = {
 # Existing types (Calls / Food / Medical / Travel / Others / Travel Allowance)
 # also get refreshed account links here.
 EXPENSE_CLAIM_TYPES = [
-    # name,                       leaf account (or "REUSE:<full account name w/o abbr>")
+    # name,                       leaf account (all under new 5230-5380 structure)
     ("Fuel",                      "Fuel"),
     ("Mobile Recharge",           "Mobile Recharge"),
-    ("Travelling Expense",        "REUSE:5216 - Travel Expenses"),
+    ("Travelling Expense",        "Travelling Expense"),
     ("Refreshments",              "Refreshments Expenses"),
     ("Meeting Expenses",          "Meeting Expenses"),
     ("Courier",                   "Courier Expenses"),
-    ("Stationery",                "REUSE:5211 - Print and Stationery"),
+    ("Stationery",                "Stationery Expense"),
     ("ID Card Printing",          "ID Card Printing Expense"),
     ("Uniform",                   "Uniform Expense"),
     ("Training",                  "Training Expenses"),
     ("Sample Materials",          "Sample Materials"),
     ("Vehicle Maintenance",       "Vehicle Maintenance"),
-    # Refresh existing types' account mappings:
-    ("Calls",                     "REUSE:5215 - Telephone Expenses"),
-    ("Travel",                    "REUSE:5216 - Travel Expenses"),
-    ("Others",                    "REUSE:5221 - Miscellaneous Expenses"),
-    ("Travel Allowance",          "REUSE:5305 - Travel Allowance"),
+    # Refresh existing types' account mappings to new equivalents:
+    ("Calls",                     "Internet and Telephone Expenses"),
+    ("Travel",                    "Travelling Expense"),
+    ("Others",                    "Miscellaneous Expenses"),
+    ("Travel Allowance",          "REUSE:5305 - Travel Allowance"),  # in Payroll 5300, kept
 ]
 
 
