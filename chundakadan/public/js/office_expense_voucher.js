@@ -65,7 +65,6 @@ frappe.ui.form.on('Office Expense Voucher', {
         // (i.e. deferred-payment mode via Payable Account), still unpaid.
         if (frm.doc.docstatus === 1
             && !frm.doc.paid_from
-            && !frm.doc.is_reimbursable
             && frm.doc.status === 'Unpaid') {
             frm.add_custom_button(__('Make Payment'), function () {
                 make_payment_entry(frm);
@@ -106,13 +105,6 @@ frappe.ui.form.on('Office Expense Voucher', {
         }
     },
 
-    is_reimbursable(frm) {
-        // If marked reimbursable, paid_from doesn't apply (Cr goes to
-        // employee payable). Clear it for clarity.
-        if (frm.doc.is_reimbursable) {
-            frm.set_value('paid_from', null);
-        }
-    },
 });
 
 frappe.ui.form.on('Office Expense Voucher Item', {

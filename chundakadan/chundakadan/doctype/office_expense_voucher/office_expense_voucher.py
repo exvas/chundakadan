@@ -69,7 +69,6 @@ class OfficeExpenseVoucher(AccountsController):
         if not self.payable_account and defaults.get("payable_account"):
             self.payable_account = defaults["payable_account"]
 
-        # Resolve a fallback cost center: per-company row → Company.cost_center → first non-group
         cc_default = defaults.get("cost_center") or \
             (self.company and frappe.get_cached_value(
                 "Company", self.company, "cost_center"))
@@ -83,6 +82,12 @@ class OfficeExpenseVoucher(AccountsController):
             for row in (self.items or []):
                 if not row.cost_center:
                     row.cost_center = cc_default
+
+    @property
+    def is_reimbursable(self):
+        # Backward-compat shim — the field was removed from the form
+        # but a few code paths still reference it. Always False now.
+        return 0
 
     def _autofill_currency(self):
         # Defensive — the doctype JSON may or may not carry currency
@@ -120,16 +125,9 @@ class OfficeExpenseVoucher(AccountsController):
         self.grand_total = subtotal + total_tax
 
     def _validate_payment_target(self):
-        """At least one of Paid From / Payable Account must be set,
-        OR the voucher must be reimbursable-to-employee.
+        """At least one of Paid From / Payable Account must be set.
         BOTH can be set together — that triggers a 4-leg passthrough
         GL (Dr Expense → Cr Payable → Dr Payable → Cr Bank)."""
-        if self.is_reimbursable:
-            if not self.employee:
-                frappe.throw(_(
-                    "Employee is required when 'Reimbursable to Employee' "
-                    "is ticked."))
-            return
         if not self.paid_from and not self.payable_account:
             frappe.throw(_(
                 "Pick <b>Paid From</b> (Bank / Cash), <b>Payable Account</b>, "
@@ -253,8 +251,7 @@ class OfficeExpenseVoucher(AccountsController):
             }, account_currency=company_currency, item=self))
 
         # 2/3. Credit side
-        if (self.paid_from and self.payable_account
-                and not self.is_reimbursable):
+        if self.paid_from and self.payable_account:
             # ====== Shape A: 4-leg passthrough through Payable ======
             # Cr Payable (booking)
             gl.append(self.get_gl_dict({
@@ -324,16 +321,9 @@ class OfficeExpenseVoucher(AccountsController):
         """Returns (account, party_type, party) for the Cr leg.
 
         Priority:
-          1. is_reimbursable → employee's user payable account (via Employee → company.default_employee_advance_account)
-          2. paid_from filled → Bank / Cash (no party)
-          3. payable_account filled → Payable account (no party if type != Payable)
+          1. paid_from filled → Bank / Cash (no party)
+          2. payable_account filled → Payable account (no party if type != Payable)
         """
-        if self.is_reimbursable and self.employee:
-            # Use Company's default employee advance account, with Employee as party
-            advance_acct = frappe.db.get_value(
-                "Company", self.company, "default_employee_advance_account")
-            return (advance_acct, "Employee", self.employee)
-
         if self.paid_from:
             atype = frappe.db.get_value("Account", self.paid_from, "account_type")
             # Bank/Cash accounts don't need party
@@ -397,10 +387,9 @@ class OfficeExpenseVoucher(AccountsController):
             else:
                 # Submitted = workflow approval is complete (the submit-guard
                 # ensures cas='Approved' before submit). Show "Approved"
-                # except for the deferred-only case where payment hasn't
-                # happened yet (paid_from is blank, payable_account is set).
-                deferred_only = (self.payable_account and not self.paid_from
-                                 and not self.is_reimbursable)
+                # except for the deferred-only case where the payable hasn't
+                # been cleared yet (paid_from blank, payable_account set).
+                deferred_only = (self.payable_account and not self.paid_from)
                 status = "Unpaid" if deferred_only else "Approved"
         self.status = status
         if update:

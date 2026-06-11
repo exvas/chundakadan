@@ -16,8 +16,6 @@
   "items",
   "payment_section",
   "paid_from",
-  "is_reimbursable",
-  "employee",
   "column_break_payment",
   "payable_account",
   "totals_section",
@@ -118,21 +116,6 @@
    "in_list_view": 1,
    "label": "Paid From",
    "options": "Account"
-  },
-  {
-   "default": "0",
-   "description": "Tick if an employee paid this and needs reimbursement. Voucher will credit Employee Payable instead of Bank.",
-   "fieldname": "is_reimbursable",
-   "fieldtype": "Check",
-   "label": "Reimbursable to Employee (paid out of pocket)"
-  },
-  {
-   "depends_on": "is_reimbursable",
-   "fieldname": "employee",
-   "fieldtype": "Link",
-   "label": "Employee",
-   "mandatory_depends_on": "is_reimbursable",
-   "options": "Employee"
   },
   {
    "fieldname": "column_break_payment",
