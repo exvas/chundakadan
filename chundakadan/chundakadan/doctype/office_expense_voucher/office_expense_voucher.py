@@ -28,15 +28,7 @@ from erpnext.accounts.general_ledger import (
     make_gl_entries,
     make_reverse_gl_entries,
 )
-
-
-# Chundakadan Settings fieldname mapping
-_SETTINGS_DEFAULTS = {
-    "paid_from":        "oev_default_paid_from",
-    "payable_account":  "oev_default_payable_account",
-    # cost_center is per-line; apply when line.cost_center is blank
-    "cost_center":      "oev_default_cost_center",
-}
+from chundakadan.install import get_oev_defaults_for_company
 
 
 class OfficeExpenseVoucher(AccountsController):
@@ -66,27 +58,33 @@ class OfficeExpenseVoucher(AccountsController):
         pass
 
     def _autofill_from_settings(self):
-        """Fill payable_account + per-line cost_center from Chundakadan
-        Settings defaults if user didn't pick them.
+        """Fill payable_account + per-line cost_center from the
+        per-company Chundakadan Settings row matching this voucher's
+        company.
 
-        Note: paid_from is INTENTIONALLY not auto-filled server-side —
-        client JS fills it on new docs only, so a user who clears it to
-        go into deferred-payment mode doesn't get it auto-restored.
+        paid_from is INTENTIONALLY not server-filled — client JS fills
+        it on new docs only, so clearing it to switch to deferred mode
+        doesn't get auto-undone.
         """
-        if not frappe.db.exists("DocType", "Chundakadan Settings"):
-            return
-        cs = frappe.get_cached_doc("Chundakadan Settings")
+        defaults = get_oev_defaults_for_company(self.company)
 
-        if not self.payable_account:
-            d = cs.get(_SETTINGS_DEFAULTS["payable_account"])
-            if d:
-                self.payable_account = d
+        if not self.payable_account and defaults.get("payable_account"):
+            self.payable_account = defaults["payable_account"]
 
-        default_cc = cs.get(_SETTINGS_DEFAULTS["cost_center"])
-        if default_cc:
+        # Resolve a fallback cost center: per-company row → Company.cost_center → first non-group
+        cc_default = defaults.get("cost_center") or \
+            (self.company and frappe.get_cached_value(
+                "Company", self.company, "cost_center"))
+        if not cc_default and self.company:
+            cc_default = frappe.db.get_value(
+                "Cost Center",
+                {"company": self.company, "is_group": 0, "disabled": 0},
+                "name",
+            )
+        if cc_default:
             for row in (self.items or []):
                 if not row.cost_center:
-                    row.cost_center = default_cc
+                    row.cost_center = cc_default
 
     def _autofill_currency(self):
         if not self.currency and self.company:
@@ -299,12 +297,13 @@ class OfficeExpenseVoucher(AccountsController):
     def _fallback_cost_center(self) -> str | None:
         if hasattr(self, "_cached_cc"):
             return self._cached_cc
+        # Priority: Company.cost_center → per-company Chundakadan defaults
+        #           → first non-group cost center for the company
         cc = None
-        if frappe.db.exists("DocType", "Chundakadan Settings"):
-            cs = frappe.get_cached_doc("Chundakadan Settings")
-            cc = cs.get(_SETTINGS_DEFAULTS["cost_center"])
-        if not cc and self.company:
+        if self.company:
             cc = frappe.get_cached_value("Company", self.company, "cost_center")
+        if not cc:
+            cc = get_oev_defaults_for_company(self.company).get("cost_center")
         if not cc and self.company:
             cc = frappe.db.get_value(
                 "Cost Center",
@@ -339,6 +338,18 @@ class OfficeExpenseVoucher(AccountsController):
 
 
 # --- Module utilities -----------------------------------------------
+
+@frappe.whitelist()
+def get_company_defaults(company: str) -> dict:
+    """Return Chundakadan Settings → oev_defaults row matching `company`,
+    augmented with Company.cost_center as a stronger cost_center default."""
+    defaults = get_oev_defaults_for_company(company) or {}
+    # Prefer Company.cost_center if not explicitly overridden in the table
+    if not defaults.get("cost_center") and company:
+        defaults["cost_center"] = frappe.get_cached_value(
+            "Company", company, "cost_center")
+    return defaults
+
 
 @frappe.whitelist()
 def make_payment_entry(source_name: str) -> dict:

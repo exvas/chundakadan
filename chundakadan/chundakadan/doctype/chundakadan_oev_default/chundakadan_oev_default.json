@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "creation": "2026-06-11 11:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "paid_from",
+  "payable_account",
+  "cost_center"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "paid_from",
+   "fieldtype": "Link",
+   "label": "Default Paid From",
+   "options": "Account",
+   "in_list_view": 1,
+   "columns": 3,
+   "description": "Bank or Cash account"
+  },
+  {
+   "fieldname": "payable_account",
+   "fieldtype": "Link",
+   "label": "Default Payable Account",
+   "options": "Account",
+   "in_list_view": 1,
+   "columns": 3,
+   "description": "Liability account (no account_type=Payable)"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Default Cost Center",
+   "options": "Cost Center",
+   "in_list_view": 1,
+   "columns": 2
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-11 11:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Chundakadan OEV Default",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

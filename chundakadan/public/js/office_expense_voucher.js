@@ -47,16 +47,8 @@ frappe.ui.form.on('Office Expense Voucher', {
     },
 
     onload(frm) {
-        // For a fresh form, fetch Chundakadan Settings defaults and apply
-        if (frm.is_new()) {
-            frappe.db.get_doc('Chundakadan Settings').then(cs => {
-                if (!frm.doc.paid_from && cs.oev_default_paid_from) {
-                    frm.set_value('paid_from', cs.oev_default_paid_from);
-                }
-                if (!frm.doc.payable_account && cs.oev_default_payable_account) {
-                    frm.set_value('payable_account', cs.oev_default_payable_account);
-                }
-            }).catch(() => { /* settings doctype missing — skip */ });
+        if (frm.is_new() && frm.doc.company) {
+            apply_company_defaults(frm);
         }
     },
 
@@ -76,13 +68,15 @@ frappe.ui.form.on('Office Expense Voucher', {
     },
 
     company(frm) {
-        // Clear bank-tied fields so user picks again for the new company
-        if (frm.doc.docstatus === 0) {
-            frm.set_value('paid_from', null);
-            frm.set_value('payable_account', null);
-            (frm.doc.items || []).forEach(it => {
-                frappe.model.set_value(it.doctype, it.name, 'cost_center', null);
-            });
+        if (frm.doc.docstatus !== 0) return;
+        // Clear company-tied fields, then re-apply defaults for the new company
+        frm.set_value('paid_from', null);
+        frm.set_value('payable_account', null);
+        (frm.doc.items || []).forEach(it => {
+            frappe.model.set_value(it.doctype, it.name, 'cost_center', null);
+        });
+        if (frm.doc.company) {
+            apply_company_defaults(frm);
         }
     },
 
@@ -99,7 +93,47 @@ frappe.ui.form.on('Office Expense Voucher Item', {
     amount(frm) { recompute_totals(frm); },
     tax_amount(frm) { recompute_totals(frm); },
     items_remove(frm) { recompute_totals(frm); },
+
+    items_add(frm, cdt, cdn) {
+        // Auto-fill the cost center on each new line from
+        // the per-company default (resolved server-side).
+        if (!frm.doc.company) return;
+        const row = locals[cdt][cdn];
+        if (row.cost_center) return;
+        frappe.call({
+            method: 'chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.get_company_defaults',
+            args: { company: frm.doc.company },
+        }).then(r => {
+            const d = (r && r.message) || {};
+            if (d.cost_center && !row.cost_center) {
+                frappe.model.set_value(cdt, cdn, 'cost_center', d.cost_center);
+            }
+        });
+    },
 });
+
+function apply_company_defaults(frm) {
+    frappe.call({
+        method: 'chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.get_company_defaults',
+        args: { company: frm.doc.company },
+    }).then(r => {
+        const d = (r && r.message) || {};
+        if (!frm.doc.paid_from && d.paid_from) {
+            frm.set_value('paid_from', d.paid_from);
+        }
+        if (!frm.doc.payable_account && d.payable_account) {
+            frm.set_value('payable_account', d.payable_account);
+        }
+        if (d.cost_center) {
+            (frm.doc.items || []).forEach(it => {
+                if (!it.cost_center) {
+                    frappe.model.set_value(it.doctype, it.name,
+                        'cost_center', d.cost_center);
+                }
+            });
+        }
+    });
+}
 
 function recompute_totals(frm) {
     let subtotal = 0;

@@ -752,71 +752,43 @@ def ensure_expense_payable_account(*args, **kwargs):
 
 
 def ensure_oev_settings_fields(*args, **kwargs):
-    """Idempotent: add 3 Custom Fields to Chundakadan Settings to hold
-    Office Expense Voucher defaults that get auto-filled on every new
-    voucher:
+    """Idempotent: add a Table Custom Field on Chundakadan Settings —
+    `oev_defaults` — holding per-company defaults for Office Expense
+    Voucher (Paid From / Payable Account / Cost Center).
 
-      oev_default_paid_from        Link → Account (Bank / Cash)
-      oev_default_payable_account  Link → Account (Liability, no type)
-      oev_default_cost_center      Link → Cost Center
-
-    Plus backfill sensible defaults for first install:
-      - paid_from: first Bank account if any
-      - payable_account: '2210 - Expense Payable' if it exists
-      - cost_center: Company.cost_center
+    Multi-company aware: each row pins defaults to one Company.
+    Migrate any pre-existing single-value fields into the table on
+    first run (they're hidden afterwards).
     """
     import frappe
 
     if not frappe.db.exists("DocType", "Chundakadan Settings"):
         return
 
-    fields = [
-        {
-            "fieldname": "oev_section",
-            "label": "Office Expense Voucher Defaults",
-            "fieldtype": "Section Break",
-            "insert_after": "expense_approval_threshold",
-            "collapsible": 1,
-        },
-        {
-            "fieldname": "oev_default_paid_from",
-            "label": "Default Paid From (Bank / Cash)",
-            "fieldtype": "Link",
-            "options": "Account",
-            "insert_after": "oev_section",
-            "description": (
-                "Auto-fills as 'Paid From' on every new Office Expense "
-                "Voucher. User can override per voucher."
-            ),
-        },
-        {
-            "fieldname": "oev_default_payable_account",
-            "label": "Default Payable Account (deferred)",
-            "fieldtype": "Link",
-            "options": "Account",
-            "insert_after": "oev_default_paid_from",
-            "description": (
-                "Liability account used when a voucher is approved but "
-                "not yet paid (Paid From blank). Should be a neutral "
-                "liability account (account_type unset) — NOT a 'Payable' "
-                "type account, which would require a Supplier party."
-            ),
-        },
-        {
-            "fieldname": "oev_default_cost_center",
-            "label": "Default Cost Center",
-            "fieldtype": "Link",
-            "options": "Cost Center",
-            "insert_after": "oev_default_payable_account",
-            "description": (
-                "Auto-fills on every expense line where Cost Center "
-                "is blank."
-            ),
-        },
-    ]
+    # --- Step 1: ensure the Table custom field exists ----------------
+    table_cf_spec = {
+        "fieldname": "oev_defaults",
+        "label": "Office Expense Voucher Defaults (per company)",
+        "fieldtype": "Table",
+        "options": "Chundakadan OEV Default",
+        "insert_after": "expense_approval_threshold",
+        "description": (
+            "Per-company defaults for new Office Expense Vouchers. "
+            "When a user creates an OEV for a given company, the row "
+            "matching that company auto-fills Paid From / Payable "
+            "Account / Cost Center on the form."
+        ),
+    }
+    section_cf_spec = {
+        "fieldname": "oev_section",
+        "label": "Office Expense Voucher Defaults",
+        "fieldtype": "Section Break",
+        "insert_after": "expense_approval_threshold",
+        "collapsible": 1,
+    }
 
     created = 0
-    for spec in fields:
+    for spec in (section_cf_spec, table_cf_spec):
         cf_name = f"Chundakadan Settings-{spec['fieldname']}"
         if frappe.db.exists("Custom Field", cf_name):
             continue
@@ -832,54 +804,99 @@ def ensure_oev_settings_fields(*args, **kwargs):
         except Exception as e:
             print(f"chundakadan.install: could not create {cf_name}: {e}")
 
+    # --- Step 2: hide the old single-value fields (if they exist) -----
+    for old in ("oev_default_paid_from",
+                "oev_default_payable_account",
+                "oev_default_cost_center"):
+        cf_name = f"Chundakadan Settings-{old}"
+        if frappe.db.exists("Custom Field", cf_name):
+            try:
+                frappe.db.set_value(
+                    "Custom Field", cf_name, "hidden", 1,
+                    update_modified=False)
+            except Exception:
+                pass
+
     if created:
         frappe.db.commit()
         print(f"chundakadan.install: created {created} OEV settings fields")
 
-    # Backfill: pick sensible defaults if not already set
+    # --- Step 3: seed per-company rows from old singles OR best guess --
     try:
         settings = frappe.get_single("Chundakadan Settings")
+        existing_rows = {(r.company or "") for r in (settings.oev_defaults or [])}
+
+        # Pick old singles if they exist (one-time migration)
+        old_paid_from = settings.get("oev_default_paid_from")
+        old_payable = settings.get("oev_default_payable_account")
+        old_cc = settings.get("oev_default_cost_center")
+
         changed = False
-
-        default_company = settings.get("default_company") or \
-            frappe.db.get_default("company") or \
-            frappe.db.get_value("Company", {}, "name")
-
-        if not settings.get("oev_default_paid_from") and default_company:
+        for co in frappe.get_all("Company", fields=["name", "abbr",
+                                                      "cost_center"]):
+            if co["name"] in existing_rows:
+                continue
+            abbr = co["abbr"]
+            # Best guess defaults for THIS company
             bank = frappe.db.get_value(
                 "Account",
-                {"company": default_company, "is_group": 0,
+                {"company": co["name"], "is_group": 0,
                  "account_type": "Bank", "disabled": 0},
                 "name",
             )
-            if bank:
-                settings.oev_default_paid_from = bank
-                changed = True
+            payable_candidate = f"2210 - Expense Payable - {abbr}"
+            payable = payable_candidate if frappe.db.exists(
+                "Account", payable_candidate) else None
+            cc = co["cost_center"] or frappe.db.get_value(
+                "Cost Center",
+                {"company": co["name"], "is_group": 0, "disabled": 0},
+                "name",
+            )
 
-        if not settings.get("oev_default_payable_account") and default_company:
-            abbr = frappe.get_cached_value("Company", default_company, "abbr")
-            candidate = f"2210 - Expense Payable - {abbr}"
-            if frappe.db.exists("Account", candidate):
-                settings.oev_default_payable_account = candidate
-                changed = True
-
-        if not settings.get("oev_default_cost_center") and default_company:
-            cc = frappe.get_cached_value("Company", default_company, "cost_center") \
-                or frappe.db.get_value(
-                    "Cost Center",
-                    {"company": default_company, "is_group": 0, "disabled": 0},
-                    "name",
-                )
-            if cc:
-                settings.oev_default_cost_center = cc
-                changed = True
+            # First company: prefer migrating old single-value defaults
+            # IF they match this company; otherwise use guesses.
+            settings.append("oev_defaults", {
+                "company": co["name"],
+                "paid_from": (old_paid_from
+                              if old_paid_from and old_paid_from.endswith(f"- {abbr}")
+                              else bank),
+                "payable_account": (old_payable
+                                    if old_payable and old_payable.endswith(f"- {abbr}")
+                                    else payable),
+                "cost_center": (old_cc
+                                if old_cc and old_cc.endswith(f"- {abbr}")
+                                else cc),
+            })
+            changed = True
 
         if changed:
             settings.flags.ignore_permissions = True
             settings.save()
-            print("chundakadan.install: backfilled OEV settings defaults")
+            frappe.db.commit()
+            n = len(settings.oev_defaults or [])
+            print(f"chundakadan.install: seeded {n} per-company OEV "
+                  f"default rows")
     except Exception as e:
-        print(f"chundakadan.install: could not backfill OEV defaults: {e}")
+        print(f"chundakadan.install: could not seed OEV per-company "
+              f"defaults: {e}")
+
+
+def get_oev_defaults_for_company(company: str) -> dict:
+    """Helper: resolve OEV defaults for a given company from Chundakadan
+    Settings child table. Returns {paid_from, payable_account, cost_center}
+    or empty dict if no row matches."""
+    import frappe
+    if not company or not frappe.db.exists("DocType", "Chundakadan Settings"):
+        return {}
+    settings = frappe.get_cached_doc("Chundakadan Settings")
+    for row in (settings.get("oev_defaults") or []):
+        if row.get("company") == company:
+            return {
+                "paid_from": row.get("paid_from"),
+                "payable_account": row.get("payable_account"),
+                "cost_center": row.get("cost_center"),
+            }
+    return {}
 
 
 def ensure_oev_default_supplier(*args, **kwargs):
