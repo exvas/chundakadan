@@ -228,9 +228,11 @@
    "read_only": 1
   },
   {
+   "description": "User who needs to act on the current workflow step",
    "fieldname": "current_approver",
    "fieldtype": "Link",
-   "label": "Current Approver",
+   "in_list_view": 1,
+   "label": "Next Approver",
    "options": "User",
    "read_only": 1
   },

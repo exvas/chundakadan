@@ -4,7 +4,8 @@
 // Cancelled' indicator.
 
 frappe.listview_settings['Office Expense Voucher'] = {
-    add_fields: ['status', 'custom_approval_status', 'docstatus', 'grand_total'],
+    add_fields: ['status', 'custom_approval_status', 'current_approver',
+                  'docstatus', 'grand_total', 'balance_amount'],
     // Both columns ARE rendered in the row (driven by in_list_view: 1
     // on the doctype). The indicator pill below uses `status`
     // (payment lifecycle) as the headline; users can also filter by
