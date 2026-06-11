@@ -250,10 +250,14 @@ function oev_update_indicator(frm) {
         'Rejected': 'red',
     };
     const color = color_map[status] || 'gray';
+    // 'waiting on' is misleading once the workflow is done — hide it
+    // for Approved / Rejected.
+    const is_final = ['Approved', 'Rejected'].includes(status);
+    const tail = (!is_final && frm.doc.current_approver)
+        ? ` — waiting on <b>${frm.doc.current_approver}</b>`
+        : '';
     frm.dashboard.set_headline_alert(
-        `<div class="indicator ${color}">Approval: ${status}` +
-        (frm.doc.current_approver ? ` — waiting on <b>${frm.doc.current_approver}</b>` : '') +
-        '</div>'
+        `<div class="indicator ${color}">Approval: ${status}${tail}</div>`
     );
 }
 

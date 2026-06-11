@@ -206,7 +206,14 @@ def validate(doc, method=None):
         _generate_approval_flow(doc, desired_roles)
         return
 
-    # Even if roles match, make sure current_approver tracks current step
+    # FINAL STATES — don't touch current_approver. Rejected vouchers
+    # need it cleared (reject() set it to None); a re-save shouldn't
+    # ressurect a stale approver from approval_flow[idx].
+    if doc.get("custom_approval_status") in ("Rejected", "Approved"):
+        return
+
+    # Otherwise (Pending / Partially Approved): keep current_approver
+    # in sync with the current step's row.
     idx = int(doc.get("current_approval_index") or 0)
     if 0 <= idx < len(existing_flow):
         row = existing_flow[idx]
