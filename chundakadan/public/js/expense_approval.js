@@ -12,7 +12,12 @@
 (function () {
     'use strict';
 
-    const SUPPORTED_DOCTYPES = ['Expense Claim', 'Employee Advance', 'Payment Request'];
+    const SUPPORTED_DOCTYPES = [
+        'Expense Claim',
+        'Employee Advance',
+        'Payment Request',
+        'Office Expense Voucher',
+    ];
 
     function user_can_act(frm) {
         if (frappe.session.user === 'Administrator') return true;

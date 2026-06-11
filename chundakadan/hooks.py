@@ -64,6 +64,7 @@ doctype_js = {
     "Expense Claim" : "public/js/expense_approval.js",
     "Employee Advance" : "public/js/expense_approval.js",
     "Payment Request" : "public/js/expense_approval.js",
+    "Office Expense Voucher" : "public/js/office_expense_voucher.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",
@@ -167,6 +168,17 @@ doc_events = {
     "Payment Request": {
         "validate": "chundakadan.chundakadan.api.expense_approval.validate",
         "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
+    },
+    "Office Expense Voucher": {
+        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
+        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
+    },
+    "Payment Entry": {
+        # When a PE referencing an Office Expense Voucher is submitted or
+        # cancelled, sync the voucher's status (outstanding_amount is
+        # already updated by Frappe's payment ledger; we just flip status).
+        "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+        "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
     }
 }
 # Install / migrate hooks. Idempotent — they no-op when there's
@@ -182,6 +194,7 @@ before_install = [
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.install.ensure_expense_approval_fields",
     "chundakadan.install.ensure_employee_advance_defaults",
+    "chundakadan.install.ensure_expense_payable_account",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
@@ -200,6 +213,7 @@ before_migrate = [
     "chundakadan.seed.expense_ledgers.seed_expense_ledgers",
     "chundakadan.install.ensure_expense_approval_fields",
     "chundakadan.install.ensure_employee_advance_defaults",
+    "chundakadan.install.ensure_expense_payable_account",
 ]
 
 # Uninstallation
@@ -239,6 +253,7 @@ permission_query_conditions = {
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",
     "Employee Advance": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_employee_advance",
     "Payment Request": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_payment_request",
+    "Office Expense Voucher": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_office_expense_voucher",
 }
 
 has_permission = {
@@ -246,6 +261,7 @@ has_permission = {
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.has_permission",
     "Employee Advance": "chundakadan.chundakadan.api.expense_approval.has_permission",
     "Payment Request": "chundakadan.chundakadan.api.expense_approval.has_permission",
+    "Office Expense Voucher": "chundakadan.chundakadan.api.expense_approval.has_permission",
 }
 
 # DocType Class

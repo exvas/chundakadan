@@ -672,6 +672,69 @@ def ensure_expense_approval_fields(*args, **kwargs):
         print(f"chundakadan.install: created {created} approval workflow custom fields")
 
 
+def ensure_expense_payable_account(*args, **kwargs):
+    """Idempotent: ensure `2210 Expense Payable` exists per company as a
+    Payable-type liability account. Used by the Office Expense Voucher
+    doctype as its default `payable_account`.
+
+    Lives directly under the company's root Liabilities group (alongside
+    or near Accounts Payable). Standard ERPNext CoAs put trade payables
+    under 21xx — we pick 2210 to avoid colliding with 21xx Accounts
+    Payable and 22xx GST / Statutory Payables.
+    """
+    import frappe
+
+    for co in frappe.get_all("Company", fields=["name", "abbr"]):
+        abbr = co["abbr"]
+        full = f"2210 - Expense Payable - {abbr}"
+        if frappe.db.exists("Account", full):
+            continue
+
+        # Find a Payable-type parent (e.g. "Accounts Payable") or fall
+        # back to the Liabilities root.
+        parent = frappe.db.sql(
+            """
+            SELECT name FROM `tabAccount`
+            WHERE company = %s
+              AND is_group = 1
+              AND root_type = 'Liability'
+              AND (account_name LIKE '%%Payable%%' OR account_name LIKE '%%Current Liabilities%%')
+            ORDER BY lft
+            LIMIT 1
+            """,
+            co["name"],
+            as_dict=True,
+        )
+        if not parent:
+            parent = frappe.db.sql(
+                """SELECT name FROM `tabAccount`
+                   WHERE company = %s AND is_group = 1 AND root_type = 'Liability'
+                   ORDER BY lft LIMIT 1""",
+                co["name"], as_dict=True,
+            )
+        if not parent:
+            print(f"chundakadan.install: no Liability parent for {co['name']}, "
+                  f"skipping Expense Payable creation")
+            continue
+
+        try:
+            frappe.get_doc({
+                "doctype": "Account",
+                "account_name": "2210 - Expense Payable",
+                "parent_account": parent[0]["name"],
+                "is_group": 0,
+                "root_type": "Liability",
+                "report_type": "Balance Sheet",
+                "account_type": "Payable",
+                "company": co["name"],
+            }).insert(ignore_permissions=True)
+            print(f"chundakadan.install: created '{full}'")
+        except Exception as e:
+            print(f"chundakadan.install: could not create '{full}': {e}")
+
+    frappe.db.commit()
+
+
 def ensure_employee_advance_defaults(*args, **kwargs):
     """Tick 'Repay Unclaimed Amount from Salary' by default on Employee
     Advance — unclaimed advances should be recovered automatically

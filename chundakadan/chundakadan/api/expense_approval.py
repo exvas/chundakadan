@@ -42,6 +42,10 @@ DOCTYPE_CONFIG = {
         "amount_field": "grand_total",
         "submit_on_final": True,
     },
+    "Office Expense Voucher": {
+        "amount_field": "grand_total",
+        "submit_on_final": True,
+    },
 }
 
 # Role IDs used in the chain. Both roles already exist on the install
@@ -550,3 +554,8 @@ def get_permission_query_conditions_employee_advance(user=None):
 
 def get_permission_query_conditions_payment_request(user=None):
     return _query_conditions_for("Payment Request", user or frappe.session.user)
+
+
+def get_permission_query_conditions_office_expense_voucher(user=None):
+    return _query_conditions_for(
+        "Office Expense Voucher", user or frappe.session.user)

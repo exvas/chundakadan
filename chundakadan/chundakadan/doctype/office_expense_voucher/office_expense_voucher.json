@@ -1,0 +1,323 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-06-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "company",
+  "posting_date",
+  "column_break_main",
+  "voucher_type",
+  "reference_no",
+  "reference_date",
+  "section_break_desc",
+  "description",
+  "attachment",
+  "section_break_amount",
+  "expense_account",
+  "cost_center",
+  "amount",
+  "column_break_amount",
+  "claim_gst_input_credit",
+  "tax_amount",
+  "gst_account_cgst",
+  "gst_account_sgst",
+  "section_break_totals",
+  "grand_total",
+  "outstanding_amount",
+  "column_break_totals",
+  "payable_account",
+  "status",
+  "approval_section",
+  "custom_approval_status",
+  "current_approver",
+  "current_approval_index",
+  "approval_flow",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "OEV-.YYYY.-",
+   "default": "OEV-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "default": "Today",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "voucher_type",
+   "fieldtype": "Select",
+   "label": "Voucher Type",
+   "options": "Utility\nOffice Rent\nRepair & Maintenance\nPetty Cash\nSubscription\nProfessional Fees\nTravel (Non-Employee)\nOther",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "reference_no",
+   "fieldtype": "Data",
+   "label": "Reference / Bill No",
+   "description": "Vendor bill number or external reference"
+  },
+  {
+   "fieldname": "reference_date",
+   "fieldtype": "Date",
+   "label": "Reference / Bill Date"
+  },
+  {
+   "fieldname": "section_break_desc",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Attach",
+   "label": "Bill / Receipt Attachment"
+  },
+  {
+   "fieldname": "section_break_amount",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "label": "Expense Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "The expense ledger to debit (e.g. 5217 Electricity Charges)"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount (excl. tax)",
+   "reqd": 1,
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "column_break_amount",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "claim_gst_input_credit",
+   "fieldtype": "Check",
+   "label": "Claim GST Input Credit",
+   "default": "0",
+   "description": "Tick if GST on this bill is recoverable. Splits tax into CGST/SGST input accounts."
+  },
+  {
+   "fieldname": "tax_amount",
+   "fieldtype": "Currency",
+   "label": "Tax Amount (GST)",
+   "default": "0",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "gst_account_cgst",
+   "fieldtype": "Link",
+   "label": "CGST Input Account",
+   "options": "Account",
+   "depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0",
+   "mandatory_depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0"
+  },
+  {
+   "fieldname": "gst_account_sgst",
+   "fieldtype": "Link",
+   "label": "SGST Input Account",
+   "options": "Account",
+   "depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0",
+   "mandatory_depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0"
+  },
+  {
+   "fieldname": "section_break_totals",
+   "fieldtype": "Section Break",
+   "label": "Totals & Payable"
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand Total",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "label": "Outstanding Amount",
+   "read_only": 1,
+   "no_copy": 1,
+   "options": "Company:company:default_currency",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payable_account",
+   "fieldtype": "Link",
+   "label": "Payable Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Liability account to credit (typically 2210 Expense Payable). Auto-set from Company on save."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPending Approval\nPartially Approved\nApproved\nUnpaid\nPartly Paid\nPaid\nRejected\nCancelled",
+   "default": "Draft",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval Workflow",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "custom_approval_status",
+   "fieldtype": "Select",
+   "label": "Approval Status",
+   "options": "\nPending\nPartially Approved\nApproved\nRejected",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "current_approver",
+   "fieldtype": "Link",
+   "label": "Current Approver",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "current_approval_index",
+   "fieldtype": "Int",
+   "label": "Current Approval Step",
+   "read_only": 1,
+   "hidden": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "approval_flow",
+   "fieldtype": "Table",
+   "label": "Approval Flow",
+   "options": "Chundakadan Approval Detail",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Office Expense Voucher",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "group": "Payments",
+   "link_doctype": "Payment Entry",
+   "link_fieldname": "reference_name"
+  }
+ ],
+ "modified": "2026-06-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Office Expense Voucher",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Accounts User",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

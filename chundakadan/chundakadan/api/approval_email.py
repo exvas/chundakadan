@@ -20,6 +20,7 @@ _DOCTYPE_SLUG = {
     "Expense Claim": "expense-claim",
     "Employee Advance": "employee-advance",
     "Payment Request": "payment-request",
+    "Office Expense Voucher": "office-expense-voucher",
 }
 
 
@@ -28,6 +29,7 @@ _AMOUNT_FIELD = {
     "Expense Claim": ("total_claimed_amount", "currency"),
     "Employee Advance": ("advance_amount", "currency"),
     "Payment Request": ("grand_total", "currency"),
+    "Office Expense Voucher": ("grand_total", None),  # OEV uses company default
     # Leave Application doesn't have an amount; we'll show days instead
 }
 
@@ -95,7 +97,13 @@ def _amount_label(doc) -> str | None:
     amount = flt(doc.get(amount_field))
     if not amount:
         return None
-    currency = doc.get(currency_field) or "INR"
+    if currency_field:
+        currency = doc.get(currency_field) or "INR"
+    elif doc.get("company"):
+        currency = frappe.db.get_value("Company", doc.get("company"),
+                                        "default_currency") or "INR"
+    else:
+        currency = "INR"
     return fmt_money(amount, currency=currency)
 
 
