@@ -246,18 +246,16 @@ function oev_override_page_indicator(frm) {
 }
 
 function oev_update_indicator(frm) {
+    if (frm.is_new()) return;  // never touch dashboard on new unsaved docs
     const status = frm.doc.custom_approval_status;
     if (!status) return;
 
-    // Frappe's set_headline_alert appends a new div on every refresh
-    // (it doesn't dedupe), so wipe any prior alert FIRST. Then add ours.
+    // Surgical dedupe — only remove OUR previous banner (tagged with
+    // .oev-approval-banner). Don't touch other Frappe dashboard sections.
     try {
         if (frm.dashboard && frm.dashboard.wrapper) {
-            frm.dashboard.wrapper.find('.form-dashboard-section.has-headline-alert,'
-                + ' .headline-alert').remove();
-        }
-        if (frm.dashboard && frm.dashboard.clear_headline) {
-            frm.dashboard.clear_headline();
+            frm.dashboard.wrapper.find('.oev-approval-banner')
+                .closest('.form-dashboard-section').remove();
         }
     } catch (e) { /* swallow */ }
 
@@ -268,24 +266,30 @@ function oev_update_indicator(frm) {
         'Rejected': 'red',
     };
     const color = color_map[status] || 'gray';
-    // 'waiting on' is misleading once the workflow is done — hide it
-    // for Approved / Rejected.
     const is_final = ['Approved', 'Rejected'].includes(status);
     const tail = (!is_final && frm.doc.current_approver)
         ? ` — waiting on <b>${frm.doc.current_approver}</b>`
         : '';
+    // Wrap with our unique class so the next refresh can find + remove it
     frm.dashboard.set_headline_alert(
-        `<div class="indicator ${color}">Approval: ${status}${tail}</div>`
+        `<div class="oev-approval-banner indicator ${color}">`
+        + `Approval: ${status}${tail}</div>`
     );
 }
 
 function oev_hide_standard_submit(frm) {
+    // Hide ONLY the standard Submit button on saved drafts (docstatus=0
+    // + already saved). Never touch the primary button when the doc is
+    // new or unsaved — that's the Save button.
     if (frm.is_new()) return;
+    if (frm.doc.__unsaved) return;
     if (frm.doc.docstatus !== 0) return;
     setTimeout(() => {
         try {
-            if (frm.page && frm.page.btn_primary) {
-                frm.page.btn_primary.hide();
+            // Only hide if the primary button text is actually "Submit"
+            const primary = frm.page && frm.page.btn_primary;
+            if (primary && primary.text().trim() === __('Submit')) {
+                primary.hide();
             }
             frm.page.wrapper.find('.primary-action').filter(function () {
                 return $(this).text().trim() === __('Submit');
