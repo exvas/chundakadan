@@ -747,48 +747,41 @@ def ensure_oev_default_supplier(*args, **kwargs):
     default party on Office Expense Vouchers when the bill has no real
     vendor (e.g. petty cash, ad-hoc reimbursements).
 
-    ERPNext requires a party (Supplier) on every GL entry that hits a
-    Payable-type account. Rather than force users to create a Supplier
-    just to file an electricity bill, we pre-seed one generic Supplier.
+    Idempotency check uses `supplier_name` not docname — Buying Settings
+    autoname via Naming Series means the actual docname is e.g.
+    'CA-SUPP-00031', not 'Misc Office Expenses'.
     """
     import frappe
 
-    name = "Misc Office Expenses"
-    if frappe.db.exists("Supplier", name):
+    target_name = "Misc Office Expenses"
+    existing = frappe.db.get_value(
+        "Supplier", {"supplier_name": target_name}, "name")
+    if existing:
+        return  # already exists, skip
+
+    # Pick any leaf Supplier Group (ERPNext seeds at least one on Company setup)
+    sg = frappe.db.get_value("Supplier Group", {"is_group": 0}, "name")
+    if not sg:
+        print("chundakadan.install: no leaf Supplier Group found, "
+              "skipping default supplier creation")
         return
 
-    # Find a default Supplier Group; create 'All Supplier Groups' fallback
-    sg = frappe.db.get_value(
-        "Supplier Group", {"is_group": 0}, "name") or "All Supplier Groups"
-    if not frappe.db.exists("Supplier Group", sg):
-        # ERPNext seeds this on Company setup; if missing, create at root
-        try:
-            root = frappe.db.get_value(
-                "Supplier Group", {"is_group": 1, "parent_supplier_group": ["in", ["", None]]},
-                "name")
-            frappe.get_doc({
-                "doctype": "Supplier Group",
-                "supplier_group_name": "All Supplier Groups",
-                "parent_supplier_group": root,
-                "is_group": 0,
-            }).insert(ignore_permissions=True)
-            sg = "All Supplier Groups"
-        except Exception as e:
-            print(f"chundakadan.install: could not create Supplier Group: {e}")
-            return
-
     try:
-        frappe.get_doc({
+        doc = frappe.get_doc({
             "doctype": "Supplier",
-            "supplier_name": name,
+            "supplier_name": target_name,
             "supplier_group": sg,
             "supplier_type": "Individual",
             "country": "India",
-        }).insert(ignore_permissions=True)
+        })
+        doc.flags.ignore_permissions = True
+        doc.insert()
         frappe.db.commit()
-        print(f"chundakadan.install: created Supplier '{name}'")
+        print(f"chundakadan.install: created Supplier "
+              f"'{target_name}' (docname: {doc.name})")
     except Exception as e:
-        print(f"chundakadan.install: could not create Supplier '{name}': {e}")
+        print(f"chundakadan.install: could not create Supplier "
+              f"'{target_name}': {e}")
 
 
 def ensure_oev_workspace_pin(*args, **kwargs):

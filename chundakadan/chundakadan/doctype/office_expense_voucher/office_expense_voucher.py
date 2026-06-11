@@ -43,14 +43,20 @@ class OfficeExpenseVoucher(AccountsController):
         self._set_status_pre_submit()
 
     def _autofill_party(self):
-        """If user didn't pick a Supplier, default to 'Misc Office
-        Expenses' (auto-created per install). Mandatory because ERPNext
-        requires a party on every GL entry that hits a Payable account."""
+        """If user didn't pick a Supplier, default to the 'Misc Office
+        Expenses' Supplier (auto-created in install hook). Look up by
+        supplier_name, not docname — Buying Settings autoname means the
+        actual name is something like 'CA-SUPP-00031'.
+
+        Mandatory because ERPNext requires a party on every GL entry
+        that hits a Payable-type account.
+        """
         if self.party:
             return
-        default = "Misc Office Expenses"
-        if frappe.db.exists("Supplier", default):
-            self.party = default
+        default_docname = frappe.db.get_value(
+            "Supplier", {"supplier_name": "Misc Office Expenses"}, "name")
+        if default_docname:
+            self.party = default_docname
 
     def _autofill_payable_account(self):
         """If user didn't pick a payable_account, default to the company's
