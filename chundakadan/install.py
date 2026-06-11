@@ -742,6 +742,55 @@ def ensure_expense_payable_account(*args, **kwargs):
     frappe.db.commit()
 
 
+def ensure_oev_default_supplier(*args, **kwargs):
+    """Idempotent: create a 'Misc Office Expenses' Supplier used as the
+    default party on Office Expense Vouchers when the bill has no real
+    vendor (e.g. petty cash, ad-hoc reimbursements).
+
+    ERPNext requires a party (Supplier) on every GL entry that hits a
+    Payable-type account. Rather than force users to create a Supplier
+    just to file an electricity bill, we pre-seed one generic Supplier.
+    """
+    import frappe
+
+    name = "Misc Office Expenses"
+    if frappe.db.exists("Supplier", name):
+        return
+
+    # Find a default Supplier Group; create 'All Supplier Groups' fallback
+    sg = frappe.db.get_value(
+        "Supplier Group", {"is_group": 0}, "name") or "All Supplier Groups"
+    if not frappe.db.exists("Supplier Group", sg):
+        # ERPNext seeds this on Company setup; if missing, create at root
+        try:
+            root = frappe.db.get_value(
+                "Supplier Group", {"is_group": 1, "parent_supplier_group": ["in", ["", None]]},
+                "name")
+            frappe.get_doc({
+                "doctype": "Supplier Group",
+                "supplier_group_name": "All Supplier Groups",
+                "parent_supplier_group": root,
+                "is_group": 0,
+            }).insert(ignore_permissions=True)
+            sg = "All Supplier Groups"
+        except Exception as e:
+            print(f"chundakadan.install: could not create Supplier Group: {e}")
+            return
+
+    try:
+        frappe.get_doc({
+            "doctype": "Supplier",
+            "supplier_name": name,
+            "supplier_group": sg,
+            "supplier_type": "Individual",
+            "country": "India",
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+        print(f"chundakadan.install: created Supplier '{name}'")
+    except Exception as e:
+        print(f"chundakadan.install: could not create Supplier '{name}': {e}")
+
+
 def ensure_oev_workspace_pin(*args, **kwargs):
     """Idempotent: pin 'Office Expense Voucher' in the standard
     Accounting workspace — adds it as a shortcut (top tiles) AND as a

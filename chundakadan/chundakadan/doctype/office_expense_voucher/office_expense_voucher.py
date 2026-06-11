@@ -33,6 +33,7 @@ class OfficeExpenseVoucher(AccountsController):
 
     def validate(self):
         self._autofill_payable_account()
+        self._autofill_party()
         self._autofill_cost_center()
         self._validate_amount()
         self._compute_grand_total()
@@ -40,6 +41,16 @@ class OfficeExpenseVoucher(AccountsController):
         if not self.outstanding_amount or self.docstatus == 0:
             self.outstanding_amount = self.grand_total
         self._set_status_pre_submit()
+
+    def _autofill_party(self):
+        """If user didn't pick a Supplier, default to 'Misc Office
+        Expenses' (auto-created per install). Mandatory because ERPNext
+        requires a party on every GL entry that hits a Payable account."""
+        if self.party:
+            return
+        default = "Misc Office Expenses"
+        if frappe.db.exists("Supplier", default):
+            self.party = default
 
     def _autofill_payable_account(self):
         """If user didn't pick a payable_account, default to the company's
@@ -243,6 +254,8 @@ class OfficeExpenseVoucher(AccountsController):
             gl[0]["debit_in_account_currency"] = gl[0]["debit"]
 
         # 3. Cr Payable (always for the full grand_total)
+        # Frappe requires party_type + party on GL entries against
+        # account_type="Payable" — Supplier supplied from voucher.party.
         gl.append(self.get_gl_dict({
             "account": self.payable_account,
             "against": self.expense_account,
@@ -250,6 +263,8 @@ class OfficeExpenseVoucher(AccountsController):
             "credit": flt(self.grand_total),
             "debit_in_account_currency": 0,
             "credit_in_account_currency": flt(self.grand_total),
+            "party_type": "Supplier",
+            "party": self.party,
             "cost_center": self.cost_center,
             "against_voucher_type": self.doctype,
             "against_voucher": self.name,
@@ -306,6 +321,11 @@ def make_payment_entry(source_name: str) -> dict:
     pe.payment_type = "Pay"
     pe.posting_date = frappe.utils.nowdate()
     pe.company = source.company
+    # Party fields — needed because we're paying down a Payable account
+    pe.party_type = "Supplier"
+    pe.party = source.party
+    pe.party_name = frappe.db.get_value("Supplier", source.party, "supplier_name") \
+                    or source.party
     pe.paid_to = source.payable_account
     pe.paid_to_account_currency = frappe.get_cached_value(
         "Account", source.payable_account, "account_currency") or \
