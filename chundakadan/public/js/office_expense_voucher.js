@@ -62,12 +62,17 @@ frappe.ui.form.on('Office Expense Voucher', {
             frm.set_df_property('approval_flow', 'read_only', 1);
         }
 
-        // Make Payment button — only when submitted, no paid_from set
-        // (i.e. deferred-payment mode via Payable Account), still unpaid.
+        // Make Payment button — submitted + still has a balance.
+        // Works for both Unpaid (initial settlement) and Partially Paid
+        // (paying down the remaining balance with another JV).
         if (frm.doc.docstatus === 1
             && !frm.doc.paid_from
-            && frm.doc.status === 'Unpaid') {
-            frm.add_custom_button(__('Make Payment'), function () {
+            && flt(frm.doc.balance_amount) > 0
+            && ['Unpaid', 'Partially Paid'].includes(frm.doc.status)) {
+            const lbl = frm.doc.status === 'Partially Paid'
+                ? __('Make Payment ({0})', [format_currency(frm.doc.balance_amount, frm.doc.currency || 'INR')])
+                : __('Make Payment');
+            frm.add_custom_button(lbl, function () {
                 make_payment_entry(frm);
             }, __('Create'));
             frm.page.set_inner_btn_group_as_primary(__('Create'));

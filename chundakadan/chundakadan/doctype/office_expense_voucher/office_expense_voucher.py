@@ -389,38 +389,51 @@ class OfficeExpenseVoucher(AccountsController):
     # --- Status ------------------------------------------------------
 
     def set_status(self, update=False, status=None, update_modified=True):
-        """Compute the PAYMENT lifecycle status (workflow status lives
-        on custom_approval_status — set independently by approve()/reject()).
+        """Compute the PAYMENT lifecycle status + paid/balance fields.
 
         Post-submit:
-          - paid_from-mode (immediate payment) → Paid
-          - pay_later mode → Unpaid / Partially Paid / Paid depending on
-            how much has been settled via JV references against this voucher
+          - paid_from-mode (immediate payment) → Paid, balance=0, paid=grand_total
+          - pay_later mode → Unpaid / Partially Paid / Paid based on JV
+            settlements; paid/balance computed accordingly
         """
         if self.is_new():
             return
+        grand = flt(self.grand_total, self.precision("grand_total"))
         if not status:
             if self.docstatus == 2:
                 status = "Cancelled"
+                paid = balance = 0.0
             elif self.docstatus == 0:
                 return  # stays "Draft" — pre-submit
             else:
                 if self.paid_from:
-                    # Immediate payment via Paid From — fully paid on submit
+                    # Immediate payment — fully paid on OEV submit
                     status = "Paid"
+                    paid = grand
+                    balance = 0.0
                 else:
-                    # Deferred — compute from JV settlements that reference us
                     settled = self._payable_settled_amount()
-                    grand = flt(self.grand_total, self.precision("grand_total"))
+                    paid = settled
+                    balance = max(0.0, grand - settled)
                     if settled <= 0:
                         status = "Unpaid"
                     elif settled < grand:
                         status = "Partially Paid"
                     else:
                         status = "Paid"
+        else:
+            paid = flt(self.paid_amount)
+            balance = flt(self.balance_amount)
+
         self.status = status
+        self.paid_amount = paid
+        self.balance_amount = balance
         if update:
-            self.db_set("status", status, update_modified=update_modified)
+            self.db_set({
+                "status": status,
+                "paid_amount": paid,
+                "balance_amount": balance,
+            }, update_modified=update_modified)
 
     def _payable_settled_amount(self) -> float:
         """Sum of Dr Payable amounts on active GL Entries that reference
@@ -485,7 +498,12 @@ def make_payment_entry(source_name: str) -> dict:
         frappe.throw(_(
             "No Payable Account set — voucher posting state is invalid."))
 
-    amount = flt(source.grand_total)
+    # Pay only the OUTSTANDING balance — supports partial-settlement chains.
+    # If balance_amount is stale (not computed yet), fall back to grand_total.
+    source.set_status(update=False)  # refresh in-memory paid/balance
+    amount = flt(source.balance_amount) or flt(source.grand_total)
+    if amount <= 0:
+        frappe.throw(_("Nothing left to pay on this voucher."))
     cc = (source.items[0].cost_center if source.items else None) or \
          frappe.get_cached_value("Company", source.company, "cost_center")
 
@@ -496,7 +514,7 @@ def make_payment_entry(source_name: str) -> dict:
     je.cheque_no = source.reference_no or source.name
     je.cheque_date = source.reference_date or source.posting_date
     je.user_remark = (
-        f"Settling Office Expense Voucher {source.name} — "
+        f"Settling Office Expense Voucher {source.name} (₹{amount:,.2f}) — "
         f"{source.vendor_payee or source.description or ''}"
     )
     # Leg 1: Dr Payable Account (clears the liability)
