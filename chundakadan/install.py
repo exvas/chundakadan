@@ -677,10 +677,9 @@ def ensure_expense_payable_account(*args, **kwargs):
     Payable-type liability account. Used by the Office Expense Voucher
     doctype as its default `payable_account`.
 
-    Lives directly under the company's root Liabilities group (alongside
-    or near Accounts Payable). Standard ERPNext CoAs put trade payables
-    under 21xx — we pick 2210 to avoid colliding with 21xx Accounts
-    Payable and 22xx GST / Statutory Payables.
+    Follows ERPNext convention: `account_name = "Expense Payable"` +
+    `account_number = "2210"` as SEPARATE fields. Frappe's autoname
+    glues them: `{account_number} - {account_name} - {abbr}`.
     """
     import frappe
 
@@ -690,49 +689,124 @@ def ensure_expense_payable_account(*args, **kwargs):
         if frappe.db.exists("Account", full):
             continue
 
-        # Find a Payable-type parent (e.g. "Accounts Payable") or fall
-        # back to the Liabilities root.
-        parent = frappe.db.sql(
-            """
-            SELECT name FROM `tabAccount`
-            WHERE company = %s
-              AND is_group = 1
-              AND root_type = 'Liability'
-              AND (account_name LIKE '%%Payable%%' OR account_name LIKE '%%Current Liabilities%%')
-            ORDER BY lft
-            LIMIT 1
-            """,
-            co["name"],
-            as_dict=True,
-        )
-        if not parent:
-            parent = frappe.db.sql(
+        # Prefer `Current Liabilities` as the parent group — sits right
+        # above Accounts Payable in standard ERPNext CoAs.
+        parent_name = None
+        for pattern in ("Current Liabilities", "Accounts Payable"):
+            row = frappe.db.sql(
+                """
+                SELECT name FROM `tabAccount`
+                WHERE company = %s
+                  AND is_group = 1
+                  AND root_type = 'Liability'
+                  AND account_name = %s
+                LIMIT 1
+                """,
+                (co["name"], pattern),
+                as_dict=True,
+            )
+            if row:
+                parent_name = row[0]["name"]
+                break
+        if not parent_name:
+            row = frappe.db.sql(
                 """SELECT name FROM `tabAccount`
                    WHERE company = %s AND is_group = 1 AND root_type = 'Liability'
                    ORDER BY lft LIMIT 1""",
-                co["name"], as_dict=True,
+                (co["name"],), as_dict=True,
             )
-        if not parent:
+            parent_name = row[0]["name"] if row else None
+        if not parent_name:
             print(f"chundakadan.install: no Liability parent for {co['name']}, "
                   f"skipping Expense Payable creation")
             continue
 
         try:
-            frappe.get_doc({
+            doc = frappe.get_doc({
                 "doctype": "Account",
-                "account_name": "2210 - Expense Payable",
-                "parent_account": parent[0]["name"],
+                "account_name": "Expense Payable",
+                "account_number": "2210",
+                "parent_account": parent_name,
                 "is_group": 0,
                 "root_type": "Liability",
                 "report_type": "Balance Sheet",
                 "account_type": "Payable",
                 "company": co["name"],
-            }).insert(ignore_permissions=True)
-            print(f"chundakadan.install: created '{full}'")
+            })
+            doc.flags.ignore_permissions = True
+            doc.insert()
+            print(f"chundakadan.install: created '{doc.name}'")
         except Exception as e:
             print(f"chundakadan.install: could not create '{full}': {e}")
 
     frappe.db.commit()
+
+
+def ensure_oev_workspace_pin(*args, **kwargs):
+    """Idempotent: pin 'Office Expense Voucher' in the standard
+    Accounting workspace — adds it as a shortcut (top tiles) AND as a
+    card-link under a 'Vouchers' group.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Office Expense Voucher"):
+        return
+    if not frappe.db.exists("Workspace", "Accounting"):
+        return
+
+    ws = frappe.get_doc("Workspace", "Accounting")
+    changed = False
+
+    # --- Shortcut tile (top of workspace) ---
+    has_shortcut = any(
+        (s.link_to == "Office Expense Voucher" and s.type == "DocType")
+        for s in (ws.shortcuts or [])
+    )
+    if not has_shortcut:
+        ws.append("shortcuts", {
+            "label": "Office Expense Voucher",
+            "type": "DocType",
+            "link_to": "Office Expense Voucher",
+            "color": "Yellow",
+        })
+        changed = True
+
+    # --- Card link (under a 'Vouchers' card-break group) ---
+    has_link = any(
+        (l.link_to == "Office Expense Voucher" and l.type == "Link")
+        for l in (ws.links or [])
+    )
+    if not has_link:
+        # Find the position right after Payment Entry / Journal Entry in
+        # the links table — both live under "Direct Entries" or similar.
+        # Simpler: append at the end with our own Card Break header.
+        has_break = any(
+            (l.type == "Card Break" and l.label == "Chundakadan Vouchers")
+            for l in (ws.links or [])
+        )
+        if not has_break:
+            ws.append("links", {
+                "label": "Chundakadan Vouchers",
+                "type": "Card Break",
+                "icon": "non-profit",
+            })
+        ws.append("links", {
+            "label": "Office Expense Voucher",
+            "type": "Link",
+            "link_type": "DocType",
+            "link_to": "Office Expense Voucher",
+        })
+        changed = True
+
+    if changed:
+        try:
+            ws.flags.ignore_permissions = True
+            ws.save()
+            frappe.db.commit()
+            print("chundakadan.install: pinned 'Office Expense Voucher' on "
+                  "Accounting workspace")
+        except Exception as e:
+            print(f"chundakadan.install: could not pin OEV on workspace: {e}")
 
 
 def ensure_employee_advance_defaults(*args, **kwargs):
