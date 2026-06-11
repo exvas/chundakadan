@@ -66,13 +66,6 @@ frappe.ui.form.on('Office Expense Voucher', {
         }
         recompute_totals(frm);
 
-        // Force inline-only editing on the Lines grid. Frappe by default
-        // opens the row-editor modal on:
-        //   1. "+ Add Row" button (calls add_new_row(.., show=true))
-        //   2. Row chevron click (.btn-open-row)
-        //   3. Insert Below / Insert Above buttons in the row toolbar
-        // We disable all three.
-        enforce_inline_grid(frm);
     },
 
     company(frm) {
@@ -153,48 +146,6 @@ function recompute_totals(frm) {
     frm.set_value('subtotal', subtotal);
     frm.set_value('total_tax', total_tax);
     frm.set_value('grand_total', subtotal + total_tax);
-}
-
-function enforce_inline_grid(frm) {
-    const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
-    if (!grid) return;
-
-    // The 'Editing Row' modal is opened via GridRow.show_form().
-    // Patch it on EVERY grid row to be a no-op — covers:
-    //   - Form load auto-open (Frappe opens row 1 if it's empty)
-    //   - Chevron / Insert Below / Insert Above
-    //   - Programmatic open via toggle_view(true) → show_form()
-    //   - '+ Add Row' / add_new_row(.., show=true)
-    const neutralise_rows = () => {
-        (grid.grid_rows || []).forEach(row => {
-            if (row && !row._oev_show_form_patched) {
-                row.show_form = function () { /* inline-only */ };
-                row._oev_show_form_patched = true;
-            }
-        });
-    };
-
-    if (!grid._oev_inline_patched) {
-        neutralise_rows();
-        // Re-patch any rows added later (via Add Row, Insert Below, etc.)
-        const original_refresh = grid.refresh.bind(grid);
-        grid.refresh = function () {
-            const r = original_refresh.apply(this, arguments);
-            neutralise_rows();
-            return r;
-        };
-        grid._oev_inline_patched = true;
-    } else {
-        // Patch any new rows on subsequent form refreshes
-        neutralise_rows();
-    }
-
-    // Hide the row-expand chevron button visually.
-    setTimeout(() => {
-        if (grid.wrapper) {
-            grid.wrapper.find('.btn-open-row').css('display', 'none');
-        }
-    }, 100);
 }
 
 function make_payment_entry(frm) {
