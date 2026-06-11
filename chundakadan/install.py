@@ -730,11 +730,24 @@ def ensure_expense_payable_account(*args, **kwargs):
                   f"skipping Expense Payable creation")
             continue
 
+        # Try 2210, then 2211..2299 if number's taken (some installs put
+        # Stock Received But Not Billed at 2210, which conflicts).
+        chosen_number = None
+        for candidate in ["2210"] + [str(n) for n in range(2211, 2300)]:
+            in_use = frappe.db.get_value(
+                "Account",
+                {"account_number": candidate, "company": co["name"]},
+                "name",
+            )
+            if not in_use:
+                chosen_number = candidate
+                break
+
         try:
             doc = frappe.get_doc({
                 "doctype": "Account",
                 "account_name": "Expense Payable",
-                "account_number": "2210",
+                "account_number": chosen_number,  # may be None if 2210-2299 all used
                 "parent_account": parent_name,
                 "is_group": 0,
                 "root_type": "Liability",
