@@ -64,6 +64,23 @@ frappe.ui.form.on('Office Expense Voucher', {
             }, __('Create'));
             frm.page.set_inner_btn_group_as_primary(__('Create'));
         }
+
+        // View Ledger button — ERPNext-standard, opens General Ledger
+        // filtered to this voucher (works on submitted + cancelled docs).
+        if (frm.doc.docstatus > 0) {
+            frm.add_custom_button(__('Ledger'), function () {
+                frappe.route_options = {
+                    voucher_no: frm.doc.name,
+                    company: frm.doc.company,
+                    from_date: frm.doc.posting_date,
+                    to_date: frm.doc.posting_date,
+                    group_by: '',
+                    show_cancelled_entries: frm.doc.docstatus === 2,
+                };
+                frappe.set_route('query-report', 'General Ledger');
+            }, __('View'));
+        }
+
         recompute_totals(frm);
 
     },

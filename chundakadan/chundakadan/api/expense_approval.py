@@ -178,14 +178,16 @@ def validate(doc, method=None):
 
     # Submit-time guard: if the doc is transitioning to docstatus=1 but
     # our chain hasn't been finalised, route the user to Approve button.
+    # NO Administrator bypass — the workflow's approve() sets
+    # custom_approval_status='Approved' BEFORE calling doc.submit(), so
+    # legitimate workflow submits pass naturally. Anyone clicking the
+    # standard Submit button (even Admin) with cas='Pending' is blocked.
     if doc.get("docstatus") == 1 and doc.get("custom_approval_status") != "Approved":
-        # Allow approve()'s set_user("Administrator") wrapped submit to pass
-        if frappe.session.user != "Administrator":
-            frappe.throw(_(
-                "This {0} can only be submitted via the Approve workflow. "
-                "Use the <b>Actions → Approve</b> button instead of Submit. "
-                "Current approver: {1}"
-            ).format(doc.doctype, doc.get("current_approver") or "—"))
+        frappe.throw(_(
+            "This {0} can only be submitted via the Approve workflow. "
+            "Use the <b>Actions → Approve</b> button instead of Submit. "
+            "Current approver: {1}"
+        ).format(doc.doctype, doc.get("current_approver") or "—"))
 
     if int(doc.get("docstatus") or 0) > 0:
         return
