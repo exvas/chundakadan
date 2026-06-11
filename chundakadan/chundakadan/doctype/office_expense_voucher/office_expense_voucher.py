@@ -128,14 +128,30 @@ class OfficeExpenseVoucher(AccountsController):
         self.grand_total = subtotal + line_taxes
 
     def _validate_payment_target(self):
-        """At least one of Paid From / Payable Account must be set.
-        BOTH can be set together — that triggers a 4-leg passthrough
-        GL (Dr Expense → Cr Payable → Dr Payable → Cr Bank)."""
-        if not self.paid_from and not self.payable_account:
-            frappe.throw(_(
-                "Pick <b>Paid From</b> (Bank / Cash), <b>Payable Account</b>, "
-                "or both. Set defaults in Chundakadan Settings so they "
-                "auto-fill on new vouchers."))
+        """Payment-target invariant — driven by the 'Pay Later' flag:
+
+          - Pay Later UNCHECKED (default, immediate payment):
+              paid_from is mandatory. If payable_account is ALSO set,
+              GL passes through it (4-leg audit). If not, direct 2-leg.
+
+          - Pay Later CHECKED (deferred):
+              paid_from is IGNORED (cleared at validate). Voucher books
+              Dr Expense / Cr Payable; user runs 'Make Payment' later
+              to settle.
+        """
+        if self.pay_later:
+            # Ignore + clear any stray paid_from value
+            self.paid_from = None
+            if not self.payable_account:
+                frappe.throw(_(
+                    "Payable Account is required when 'Pay Later' is "
+                    "ticked. Set a default in Chundakadan Settings to "
+                    "auto-fill it."))
+        else:
+            if not self.paid_from:
+                frappe.throw(_(
+                    "<b>Paid From</b> (Bank / Cash) is required. Tick "
+                    "'Pay Later' if you want to defer the payment."))
 
     def _set_status_pre_submit(self):
         if self.docstatus == 2:

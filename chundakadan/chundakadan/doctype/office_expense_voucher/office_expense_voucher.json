@@ -15,6 +15,7 @@
   "lines_section",
   "items",
   "payment_section",
+  "pay_later",
   "paid_from",
   "column_break_payment",
   "payable_account",
@@ -109,11 +110,20 @@
    "label": "Payment"
   },
   {
-   "description": "Bank or Cash account. Leave blank to book as pending payable (use 'Make Payment' later).",
+   "default": "0",
+   "description": "Tick to defer payment — voucher books to Payable Account only. Use the 'Make Payment' button later. Unticked = pay immediately from Bank / Cash.",
+   "fieldname": "pay_later",
+   "fieldtype": "Check",
+   "label": "Pay Later"
+  },
+  {
+   "depends_on": "eval:!doc.pay_later",
+   "description": "Bank or Cash account. Required unless 'Pay Later' is ticked.",
    "fieldname": "paid_from",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Paid From",
+   "mandatory_depends_on": "eval:!doc.pay_later",
    "options": "Account"
   },
   {

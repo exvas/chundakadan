@@ -106,6 +106,16 @@ frappe.ui.form.on('Office Expense Voucher', {
         }
     },
 
+    pay_later(frm) {
+        // Pay Later ticked → clear Paid From (it's ignored anyway).
+        // Unticked → restore default Paid From from company settings.
+        if (frm.doc.pay_later) {
+            frm.set_value('paid_from', null);
+        } else if (!frm.doc.paid_from && frm.doc.company) {
+            apply_company_defaults(frm);
+        }
+    },
+
 });
 
 frappe.ui.form.on('Office Expense Voucher Item', {
