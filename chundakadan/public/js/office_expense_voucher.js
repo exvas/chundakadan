@@ -53,6 +53,14 @@ frappe.ui.form.on('Office Expense Voucher', {
     },
 
     refresh(frm) {
+        // === Shared approval UI (Expense Claim parity) ===
+        oev_update_indicator(frm);
+        oev_hide_standard_submit(frm);
+        oev_add_approve_reject_buttons(frm);
+        if (frm.fields_dict.approval_flow) {
+            frm.set_df_property('approval_flow', 'read_only', 1);
+        }
+
         // Make Payment button — only when submitted, no paid_from set
         // (i.e. deferred-payment mode via Payable Account), still unpaid.
         if (frm.doc.docstatus === 1
@@ -163,6 +171,123 @@ function recompute_totals(frm) {
     frm.set_value('subtotal', subtotal);
     frm.set_value('total_tax', total_tax);
     frm.set_value('grand_total', subtotal + total_tax);
+}
+
+// ============================================================
+// Shared approval UI — ported from expense_approval.js so OEV
+// gets the exact same Approve / Reject / status banner UX as
+// Expense Claim, Employee Advance, Payment Request.
+// ============================================================
+
+function oev_user_can_act(frm) {
+    if (frappe.session.user === 'Administrator') return true;
+    const admin_roles = ['System Manager', 'HR Manager', 'Accounts Manager'];
+    if (admin_roles.some(r => frappe.user_roles.includes(r))) return true;
+
+    if (frm.doc.current_approver === frappe.session.user) return true;
+
+    const idx = cint(frm.doc.current_approval_index);
+    const flow = frm.doc.approval_flow || [];
+    if (idx >= 0 && idx < flow.length) {
+        const row = flow[idx];
+        if (row.approver === frappe.session.user) return true;
+        if (row.approver_role && frappe.user_roles.includes(row.approver_role)) return true;
+    }
+    return false;
+}
+
+function oev_update_indicator(frm) {
+    const status = frm.doc.custom_approval_status;
+    if (!status) return;
+    const color_map = {
+        'Pending': 'orange',
+        'Partially Approved': 'orange',
+        'Approved': 'green',
+        'Rejected': 'red',
+    };
+    const color = color_map[status] || 'gray';
+    frm.dashboard.set_headline_alert(
+        `<div class="indicator ${color}">Approval: ${status}` +
+        (frm.doc.current_approver ? ` — waiting on <b>${frm.doc.current_approver}</b>` : '') +
+        '</div>'
+    );
+}
+
+function oev_hide_standard_submit(frm) {
+    if (frm.is_new()) return;
+    if (frm.doc.docstatus !== 0) return;
+    setTimeout(() => {
+        try {
+            if (frm.page && frm.page.btn_primary) {
+                frm.page.btn_primary.hide();
+            }
+            frm.page.wrapper.find('.primary-action').filter(function () {
+                return $(this).text().trim() === __('Submit');
+            }).hide();
+        } catch (e) { /* swallow */ }
+    }, 50);
+}
+
+function oev_add_approve_reject_buttons(frm) {
+    if (frm.is_new()) return;
+    if (frm.doc.docstatus === 2) return;  // Cancelled
+    const status = frm.doc.custom_approval_status;
+    if (status === 'Approved' || status === 'Rejected') return;
+    if (!oev_user_can_act(frm)) return;
+    if (!(frm.doc.approval_flow || []).length) return;
+
+    frm.add_custom_button(__('Approve'), function () {
+        frappe.confirm(
+            __('Approve this {0}?', [__(frm.doctype)]),
+            function () {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.expense_approval.approve',
+                    args: { doctype: frm.doctype, docname: frm.doc.name },
+                    freeze: true,
+                    freeze_message: __('Approving...'),
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.show_alert({ message: __('Approved'), indicator: 'green' });
+                            frm.reload_doc();
+                        }
+                    },
+                });
+            }
+        );
+    }, __('Actions'));
+
+    frm.add_custom_button(__('Reject'), function () {
+        frappe.prompt(
+            [{
+                fieldname: 'remarks',
+                fieldtype: 'Small Text',
+                label: __('Reason for Rejection'),
+                reqd: 1,
+            }],
+            function (values) {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.expense_approval.reject',
+                    args: {
+                        doctype: frm.doctype,
+                        docname: frm.doc.name,
+                        remarks: values.remarks,
+                    },
+                    freeze: true,
+                    freeze_message: __('Rejecting...'),
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.show_alert({ message: __('Rejected'), indicator: 'red' });
+                            frm.reload_doc();
+                        }
+                    },
+                });
+            },
+            __('Reject'), __('Submit')
+        );
+    }, __('Actions'));
+
+    frm.change_custom_button_type(__('Reject'), __('Actions'), 'danger');
+    frm.change_custom_button_type(__('Approve'), __('Actions'), 'primary');
 }
 
 function make_payment_entry(frm) {
