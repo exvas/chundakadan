@@ -43,8 +43,6 @@ class OfficeExpenseVoucher(AccountsController):
         self._compute_totals()
         self._validate_payment_target()
         self._set_status_pre_submit()
-        if not self.outstanding_amount_field() or self.docstatus == 0:
-            self._set_initial_outstanding()
 
     def outstanding_amount_field(self):
         """OEV doesn't store outstanding_amount as a column on the form
@@ -87,10 +85,13 @@ class OfficeExpenseVoucher(AccountsController):
                     row.cost_center = cc_default
 
     def _autofill_currency(self):
-        if not self.currency and self.company:
+        # Defensive — the doctype JSON may or may not carry currency
+        # / exchange_rate fields depending on the active layout.
+        if self.meta.has_field("currency") and not self.get("currency") \
+                and self.company:
             self.currency = frappe.get_cached_value(
                 "Company", self.company, "default_currency")
-        if not self.exchange_rate:
+        if self.meta.has_field("exchange_rate") and not self.get("exchange_rate"):
             self.exchange_rate = 1.0
 
     def _validate_items(self):
@@ -119,21 +120,21 @@ class OfficeExpenseVoucher(AccountsController):
         self.grand_total = subtotal + total_tax
 
     def _validate_payment_target(self):
-        """User must pick EITHER Paid From (bank/cash/employee) OR
-        Payable Account, not neither."""
+        """At least one of Paid From / Payable Account must be set,
+        OR the voucher must be reimbursable-to-employee.
+        BOTH can be set together — that triggers a 4-leg passthrough
+        GL (Dr Expense → Cr Payable → Dr Payable → Cr Bank)."""
         if self.is_reimbursable:
             if not self.employee:
                 frappe.throw(_(
                     "Employee is required when 'Reimbursable to Employee' "
                     "is ticked."))
-            # paid_from / payable_account become irrelevant — Cr leg goes
-            # to the employee's payable account
             return
         if not self.paid_from and not self.payable_account:
             frappe.throw(_(
-                "Pick either <b>Paid From</b> (Bank / Cash) for immediate "
-                "payment, OR <b>Payable Account</b> to defer the payment. "
-                "Set a default in Chundakadan Settings so this auto-fills."))
+                "Pick <b>Paid From</b> (Bank / Cash), <b>Payable Account</b>, "
+                "or both. Set defaults in Chundakadan Settings so they "
+                "auto-fill on new vouchers."))
 
     def _set_status_pre_submit(self):
         if self.docstatus == 2:
@@ -208,16 +209,31 @@ class OfficeExpenseVoucher(AccountsController):
     def get_gl_entries(self) -> list[dict]:
         """Build the GL entry rows.
 
-        Dr side: one row per expense line (account from line),
-                 plus per-line tax (if non-zero) folded INTO that line's
-                 expense account (non-recoverable tax).
-        Cr side: one row to Paid From OR Payable Account OR Employee Payable.
+        Posting shapes (decided by which fields the user filled):
+
+        A) Paid From + Payable Account BOTH set → 4-leg passthrough:
+           Dr Expense                       (per line)
+              Cr Payable Account     (sum)
+           Dr Payable Account                (clearing)
+              Cr Paid From          (sum)
+
+        B) Only Paid From set → direct 2-leg:
+           Dr Expense (per line) / Cr Paid From
+
+        C) Only Payable Account set → deferred 2-leg:
+           Dr Expense (per line) / Cr Payable (outstanding)
+
+        D) Reimbursable to Employee → employee payable:
+           Dr Expense (per line) / Cr Employee Advance (party=Employee)
         """
         company_currency = frappe.get_cached_value(
             "Company", self.company, "default_currency")
         gl: list[dict] = []
+        cr_cc_fallback = (self.items[0].cost_center if self.items else None) \
+            or self._fallback_cost_center()
 
-        # 1. Debits — one row per expense line, tax folded in (non-recoverable)
+        # 1. Debits — one row per expense line (tax folded into expense
+        # account for non-recoverable case).
         for row in (self.items or []):
             cc = row.cost_center or self._fallback_cost_center()
             line_dr = flt(row.amount) + flt(row.tax_amount)
@@ -236,30 +252,71 @@ class OfficeExpenseVoucher(AccountsController):
                 "remarks": row.description or self.description or "",
             }, account_currency=company_currency, item=self))
 
-        # 2. Credit — single row for the full grand_total
-        cr_account, party_type, party = self._credit_target()
-        if not cr_account:
-            frappe.throw(_("Could not resolve credit account."))
-
-        cr_cc = (self.items[0].cost_center if self.items else None) \
-            or self._fallback_cost_center()
-        gl_dict = {
-            "account": cr_account,
-            "against": (self.items[0].expense_account if self.items else ""),
-            "debit": 0,
-            "credit": flt(self.grand_total),
-            "debit_in_account_currency": 0,
-            "credit_in_account_currency": flt(self.grand_total),
-            "cost_center": cr_cc,
-            "against_voucher_type": self.doctype,
-            "against_voucher": self.name,
-            "remarks": self.description or self.vendor_payee or "",
-        }
-        if party_type and party:
-            gl_dict["party_type"] = party_type
-            gl_dict["party"] = party
-        gl.append(self.get_gl_dict(
-            gl_dict, account_currency=company_currency, item=self))
+        # 2/3. Credit side
+        if (self.paid_from and self.payable_account
+                and not self.is_reimbursable):
+            # ====== Shape A: 4-leg passthrough through Payable ======
+            # Cr Payable (booking)
+            gl.append(self.get_gl_dict({
+                "account": self.payable_account,
+                "against": (self.items[0].expense_account if self.items else ""),
+                "debit": 0,
+                "credit": flt(self.grand_total),
+                "debit_in_account_currency": 0,
+                "credit_in_account_currency": flt(self.grand_total),
+                "cost_center": cr_cc_fallback,
+                "against_voucher_type": self.doctype,
+                "against_voucher": self.name,
+                "remarks": self.description or self.vendor_payee or "",
+            }, account_currency=company_currency, item=self))
+            # Dr Payable (clearing)
+            gl.append(self.get_gl_dict({
+                "account": self.payable_account,
+                "against": self.paid_from,
+                "debit": flt(self.grand_total),
+                "credit": 0,
+                "debit_in_account_currency": flt(self.grand_total),
+                "credit_in_account_currency": 0,
+                "cost_center": cr_cc_fallback,
+                "against_voucher_type": self.doctype,
+                "against_voucher": self.name,
+                "remarks": self.description or self.vendor_payee or "",
+            }, account_currency=company_currency, item=self))
+            # Cr Paid From (money out)
+            gl.append(self.get_gl_dict({
+                "account": self.paid_from,
+                "against": self.payable_account,
+                "debit": 0,
+                "credit": flt(self.grand_total),
+                "debit_in_account_currency": 0,
+                "credit_in_account_currency": flt(self.grand_total),
+                "cost_center": cr_cc_fallback,
+                "against_voucher_type": self.doctype,
+                "against_voucher": self.name,
+                "remarks": self.description or self.vendor_payee or "",
+            }, account_currency=company_currency, item=self))
+        else:
+            # ====== Shapes B / C / D: single Cr leg ======
+            cr_account, party_type, party = self._credit_target()
+            if not cr_account:
+                frappe.throw(_("Could not resolve credit account."))
+            cr_dict = {
+                "account": cr_account,
+                "against": (self.items[0].expense_account if self.items else ""),
+                "debit": 0,
+                "credit": flt(self.grand_total),
+                "debit_in_account_currency": 0,
+                "credit_in_account_currency": flt(self.grand_total),
+                "cost_center": cr_cc_fallback,
+                "against_voucher_type": self.doctype,
+                "against_voucher": self.name,
+                "remarks": self.description or self.vendor_payee or "",
+            }
+            if party_type and party:
+                cr_dict["party_type"] = party_type
+                cr_dict["party"] = party
+            gl.append(self.get_gl_dict(
+                cr_dict, account_currency=company_currency, item=self))
 
         return gl
 
@@ -338,14 +395,13 @@ class OfficeExpenseVoucher(AccountsController):
             elif self.docstatus == 0:
                 return  # draft / approval-pipeline statuses set elsewhere
             else:
-                # Submitted. If user paid via paid_from, mark Paid;
-                # if via payable_account, mark Unpaid until a PE clears it.
-                if self.paid_from or self.is_reimbursable:
-                    status = "Paid"
-                elif self.payable_account:
-                    status = "Unpaid"
-                else:
-                    status = "Approved"
+                # Submitted = workflow approval is complete (the submit-guard
+                # ensures cas='Approved' before submit). Show "Approved"
+                # except for the deferred-only case where payment hasn't
+                # happened yet (paid_from is blank, payable_account is set).
+                deferred_only = (self.payable_account and not self.paid_from
+                                 and not self.is_reimbursable)
+                status = "Unpaid" if deferred_only else "Approved"
         self.status = status
         if update:
             self.db_set("status", status, update_modified=update_modified)

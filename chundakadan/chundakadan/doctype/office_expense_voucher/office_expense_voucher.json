@@ -1,23 +1,17 @@
 {
  "actions": [],
- "allow_rename": 0,
  "autoname": "naming_series:",
- "creation": "2026-06-11 00:00:00.000000",
+ "creation": "2026-06-11 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "naming_series",
+  "company",
   "posting_date",
   "vendor_payee",
   "column_break_header",
   "voucher_type",
   "reference_no",
   "reference_date",
-  "company_section",
-  "company",
-  "column_break_company",
-  "currency",
-  "exchange_rate",
   "lines_section",
   "items",
   "payment_section",
@@ -40,32 +34,33 @@
   "current_approver",
   "current_approval_index",
   "approval_flow",
-  "amended_from"
+  "amended_from",
+  "naming_series"
  ],
  "fields": [
   {
+   "default": "OEV-.YYYY.-",
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Naming Series",
    "options": "OEV-.YYYY.-",
-   "default": "OEV-.YYYY.-",
    "reqd": 1
   },
   {
+   "default": "Today",
    "fieldname": "posting_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Date",
-   "default": "Today",
-   "reqd": 1,
-   "in_list_view": 1
+   "reqd": 1
   },
   {
+   "description": "Free text (e.g. KSEB, BSNL, Marina Office). Not linked to Supplier master.",
    "fieldname": "vendor_payee",
    "fieldtype": "Data",
-   "label": "Vendor / Payee",
-   "description": "Free text (e.g. KSEB, BSNL, Marina Office). Not linked to Supplier master.",
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "label": "Vendor / Payee"
   },
   {
    "fieldname": "column_break_header",
@@ -74,17 +69,17 @@
   {
    "fieldname": "voucher_type",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Category",
    "options": "Utility\nOffice Rent\nRepair & Maintenance\nPetty Cash\nSubscription\nProfessional Fees\nTravel (Non-Employee)\nOther",
-   "reqd": 1,
-   "in_list_view": 1,
-   "in_standard_filter": 1
+   "reqd": 1
   },
   {
+   "description": "Vendor bill number or external reference",
    "fieldname": "reference_no",
    "fieldtype": "Data",
-   "label": "Reference / Bill No",
-   "description": "Vendor bill number or external reference"
+   "label": "Reference / Bill No"
   },
   {
    "fieldname": "reference_date",
@@ -92,36 +87,12 @@
    "label": "Reference / Bill Date"
   },
   {
-   "fieldname": "company_section",
-   "fieldtype": "Section Break",
-   "label": "Company"
-  },
-  {
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Company",
    "options": "Company",
-   "reqd": 1,
-   "in_standard_filter": 1
-  },
-  {
-   "fieldname": "column_break_company",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency",
    "reqd": 1
-  },
-  {
-   "fieldname": "exchange_rate",
-   "fieldtype": "Float",
-   "label": "FX Rate",
-   "default": "1",
-   "reqd": 1,
-   "precision": 6
   },
   {
    "fieldname": "lines_section",
@@ -141,38 +112,38 @@
    "label": "Payment"
   },
   {
+   "description": "Bank or Cash account. Leave blank to book as pending payable (use 'Make Payment' later).",
    "fieldname": "paid_from",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Paid From",
-   "options": "Account",
-   "description": "Bank or Cash account. Leave blank to book as pending payable (use 'Make Payment' later).",
-   "in_list_view": 1
+   "options": "Account"
   },
   {
+   "default": "0",
+   "description": "Tick if an employee paid this and needs reimbursement. Voucher will credit Employee Payable instead of Bank.",
    "fieldname": "is_reimbursable",
    "fieldtype": "Check",
-   "label": "Reimbursable to Employee (paid out of pocket)",
-   "default": "0",
-   "description": "Tick if an employee paid this and needs reimbursement. Voucher will credit Employee Payable instead of Bank."
+   "label": "Reimbursable to Employee (paid out of pocket)"
   },
   {
+   "depends_on": "is_reimbursable",
    "fieldname": "employee",
    "fieldtype": "Link",
    "label": "Employee",
-   "options": "Employee",
-   "depends_on": "is_reimbursable",
-   "mandatory_depends_on": "is_reimbursable"
+   "mandatory_depends_on": "is_reimbursable",
+   "options": "Employee"
   },
   {
    "fieldname": "column_break_payment",
    "fieldtype": "Column Break"
   },
   {
+   "description": "Used as the Cr account when 'Paid From' is blank (deferred payment). Auto-filled from Chundakadan Settings.",
    "fieldname": "payable_account",
    "fieldtype": "Link",
    "label": "Payable Account",
-   "options": "Account",
-   "description": "Used as the Cr account when 'Paid From' is blank (deferred payment). Auto-filled from Chundakadan Settings."
+   "options": "Account"
   },
   {
    "fieldname": "totals_section",
@@ -183,45 +154,45 @@
    "fieldname": "subtotal",
    "fieldtype": "Currency",
    "label": "Subtotal",
-   "read_only": 1,
-   "options": "currency"
+   "options": "currency",
+   "read_only": 1
   },
   {
    "fieldname": "total_tax",
    "fieldtype": "Currency",
    "label": "Total Tax",
-   "read_only": 1,
-   "options": "currency"
+   "options": "currency",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_totals",
    "fieldtype": "Column Break"
   },
   {
+   "bold": 1,
    "fieldname": "grand_total",
    "fieldtype": "Currency",
-   "label": "Grand Total",
-   "read_only": 1,
    "in_list_view": 1,
+   "label": "Grand Total",
    "options": "currency",
-   "bold": 1
+   "read_only": 1
   },
   {
+   "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Status",
-   "options": "Draft\nPending Approval\nPartially Approved\nApproved\nUnpaid\nPaid\nRejected\nCancelled",
-   "default": "Draft",
-   "read_only": 1,
-   "no_copy": 1,
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nPending Approval\nPartially Approved\nApproved\nUnpaid\nPaid\nRejected\nCancelled",
+   "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "notes_section",
    "fieldtype": "Section Break",
-   "label": "Notes",
-   "collapsible": 1
+   "label": "Notes"
   },
   {
    "fieldname": "description",
@@ -234,18 +205,18 @@
    "label": "Remarks (internal notes)"
   },
   {
+   "collapsible": 1,
    "fieldname": "approval_section",
    "fieldtype": "Section Break",
-   "label": "Approval Workflow",
-   "collapsible": 1
+   "label": "Approval Workflow"
   },
   {
    "fieldname": "custom_approval_status",
    "fieldtype": "Select",
+   "in_standard_filter": 1,
    "label": "Approval Status",
    "options": "\nPending\nPartially Approved\nApproved\nRejected",
-   "read_only": 1,
-   "in_standard_filter": 1
+   "read_only": 1
   },
   {
    "fieldname": "current_approver",
@@ -255,12 +226,12 @@
    "read_only": 1
   },
   {
+   "default": "0",
    "fieldname": "current_approval_index",
    "fieldtype": "Int",
-   "label": "Current Approval Step",
-   "read_only": 1,
    "hidden": 1,
-   "default": "0"
+   "label": "Current Approval Step",
+   "read_only": 1
   },
   {
    "fieldname": "approval_flow",
@@ -273,8 +244,8 @@
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
-   "options": "Office Expense Voucher",
    "no_copy": 1,
+   "options": "Office Expense Voucher",
    "print_hide": 1,
    "read_only": 1
   }
@@ -288,7 +259,7 @@
    "link_fieldname": "reference_name"
   }
  ],
- "modified": "2026-06-11 11:00:00.000000",
+ "modified": "2026-06-11 13:24:14.708871",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Office Expense Voucher",
@@ -296,7 +267,22 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
    "role": "Accounts User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -304,28 +290,14 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "share": 1,
-   "submit": 1,
-   "cancel": 1,
-   "write": 1
-  },
-  {
    "role": "Accounts Manager",
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
    "share": 1,
    "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "write": 1
   },
   {
-   "role": "System Manager",
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -333,13 +305,13 @@
    "print": 1,
    "read": 1,
    "report": 1,
+   "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
