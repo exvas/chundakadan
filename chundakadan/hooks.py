@@ -175,9 +175,16 @@ doc_events = {
         "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
     },
     "Payment Entry": {
-        # When a PE referencing an Office Expense Voucher is submitted or
-        # cancelled, sync the voucher's status (outstanding_amount is
-        # already updated by Frappe's payment ledger; we just flip status).
+        # When a PE references an Office Expense Voucher is submitted or
+        # cancelled, sync the voucher's status (legacy path — keep in
+        # case real PEs ever reference an OEV).
+        "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+        "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
+    },
+    "Journal Entry": {
+        # When a JV's account row references an OEV (deferred-payment
+        # settlement created via the 'Make Payment' button), flip the
+        # voucher's status to Paid on submit / Unpaid on cancel.
         "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
         "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
     }

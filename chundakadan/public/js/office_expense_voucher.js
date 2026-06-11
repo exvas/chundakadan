@@ -319,11 +319,11 @@ function make_payment_entry(frm) {
         method: 'chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.make_payment_entry',
         args: { source_name: frm.doc.name },
         freeze: true,
-        freeze_message: __('Building Payment Entry...'),
+        freeze_message: __('Building Journal Entry...'),
         callback: function (r) {
             if (!r.message) return;
-            const pe = frappe.model.sync(r.message)[0];
-            frappe.set_route('Form', 'Payment Entry', pe.name);
+            const je = frappe.model.sync(r.message)[0];
+            frappe.set_route('Form', 'Journal Entry', je.name);
         },
     });
 }

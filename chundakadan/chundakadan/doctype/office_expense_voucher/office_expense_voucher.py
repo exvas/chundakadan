@@ -432,8 +432,17 @@ def get_company_defaults(company: str) -> dict:
 
 @frappe.whitelist()
 def make_payment_entry(source_name: str) -> dict:
-    """Build a Payment Entry for the deferred-payment case (payable_account
-    used, paid_from blank). Pre-fills enough that user just picks the bank.
+    """Build a Journal Entry (NOT a Payment Entry) to clear the Payable
+    Account for a deferred-mode voucher (pay_later=1).
+
+    Why JV instead of PE: our Expense Payable account is account_type=''
+    (deliberately, to keep these out of the AR/AP report). ERPNext's PE
+    enforces a Supplier party on any 'Pay' to a Payable account — we
+    don't have a supplier here. A JV is happy with any liability
+    account + no party.
+
+    Returns a JV dict the form syncs into a new draft. User picks the
+    Bank/Cash account on line 2 then submits.
     """
     source = frappe.get_doc("Office Expense Voucher", source_name)
     if source.docstatus != 1:
@@ -441,58 +450,76 @@ def make_payment_entry(source_name: str) -> dict:
     if source.paid_from:
         frappe.throw(_(
             "This voucher was already paid via {0}. "
-            "No further Payment Entry needed.").format(source.paid_from))
+            "No further payment needed.").format(source.paid_from))
     if not source.payable_account:
         frappe.throw(_(
             "No Payable Account set — voucher posting state is invalid."))
 
-    pe = frappe.new_doc("Payment Entry")
-    pe.payment_type = "Pay"
-    pe.posting_date = frappe.utils.nowdate()
-    pe.company = source.company
-    pe.paid_to = source.payable_account
-    pe.paid_to_account_currency = frappe.get_cached_value(
-        "Account", source.payable_account, "account_currency") or \
-        frappe.get_cached_value("Company", source.company, "default_currency")
-    pe.paid_amount = flt(source.grand_total)
-    pe.received_amount = flt(source.grand_total)
-    pe.target_exchange_rate = 1.0
-    pe.source_exchange_rate = 1.0
-    pe.reference_no = source.reference_no or source.name
-    pe.reference_date = source.reference_date or source.posting_date
+    amount = flt(source.grand_total)
+    cc = (source.items[0].cost_center if source.items else None) or \
+         frappe.get_cached_value("Company", source.company, "cost_center")
 
-    pe.append("references", {
-        "reference_doctype": source.doctype,
+    je = frappe.new_doc("Journal Entry")
+    je.voucher_type = "Bank Entry"
+    je.posting_date = frappe.utils.nowdate()
+    je.company = source.company
+    je.cheque_no = source.reference_no or source.name
+    je.cheque_date = source.reference_date or source.posting_date
+    je.user_remark = (
+        f"Settling Office Expense Voucher {source.name} — "
+        f"{source.vendor_payee or source.description or ''}"
+    )
+    # Leg 1: Dr Payable Account (clears the liability)
+    je.append("accounts", {
+        "account": source.payable_account,
+        "debit_in_account_currency": amount,
+        "credit_in_account_currency": 0,
+        "cost_center": cc,
+        "reference_type": source.doctype,
         "reference_name": source.name,
-        "due_date": source.posting_date,
-        "total_amount": flt(source.grand_total),
-        "outstanding_amount": flt(source.grand_total),
-        "allocated_amount": flt(source.grand_total),
+        "user_remark": f"Settle {source.name}",
     })
-    return pe.as_dict()
+    # Leg 2: Cr Bank/Cash — user fills the account on the form
+    je.append("accounts", {
+        "debit_in_account_currency": 0,
+        "credit_in_account_currency": amount,
+        "cost_center": cc,
+    })
+    return je.as_dict()
 
 
 def update_voucher_status_on_payment(payment_doc, method=None):
-    """When a PE referencing an OEV is submitted/cancelled, flip the
-    voucher's status (paid_from-based vouchers were already 'Paid'
-    on submit; this handles the deferred-payment / payable_account case)."""
-    if not payment_doc.references:
-        return
-    refs = [
-        r for r in payment_doc.references
-        if r.reference_doctype == "Office Expense Voucher" and r.reference_name
-    ]
+    """Hook for Journal Entry (formerly Payment Entry).
+
+    When a JV with an account-row referencing an OEV is submitted /
+    cancelled, flip the voucher's status: Paid on submit, back to
+    Unpaid on cancel. Idempotent — only acts on deferred-mode
+    vouchers (paid_from blank, payable_account set)."""
+    refs = set()
+    # Journal Entry's account rows expose reference_type / reference_name
+    for row in (payment_doc.get("accounts") or []):
+        if row.get("reference_type") == "Office Expense Voucher" \
+                and row.get("reference_name"):
+            refs.add(row.reference_name)
+    # Payment Entry's references table — kept for legacy / safety
+    for row in (payment_doc.get("references") or []):
+        if row.get("reference_doctype") == "Office Expense Voucher" \
+                and row.get("reference_name"):
+            refs.add(row.reference_name)
     if not refs:
         return
-    for ref in refs:
+    for name in refs:
         try:
-            voucher = frappe.get_doc("Office Expense Voucher", ref.reference_name)
+            voucher = frappe.get_doc("Office Expense Voucher", name)
             if voucher.docstatus != 1:
+                continue
+            if voucher.paid_from:
+                # Immediate-payment mode — status stays Approved
                 continue
             new_status = "Paid" if payment_doc.docstatus == 1 else "Unpaid"
             voucher.db_set("status", new_status, update_modified=False)
         except Exception as e:
             frappe.log_error(
-                f"OEV status sync failed for {ref.reference_name}: {e}",
+                f"OEV status sync failed for {name}: {e}",
                 "office_expense_voucher",
             )
