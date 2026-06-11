@@ -195,7 +195,7 @@ before_install = [
     "chundakadan.install.ensure_expense_approval_fields",
     "chundakadan.install.ensure_employee_advance_defaults",
     "chundakadan.install.ensure_expense_payable_account",
-    "chundakadan.install.ensure_oev_default_supplier",
+    "chundakadan.install.ensure_oev_settings_fields",
     "chundakadan.install.ensure_oev_workspace_pin",
 ]
 before_migrate = [
@@ -216,7 +216,7 @@ before_migrate = [
     "chundakadan.install.ensure_expense_approval_fields",
     "chundakadan.install.ensure_employee_advance_defaults",
     "chundakadan.install.ensure_expense_payable_account",
-    "chundakadan.install.ensure_oev_default_supplier",
+    "chundakadan.install.ensure_oev_settings_fields",
     "chundakadan.install.ensure_oev_workspace_pin",
 ]
 

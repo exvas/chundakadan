@@ -673,13 +673,13 @@ def ensure_expense_approval_fields(*args, **kwargs):
 
 
 def ensure_expense_payable_account(*args, **kwargs):
-    """Idempotent: ensure `2210 Expense Payable` exists per company as a
-    Payable-type liability account. Used by the Office Expense Voucher
-    doctype as its default `payable_account`.
+    """Idempotent: ensure `2210 Expense Payable` exists per company as
+    a plain Liability account (account_type='' — NOT 'Payable').
 
-    Follows ERPNext convention: `account_name = "Expense Payable"` +
-    `account_number = "2210"` as SEPARATE fields. Frappe's autoname
-    glues them: `{account_number} - {account_name} - {abbr}`.
+    Used by the Office Expense Voucher as the deferred-payment Cr
+    target. With account_type=Payable, every GL entry would need a
+    Supplier party and the bills would pollute the Accounts Payable /
+    Aging reports. We want a neutral liability bucket instead.
     """
     import frappe
 
@@ -687,6 +687,15 @@ def ensure_expense_payable_account(*args, **kwargs):
         abbr = co["abbr"]
         full = f"2210 - Expense Payable - {abbr}"
         if frappe.db.exists("Account", full):
+            # Normalize account_type: must be '' (not 'Payable')
+            current_type = frappe.db.get_value(
+                "Account", full, "account_type") or ""
+            if current_type == "Payable":
+                frappe.db.set_value(
+                    "Account", full, "account_type", "",
+                    update_modified=False)
+                print(f"chundakadan.install: cleared account_type='Payable' "
+                      f"on '{full}' (now neutral Liability)")
             continue
 
         # Prefer `Current Liabilities` as the parent group — sits right
@@ -730,7 +739,7 @@ def ensure_expense_payable_account(*args, **kwargs):
                 "is_group": 0,
                 "root_type": "Liability",
                 "report_type": "Balance Sheet",
-                "account_type": "Payable",
+                # account_type intentionally LEFT BLANK — see docstring.
                 "company": co["name"],
             })
             doc.flags.ignore_permissions = True
@@ -740,6 +749,137 @@ def ensure_expense_payable_account(*args, **kwargs):
             print(f"chundakadan.install: could not create '{full}': {e}")
 
     frappe.db.commit()
+
+
+def ensure_oev_settings_fields(*args, **kwargs):
+    """Idempotent: add 3 Custom Fields to Chundakadan Settings to hold
+    Office Expense Voucher defaults that get auto-filled on every new
+    voucher:
+
+      oev_default_paid_from        Link → Account (Bank / Cash)
+      oev_default_payable_account  Link → Account (Liability, no type)
+      oev_default_cost_center      Link → Cost Center
+
+    Plus backfill sensible defaults for first install:
+      - paid_from: first Bank account if any
+      - payable_account: '2210 - Expense Payable' if it exists
+      - cost_center: Company.cost_center
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Chundakadan Settings"):
+        return
+
+    fields = [
+        {
+            "fieldname": "oev_section",
+            "label": "Office Expense Voucher Defaults",
+            "fieldtype": "Section Break",
+            "insert_after": "expense_approval_threshold",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "oev_default_paid_from",
+            "label": "Default Paid From (Bank / Cash)",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "oev_section",
+            "description": (
+                "Auto-fills as 'Paid From' on every new Office Expense "
+                "Voucher. User can override per voucher."
+            ),
+        },
+        {
+            "fieldname": "oev_default_payable_account",
+            "label": "Default Payable Account (deferred)",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "oev_default_paid_from",
+            "description": (
+                "Liability account used when a voucher is approved but "
+                "not yet paid (Paid From blank). Should be a neutral "
+                "liability account (account_type unset) — NOT a 'Payable' "
+                "type account, which would require a Supplier party."
+            ),
+        },
+        {
+            "fieldname": "oev_default_cost_center",
+            "label": "Default Cost Center",
+            "fieldtype": "Link",
+            "options": "Cost Center",
+            "insert_after": "oev_default_payable_account",
+            "description": (
+                "Auto-fills on every expense line where Cost Center "
+                "is blank."
+            ),
+        },
+    ]
+
+    created = 0
+    for spec in fields:
+        cf_name = f"Chundakadan Settings-{spec['fieldname']}"
+        if frappe.db.exists("Custom Field", cf_name):
+            continue
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Chundakadan Settings",
+                "module": "Chundakadan",
+                "translatable": 0,
+                **spec,
+            }).insert(ignore_permissions=True)
+            created += 1
+        except Exception as e:
+            print(f"chundakadan.install: could not create {cf_name}: {e}")
+
+    if created:
+        frappe.db.commit()
+        print(f"chundakadan.install: created {created} OEV settings fields")
+
+    # Backfill: pick sensible defaults if not already set
+    try:
+        settings = frappe.get_single("Chundakadan Settings")
+        changed = False
+
+        default_company = settings.get("default_company") or \
+            frappe.db.get_default("company") or \
+            frappe.db.get_value("Company", {}, "name")
+
+        if not settings.get("oev_default_paid_from") and default_company:
+            bank = frappe.db.get_value(
+                "Account",
+                {"company": default_company, "is_group": 0,
+                 "account_type": "Bank", "disabled": 0},
+                "name",
+            )
+            if bank:
+                settings.oev_default_paid_from = bank
+                changed = True
+
+        if not settings.get("oev_default_payable_account") and default_company:
+            abbr = frappe.get_cached_value("Company", default_company, "abbr")
+            candidate = f"2210 - Expense Payable - {abbr}"
+            if frappe.db.exists("Account", candidate):
+                settings.oev_default_payable_account = candidate
+                changed = True
+
+        if not settings.get("oev_default_cost_center") and default_company:
+            cc = frappe.get_cached_value("Company", default_company, "cost_center") \
+                or frappe.db.get_value(
+                    "Cost Center",
+                    {"company": default_company, "is_group": 0, "disabled": 0},
+                    "name",
+                )
+            if cc:
+                settings.oev_default_cost_center = cc
+                changed = True
+
+        if changed:
+            settings.flags.ignore_permissions = True
+            settings.save()
+            print("chundakadan.install: backfilled OEV settings defaults")
+    except Exception as e:
+        print(f"chundakadan.install: could not backfill OEV defaults: {e}")
 
 
 def ensure_oev_default_supplier(*args, **kwargs):

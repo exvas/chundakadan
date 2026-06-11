@@ -7,32 +7,34 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
-  "company",
   "posting_date",
-  "column_break_main",
+  "vendor_payee",
+  "column_break_header",
   "voucher_type",
   "reference_no",
   "reference_date",
-  "section_break_party",
-  "party",
-  "section_break_desc",
-  "description",
-  "attachment",
-  "section_break_amount",
-  "expense_account",
-  "cost_center",
-  "amount",
-  "column_break_amount",
-  "claim_gst_input_credit",
-  "tax_amount",
-  "gst_account_cgst",
-  "gst_account_sgst",
-  "section_break_totals",
-  "grand_total",
-  "outstanding_amount",
-  "column_break_totals",
+  "company_section",
+  "company",
+  "column_break_company",
+  "currency",
+  "exchange_rate",
+  "lines_section",
+  "items",
+  "payment_section",
+  "paid_from",
+  "is_reimbursable",
+  "employee",
+  "column_break_payment",
   "payable_account",
+  "totals_section",
+  "subtotal",
+  "total_tax",
+  "column_break_totals",
+  "grand_total",
   "status",
+  "notes_section",
+  "description",
+  "remarks",
   "approval_section",
   "custom_approval_status",
   "current_approver",
@@ -50,29 +52,29 @@
    "reqd": 1
   },
   {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "label": "Company",
-   "options": "Company",
-   "reqd": 1,
-   "in_standard_filter": 1
-  },
-  {
    "fieldname": "posting_date",
    "fieldtype": "Date",
-   "label": "Posting Date",
+   "label": "Date",
    "default": "Today",
    "reqd": 1,
    "in_list_view": 1
   },
   {
-   "fieldname": "column_break_main",
+   "fieldname": "vendor_payee",
+   "fieldtype": "Data",
+   "label": "Vendor / Payee",
+   "description": "Free text (e.g. KSEB, BSNL, Marina Office). Not linked to Supplier master.",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_header",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "voucher_type",
    "fieldtype": "Select",
-   "label": "Voucher Type",
+   "label": "Category",
    "options": "Utility\nOffice Rent\nRepair & Maintenance\nPetty Cash\nSubscription\nProfessional Fees\nTravel (Non-Employee)\nOther",
    "reqd": 1,
    "in_list_view": 1,
@@ -90,121 +92,79 @@
    "label": "Reference / Bill Date"
   },
   {
-   "fieldname": "section_break_party",
+   "fieldname": "company_section",
    "fieldtype": "Section Break",
-   "label": "Party"
+   "label": "Company"
   },
   {
-   "fieldname": "party",
+   "fieldname": "company",
    "fieldtype": "Link",
-   "label": "Supplier",
-   "options": "Supplier",
+   "label": "Company",
+   "options": "Company",
    "reqd": 1,
-   "description": "The vendor / party we owe. Pick 'Misc Office Expenses' for one-off / petty bills without a real supplier master.",
-   "in_list_view": 1,
    "in_standard_filter": 1
   },
   {
-   "fieldname": "section_break_desc",
-   "fieldtype": "Section Break",
-   "label": "Description"
-  },
-  {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description",
-   "reqd": 1
-  },
-  {
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "label": "Bill / Receipt Attachment"
-  },
-  {
-   "fieldname": "section_break_amount",
-   "fieldtype": "Section Break",
-   "label": "Amount"
-  },
-  {
-   "fieldname": "expense_account",
-   "fieldtype": "Link",
-   "label": "Expense Account",
-   "options": "Account",
-   "reqd": 1,
-   "description": "The expense ledger to debit (e.g. 5217 Electricity Charges)"
-  },
-  {
-   "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "options": "Cost Center",
-   "reqd": 1
-  },
-  {
-   "fieldname": "amount",
-   "fieldtype": "Currency",
-   "label": "Amount (excl. tax)",
-   "reqd": 1,
-   "options": "Company:company:default_currency"
-  },
-  {
-   "fieldname": "column_break_amount",
+   "fieldname": "column_break_company",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "claim_gst_input_credit",
-   "fieldtype": "Check",
-   "label": "Claim GST Input Credit",
-   "default": "0",
-   "description": "Tick if GST on this bill is recoverable. Splits tax into CGST/SGST input accounts."
-  },
-  {
-   "fieldname": "tax_amount",
-   "fieldtype": "Currency",
-   "label": "Tax Amount (GST)",
-   "default": "0",
-   "options": "Company:company:default_currency"
-  },
-  {
-   "fieldname": "gst_account_cgst",
+   "fieldname": "currency",
    "fieldtype": "Link",
-   "label": "CGST Input Account",
-   "options": "Account",
-   "depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0",
-   "mandatory_depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0"
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
   },
   {
-   "fieldname": "gst_account_sgst",
-   "fieldtype": "Link",
-   "label": "SGST Input Account",
-   "options": "Account",
-   "depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0",
-   "mandatory_depends_on": "eval:doc.claim_gst_input_credit && doc.tax_amount > 0"
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "FX Rate",
+   "default": "1",
+   "reqd": 1,
+   "precision": 6
   },
   {
-   "fieldname": "section_break_totals",
+   "fieldname": "lines_section",
    "fieldtype": "Section Break",
-   "label": "Totals & Payable"
+   "label": "Lines"
   },
   {
-   "fieldname": "grand_total",
-   "fieldtype": "Currency",
-   "label": "Grand Total",
-   "read_only": 1,
-   "in_list_view": 1,
-   "options": "Company:company:default_currency"
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Expense Lines",
+   "options": "Office Expense Voucher Item",
+   "reqd": 1
   },
   {
-   "fieldname": "outstanding_amount",
-   "fieldtype": "Currency",
-   "label": "Outstanding Amount",
-   "read_only": 1,
-   "no_copy": 1,
-   "options": "Company:company:default_currency",
+   "fieldname": "payment_section",
+   "fieldtype": "Section Break",
+   "label": "Payment"
+  },
+  {
+   "fieldname": "paid_from",
+   "fieldtype": "Link",
+   "label": "Paid From",
+   "options": "Account",
+   "description": "Bank or Cash account. Leave blank to book as pending payable (use 'Make Payment' later).",
    "in_list_view": 1
   },
   {
-   "fieldname": "column_break_totals",
+   "fieldname": "is_reimbursable",
+   "fieldtype": "Check",
+   "label": "Reimbursable to Employee (paid out of pocket)",
+   "default": "0",
+   "description": "Tick if an employee paid this and needs reimbursement. Voucher will credit Employee Payable instead of Bank."
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "depends_on": "is_reimbursable",
+   "mandatory_depends_on": "is_reimbursable"
+  },
+  {
+   "fieldname": "column_break_payment",
    "fieldtype": "Column Break"
   },
   {
@@ -212,19 +172,66 @@
    "fieldtype": "Link",
    "label": "Payable Account",
    "options": "Account",
-   "reqd": 1,
-   "description": "Liability account to credit (typically 2210 Expense Payable). Auto-set from Company on save."
+   "description": "Used as the Cr account when 'Paid From' is blank (deferred payment). Auto-filled from Chundakadan Settings."
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "fieldname": "subtotal",
+   "fieldtype": "Currency",
+   "label": "Subtotal",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "total_tax",
+   "fieldtype": "Currency",
+   "label": "Total Tax",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "column_break_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand Total",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency",
+   "bold": 1
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Draft\nPending Approval\nPartially Approved\nApproved\nUnpaid\nPartly Paid\nPaid\nRejected\nCancelled",
+   "options": "Draft\nPending Approval\nPartially Approved\nApproved\nUnpaid\nPaid\nRejected\nCancelled",
    "default": "Draft",
    "read_only": 1,
    "no_copy": 1,
    "in_list_view": 1,
    "in_standard_filter": 1
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description (whole voucher)"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks (internal notes)"
   },
   {
    "fieldname": "approval_section",
@@ -281,7 +288,7 @@
    "link_fieldname": "reference_name"
   }
  ],
- "modified": "2026-06-11 00:00:00.000000",
+ "modified": "2026-06-11 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "Chundakadan",
  "name": "Office Expense Voucher",

@@ -1,18 +1,22 @@
-"""Office Expense Voucher
+"""Office Expense Voucher (multi-line, direct-payment)
 
-Direct-to-GL expense booking. Posts a 2- or 3-leg GL entry on submit
-(Dr Expense, optional Dr Input GST, Cr Expense Payable). Outstanding
-amount is cleared by Payment Entries that reference this voucher
-(`reference_doctype = "Office Expense Voucher"`).
+Books utility / office / petty expenses with one-or-more expense lines.
 
-Mirrors Purchase Invoice's accounting pattern minus item / stock / GST
-return complexity — appropriate for utilities, office rent, small
-recurring office expenses where a Supplier master is overkill.
+Posting modes (decided per-voucher by which field the user fills):
 
-Approval workflow piggy-backs on `chundakadan.api.expense_approval`
-(see DOCTYPE_CONFIG there). Submit is blocked until the chain is
-complete; on final approve, the controller's `on_submit` fires and the
-GL entries are written.
+  A) PAID FROM filled (typical case)
+     → Dr each expense line account (+ tax accounts)
+     → Cr Paid From (Bank / Cash / Employee Payable when reimbursable)
+     Single-step booking + payment. No outstanding. status='Paid'.
+
+  B) PAYABLE ACCOUNT filled, PAID FROM blank (deferred)
+     → Dr each expense line account (+ tax accounts)
+     → Cr Payable Account
+     Outstanding tracked. status='Unpaid'. Settle via Make Payment.
+
+The Payable Account is a plain Liability account WITHOUT
+account_type='Payable' — keeps these out of the standard Accounts
+Payable / Aging reports (which only show party-based payables).
 """
 from __future__ import annotations
 
@@ -26,114 +30,114 @@ from erpnext.accounts.general_ledger import (
 )
 
 
-class OfficeExpenseVoucher(AccountsController):
-    """Direct-to-GL expense voucher. See module docstring for shape."""
+# Chundakadan Settings fieldname mapping
+_SETTINGS_DEFAULTS = {
+    "paid_from":        "oev_default_paid_from",
+    "payable_account":  "oev_default_payable_account",
+    # cost_center is per-line; apply when line.cost_center is blank
+    "cost_center":      "oev_default_cost_center",
+}
 
-    # --- Validation / pre-save -----------------------------------------
+
+class OfficeExpenseVoucher(AccountsController):
+    """Multi-line, direct-payment expense voucher."""
+
+    # --- Validation ---------------------------------------------------
 
     def validate(self):
-        self._autofill_payable_account()
-        self._autofill_party()
-        self._autofill_cost_center()
-        self._validate_amount()
-        self._compute_grand_total()
-        # outstanding_amount is set on submit; for drafts, mirror grand_total
-        if not self.outstanding_amount or self.docstatus == 0:
-            self.outstanding_amount = self.grand_total
+        self._autofill_from_settings()
+        self._autofill_currency()
+        self._validate_items()
+        self._compute_totals()
+        self._validate_payment_target()
         self._set_status_pre_submit()
+        if not self.outstanding_amount_field() or self.docstatus == 0:
+            self._set_initial_outstanding()
 
-    def _autofill_party(self):
-        """If user didn't pick a Supplier, default to the 'Misc Office
-        Expenses' Supplier (auto-created in install hook). Look up by
-        supplier_name, not docname — Buying Settings autoname means the
-        actual name is something like 'CA-SUPP-00031'.
+    def outstanding_amount_field(self):
+        """OEV doesn't store outstanding_amount as a column on the form
+        (we removed it from the layout). Track via GL Entry sums on the
+        Payable account if needed for deferred mode."""
+        return None
 
-        Mandatory because ERPNext requires a party on every GL entry
-        that hits a Payable-type account.
-        """
-        if self.party:
-            return
-        default_docname = frappe.db.get_value(
-            "Supplier", {"supplier_name": "Misc Office Expenses"}, "name")
-        if default_docname:
-            self.party = default_docname
+    def _set_initial_outstanding(self):
+        # No-op for now — outstanding lives in GL Entries against the
+        # voucher when payable_account is used.
+        pass
 
-    def _autofill_payable_account(self):
-        """If user didn't pick a payable_account, default to the company's
-        Expense Payable account."""
-        if self.payable_account:
+    def _autofill_from_settings(self):
+        """Fill paid_from / payable_account / per-line cost_center from
+        Chundakadan Settings defaults if user didn't pick them."""
+        if not frappe.db.exists("DocType", "Chundakadan Settings"):
             return
-        # Look for an Account named "Expense Payable - <abbr>" first;
-        # fall back to any non-group Payable account on the company
-        abbr = frappe.get_cached_value("Company", self.company, "abbr") or ""
-        guess = f"2210 - Expense Payable - {abbr}"
-        if frappe.db.exists("Account", guess):
-            self.payable_account = guess
+        cs = frappe.get_cached_doc("Chundakadan Settings")
+
+        if not self.paid_from and not self.is_reimbursable:
+            d = cs.get(_SETTINGS_DEFAULTS["paid_from"])
+            if d:
+                self.paid_from = d
+
+        if not self.payable_account:
+            d = cs.get(_SETTINGS_DEFAULTS["payable_account"])
+            if d:
+                self.payable_account = d
+
+        default_cc = cs.get(_SETTINGS_DEFAULTS["cost_center"])
+        if default_cc:
+            for row in (self.items or []):
+                if not row.cost_center:
+                    row.cost_center = default_cc
+
+    def _autofill_currency(self):
+        if not self.currency and self.company:
+            self.currency = frappe.get_cached_value(
+                "Company", self.company, "default_currency")
+        if not self.exchange_rate:
+            self.exchange_rate = 1.0
+
+    def _validate_items(self):
+        if not self.items:
+            frappe.throw(_("At least one expense line is required."))
+        for row in self.items:
+            if not row.expense_account:
+                frappe.throw(_("Row {0}: Expense Account is required.")
+                             .format(row.idx))
+            rt = frappe.db.get_value(
+                "Account", row.expense_account, "root_type")
+            if rt != "Expense":
+                frappe.throw(_(
+                    "Row {0}: Account {1} is not an Expense account (root_type={2})."
+                ).format(row.idx, row.expense_account, rt))
+            if flt(row.amount) <= 0:
+                frappe.throw(_(
+                    "Row {0}: Amount must be greater than zero."
+                ).format(row.idx))
+
+    def _compute_totals(self):
+        subtotal = sum(flt(r.amount) for r in (self.items or []))
+        total_tax = sum(flt(r.tax_amount) for r in (self.items or []))
+        self.subtotal = subtotal
+        self.total_tax = total_tax
+        self.grand_total = subtotal + total_tax
+
+    def _validate_payment_target(self):
+        """User must pick EITHER Paid From (bank/cash/employee) OR
+        Payable Account, not neither."""
+        if self.is_reimbursable:
+            if not self.employee:
+                frappe.throw(_(
+                    "Employee is required when 'Reimbursable to Employee' "
+                    "is ticked."))
+            # paid_from / payable_account become irrelevant — Cr leg goes
+            # to the employee's payable account
             return
-        candidates = frappe.db.sql(
-            """
-            SELECT name FROM `tabAccount`
-            WHERE company = %s
-              AND is_group = 0
-              AND account_type = 'Payable'
-              AND disabled = 0
-            ORDER BY (account_name LIKE '%%Expense Payable%%') DESC, lft
-            LIMIT 1
-            """,
-            self.company,
-            as_dict=True,
-        )
-        if candidates:
-            self.payable_account = candidates[0]["name"]
-        else:
+        if not self.paid_from and not self.payable_account:
             frappe.throw(_(
-                "No Payable account found for {0}. Create '2210 Expense "
-                "Payable' under Liabilities or pick one in the Payable "
-                "Account field."
-            ).format(self.company))
-
-    def _autofill_cost_center(self):
-        if self.cost_center:
-            return
-        cc = frappe.get_cached_value("Company", self.company, "cost_center")
-        if not cc:
-            cc = frappe.db.get_value(
-                "Cost Center",
-                {"company": self.company, "is_group": 0, "disabled": 0},
-                "name",
-            )
-        if cc:
-            self.cost_center = cc
-
-    def _validate_amount(self):
-        if flt(self.amount) <= 0:
-            frappe.throw(_("Amount must be greater than zero."))
-        if flt(self.tax_amount) < 0:
-            frappe.throw(_("Tax Amount cannot be negative."))
-        if self.expense_account:
-            root_type = frappe.db.get_value(
-                "Account", self.expense_account, "root_type")
-            if root_type != "Expense":
-                frappe.throw(_(
-                    "Expense Account {0} must be of root type 'Expense' "
-                    "(got '{1}')."
-                ).format(self.expense_account, root_type))
-        if self.payable_account:
-            atype = frappe.db.get_value(
-                "Account", self.payable_account, "account_type")
-            if atype != "Payable":
-                frappe.throw(_(
-                    "Payable Account {0} must have Account Type 'Payable' "
-                    "(got '{1}')."
-                ).format(self.payable_account, atype))
-
-    def _compute_grand_total(self):
-        self.grand_total = flt(self.amount) + flt(self.tax_amount)
+                "Pick either <b>Paid From</b> (Bank / Cash) for immediate "
+                "payment, OR <b>Payable Account</b> to defer the payment. "
+                "Set a default in Chundakadan Settings so this auto-fills."))
 
     def _set_status_pre_submit(self):
-        """Status flips during the workflow are managed in two places:
-        the approval module sets custom_approval_status, this method
-        mirrors that into the user-facing `status` field for drafts."""
         if self.docstatus == 2:
             self.status = "Cancelled"
             return
@@ -142,7 +146,7 @@ class OfficeExpenseVoucher(AccountsController):
             if cas == "Rejected":
                 self.status = "Rejected"
             elif cas == "Approved":
-                self.status = "Approved"  # about to submit
+                self.status = "Approved"
             elif cas == "Partially Approved":
                 self.status = "Partially Approved"
             elif cas == "Pending":
@@ -150,21 +154,15 @@ class OfficeExpenseVoucher(AccountsController):
             else:
                 self.status = "Draft"
 
-    # --- Submit / Cancel -----------------------------------------------
+    # --- Submit / Cancel ---------------------------------------------
 
     def on_submit(self):
-        # Standard AccountsController.on_submit doesn't post GL — that's
-        # our job. AccountsController hooks ARE useful for fiscal year
-        # checks etc., so call super after our pre-checks.
-        self._validate_submit_preconditions()
-        # Defensive invariant: at the moment of submit, custom_approval_status
-        # MUST be 'Approved' (workflow approve() sets it). If something
-        # bypassed the workflow and submitted directly, force the field to
-        # 'Approved' here so the post-submit state is internally consistent.
+        # Defensive invariant — submit can only happen via the approval
+        # workflow, which sets cas='Approved'. If anything bypasses that,
+        # force the state to match.
         if self.custom_approval_status != "Approved":
             self.custom_approval_status = "Approved"
             self.current_approver = None
-            # Mark the last pending row Approved too
             for row in (self.approval_flow or []):
                 if row.status == "Pending":
                     row.status = "Approved"
@@ -173,187 +171,201 @@ class OfficeExpenseVoucher(AccountsController):
             self.db_set("custom_approval_status", "Approved",
                         update_modified=False)
             self.db_set("current_approver", None, update_modified=False)
+
         self.make_gl_entries()
         self.set_status(update=True)
 
     def on_cancel(self):
-        # Use AccountsController's helper rather than reposting a cancel
-        # flag — handles linked Payment Entries properly.
-        from erpnext.accounts.utils import unlink_ref_doc_from_payment_entries
-        # If any PE references this voucher, allow user to cancel only
-        # if PEs are also cancelled. (Standard PI behavior.)
-        self.check_no_active_payment_links()
-        make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
-        # Also clear payment ledger entries (cascades)
-        unlink_ref_doc_from_payment_entries(self)
+        make_reverse_gl_entries(
+            voucher_type=self.doctype, voucher_no=self.name)
         self.set_status(update=True)
 
-    def _validate_submit_preconditions(self):
-        if not self.expense_account or not self.payable_account:
-            frappe.throw(_("Expense Account and Payable Account are required."))
-        if not self.cost_center:
-            frappe.throw(_("Cost Center is required."))
-        if flt(self.grand_total) <= 0:
-            frappe.throw(_("Grand Total must be greater than zero."))
-
-    def check_no_active_payment_links(self):
-        active = frappe.db.sql(
-            """
-            SELECT per.parent FROM `tabPayment Entry Reference` per
-            JOIN `tabPayment Entry` pe ON pe.name = per.parent
-            WHERE per.reference_doctype = %s
-              AND per.reference_name = %s
-              AND pe.docstatus = 1
-            """,
-            (self.doctype, self.name),
-        )
-        if active:
-            pe_names = ", ".join(set(p[0] for p in active))
-            frappe.throw(_(
-                "Cannot cancel — submitted Payment Entries reference this "
-                "voucher: {0}. Cancel the Payment Entries first."
-            ).format(pe_names))
-
-    # --- GL Entry construction -----------------------------------------
+    # --- GL Entry construction ---------------------------------------
 
     def make_gl_entries(self, gl_entries=None, from_repost=False):
-        """Build the 2- or 3-leg GL entry and post it."""
         gl_entries = gl_entries or self.get_gl_entries()
         if not gl_entries:
             return
         make_gl_entries(
             gl_entries,
             cancel=(self.docstatus == 2),
-            update_outstanding="Yes",
+            update_outstanding="No",  # outstanding tracked via GL sums when needed
             merge_entries=False,
         )
 
     def get_gl_entries(self) -> list[dict]:
-        gl: list[dict] = []
+        """Build the GL entry rows.
+
+        Dr side: one row per expense line (account from line),
+                 plus per-line tax (if non-zero) folded INTO that line's
+                 expense account (non-recoverable tax).
+        Cr side: one row to Paid From OR Payable Account OR Employee Payable.
+        """
         company_currency = frappe.get_cached_value(
             "Company", self.company, "default_currency")
+        gl: list[dict] = []
 
-        # 1. Dr Expense
-        gl.append(self.get_gl_dict({
-            "account": self.expense_account,
-            "against": self.payable_account,
-            "debit": flt(self.amount),
-            "credit": 0,
-            "debit_in_account_currency": flt(self.amount),
-            "credit_in_account_currency": 0,
-            "cost_center": self.cost_center,
-            "against_voucher_type": self.doctype,
-            "against_voucher": self.name,
-            "remarks": self.description or "",
-        }, account_currency=company_currency, item=self))
+        # 1. Debits — one row per expense line, tax folded in (non-recoverable)
+        for row in (self.items or []):
+            cc = row.cost_center or self._fallback_cost_center()
+            line_dr = flt(row.amount) + flt(row.tax_amount)
+            if line_dr <= 0:
+                continue
+            gl.append(self.get_gl_dict({
+                "account": row.expense_account,
+                "against": self._against_account(),
+                "debit": line_dr,
+                "credit": 0,
+                "debit_in_account_currency": line_dr,
+                "credit_in_account_currency": 0,
+                "cost_center": cc,
+                "against_voucher_type": self.doctype,
+                "against_voucher": self.name,
+                "remarks": row.description or self.description or "",
+            }, account_currency=company_currency, item=self))
 
-        # 2. Dr GST input (if claiming + tax > 0)
-        if self.claim_gst_input_credit and flt(self.tax_amount) > 0:
-            cgst = flt(self.tax_amount) / 2.0
-            sgst = flt(self.tax_amount) - cgst
-            for acct, amt in (
-                (self.gst_account_cgst, cgst),
-                (self.gst_account_sgst, sgst),
-            ):
-                if not acct:
-                    continue
-                gl.append(self.get_gl_dict({
-                    "account": acct,
-                    "against": self.payable_account,
-                    "debit": amt,
-                    "credit": 0,
-                    "debit_in_account_currency": amt,
-                    "credit_in_account_currency": 0,
-                    "cost_center": self.cost_center,
-                    "against_voucher_type": self.doctype,
-                    "against_voucher": self.name,
-                    "remarks": "GST input on " + (self.description or ""),
-                }, account_currency=company_currency, item=self))
-        elif not self.claim_gst_input_credit and flt(self.tax_amount) > 0:
-            # Tax is non-recoverable — fold into the expense leg instead
-            # of a separate GL row (cleaner P&L).
-            gl[0]["debit"] = flt(gl[0]["debit"]) + flt(self.tax_amount)
-            gl[0]["debit_in_account_currency"] = gl[0]["debit"]
+        # 2. Credit — single row for the full grand_total
+        cr_account, party_type, party = self._credit_target()
+        if not cr_account:
+            frappe.throw(_("Could not resolve credit account."))
 
-        # 3. Cr Payable (always for the full grand_total)
-        # Frappe requires party_type + party on GL entries against
-        # account_type="Payable" — Supplier supplied from voucher.party.
-        gl.append(self.get_gl_dict({
-            "account": self.payable_account,
-            "against": self.expense_account,
+        cr_cc = (self.items[0].cost_center if self.items else None) \
+            or self._fallback_cost_center()
+        gl_dict = {
+            "account": cr_account,
+            "against": (self.items[0].expense_account if self.items else ""),
             "debit": 0,
             "credit": flt(self.grand_total),
             "debit_in_account_currency": 0,
             "credit_in_account_currency": flt(self.grand_total),
-            "party_type": "Supplier",
-            "party": self.party,
-            "cost_center": self.cost_center,
+            "cost_center": cr_cc,
             "against_voucher_type": self.doctype,
             "against_voucher": self.name,
-            "remarks": self.description or "",
-        }, account_currency=company_currency, item=self))
+            "remarks": self.description or self.vendor_payee or "",
+        }
+        if party_type and party:
+            gl_dict["party_type"] = party_type
+            gl_dict["party"] = party
+        gl.append(self.get_gl_dict(
+            gl_dict, account_currency=company_currency, item=self))
 
         return gl
 
-    # --- Status --------------------------------------------------------
+    def _credit_target(self) -> tuple[str | None, str | None, str | None]:
+        """Returns (account, party_type, party) for the Cr leg.
+
+        Priority:
+          1. is_reimbursable → employee's user payable account (via Employee → company.default_employee_advance_account)
+          2. paid_from filled → Bank / Cash (no party)
+          3. payable_account filled → Payable account (no party if type != Payable)
+        """
+        if self.is_reimbursable and self.employee:
+            # Use Company's default employee advance account, with Employee as party
+            advance_acct = frappe.db.get_value(
+                "Company", self.company, "default_employee_advance_account")
+            return (advance_acct, "Employee", self.employee)
+
+        if self.paid_from:
+            atype = frappe.db.get_value("Account", self.paid_from, "account_type")
+            # Bank/Cash accounts don't need party
+            return (self.paid_from, None, None)
+
+        if self.payable_account:
+            atype = frappe.db.get_value(
+                "Account", self.payable_account, "account_type") or ""
+            # If user picked a 'Payable' typed account we'd need a party.
+            # Our default Chundakadan setting points at an account_type=''
+            # liability, so this is fine. But guard anyway.
+            if atype == "Payable":
+                # User picked a real Payable account — won't post without party.
+                frappe.throw(_(
+                    "Payable Account {0} has account_type='Payable' which "
+                    "requires a Supplier. Use a Liability-type account "
+                    "without 'Payable' type for Office Expense Vouchers, "
+                    "or pick a Paid From bank/cash account instead."
+                ).format(self.payable_account))
+            return (self.payable_account, None, None)
+
+        return (None, None, None)
+
+    def _against_account(self) -> str:
+        """Describes the Cr side on Dr GL rows (free-text narrative)."""
+        if self.paid_from:
+            return self.paid_from
+        if self.payable_account:
+            return self.payable_account
+        return self.vendor_payee or ""
+
+    def _fallback_cost_center(self) -> str | None:
+        if hasattr(self, "_cached_cc"):
+            return self._cached_cc
+        cc = None
+        if frappe.db.exists("DocType", "Chundakadan Settings"):
+            cs = frappe.get_cached_doc("Chundakadan Settings")
+            cc = cs.get(_SETTINGS_DEFAULTS["cost_center"])
+        if not cc and self.company:
+            cc = frappe.get_cached_value("Company", self.company, "cost_center")
+        if not cc and self.company:
+            cc = frappe.db.get_value(
+                "Cost Center",
+                {"company": self.company, "is_group": 0, "disabled": 0},
+                "name",
+            )
+        self._cached_cc = cc
+        return cc
+
+    # --- Status ------------------------------------------------------
 
     def set_status(self, update=False, status=None, update_modified=True):
-        """Map outstanding_amount → user-facing status."""
         if self.is_new():
             return
         if not status:
             if self.docstatus == 2:
                 status = "Cancelled"
             elif self.docstatus == 0:
-                # Draft / approval-pipeline statuses managed in validate
-                return
+                return  # draft / approval-pipeline statuses set elsewhere
             else:
-                outstanding = flt(self.outstanding_amount,
-                                  self.precision("outstanding_amount"))
-                grand = flt(self.grand_total, self.precision("grand_total"))
-                if outstanding <= 0:
+                # Submitted. If user paid via paid_from, mark Paid;
+                # if via payable_account, mark Unpaid until a PE clears it.
+                if self.paid_from or self.is_reimbursable:
                     status = "Paid"
-                elif 0 < outstanding < grand:
-                    status = "Partly Paid"
-                else:
+                elif self.payable_account:
                     status = "Unpaid"
+                else:
+                    status = "Approved"
         self.status = status
         if update:
             self.db_set("status", status, update_modified=update_modified)
 
 
-# --- Module-level utilities (called from hooks / Payment Entry) -----------
+# --- Module utilities -----------------------------------------------
 
 @frappe.whitelist()
 def make_payment_entry(source_name: str) -> dict:
-    """Build a Payment Entry pre-filled to clear this voucher's outstanding.
-
-    ERPNext's standard `get_payment_entry` doesn't know about our custom
-    doctype, so we hand-build a minimal PE dict here. Bank account is
-    left blank — user picks it on the form.
+    """Build a Payment Entry for the deferred-payment case (payable_account
+    used, paid_from blank). Pre-fills enough that user just picks the bank.
     """
     source = frappe.get_doc("Office Expense Voucher", source_name)
     if source.docstatus != 1:
         frappe.throw(_("Voucher must be submitted before paying."))
-    outstanding = flt(source.outstanding_amount)
-    if outstanding <= 0:
-        frappe.throw(_("Nothing outstanding on this voucher."))
+    if source.paid_from:
+        frappe.throw(_(
+            "This voucher was already paid via {0}. "
+            "No further Payment Entry needed.").format(source.paid_from))
+    if not source.payable_account:
+        frappe.throw(_(
+            "No Payable Account set — voucher posting state is invalid."))
 
     pe = frappe.new_doc("Payment Entry")
     pe.payment_type = "Pay"
     pe.posting_date = frappe.utils.nowdate()
     pe.company = source.company
-    # Party fields — needed because we're paying down a Payable account
-    pe.party_type = "Supplier"
-    pe.party = source.party
-    pe.party_name = frappe.db.get_value("Supplier", source.party, "supplier_name") \
-                    or source.party
     pe.paid_to = source.payable_account
     pe.paid_to_account_currency = frappe.get_cached_value(
         "Account", source.payable_account, "account_currency") or \
         frappe.get_cached_value("Company", source.company, "default_currency")
-    pe.paid_amount = outstanding
-    pe.received_amount = outstanding
+    pe.paid_amount = flt(source.grand_total)
+    pe.received_amount = flt(source.grand_total)
     pe.target_exchange_rate = 1.0
     pe.source_exchange_rate = 1.0
     pe.reference_no = source.reference_no or source.name
@@ -364,20 +376,16 @@ def make_payment_entry(source_name: str) -> dict:
         "reference_name": source.name,
         "due_date": source.posting_date,
         "total_amount": flt(source.grand_total),
-        "outstanding_amount": outstanding,
-        "allocated_amount": outstanding,
+        "outstanding_amount": flt(source.grand_total),
+        "allocated_amount": flt(source.grand_total),
     })
     return pe.as_dict()
 
 
 def update_voucher_status_on_payment(payment_doc, method=None):
-    """`Payment Entry` doc_event hook. When a PE that references an
-    Office Expense Voucher is submitted or cancelled, recompute the
-    voucher's outstanding_amount + status.
-
-    Frappe's payment_ledger already updates outstanding via
-    `update_voucher_outstanding`; we just need to flip status.
-    """
+    """When a PE referencing an OEV is submitted/cancelled, flip the
+    voucher's status (paid_from-based vouchers were already 'Paid'
+    on submit; this handles the deferred-payment / payable_account case)."""
     if not payment_doc.references:
         return
     refs = [
@@ -391,8 +399,8 @@ def update_voucher_status_on_payment(payment_doc, method=None):
             voucher = frappe.get_doc("Office Expense Voucher", ref.reference_name)
             if voucher.docstatus != 1:
                 continue
-            voucher.reload()
-            voucher.set_status(update=True)
+            new_status = "Paid" if payment_doc.docstatus == 1 else "Unpaid"
+            voucher.db_set("status", new_status, update_modified=False)
         except Exception as e:
             frappe.log_error(
                 f"OEV status sync failed for {ref.reference_name}: {e}",
