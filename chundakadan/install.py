@@ -785,21 +785,29 @@ def ensure_oev_default_supplier(*args, **kwargs):
 
 
 def ensure_oev_workspace_pin(*args, **kwargs):
-    """Idempotent: pin 'Office Expense Voucher' in the standard
-    Accounting workspace — adds it as a shortcut (top tiles) AND as a
-    card-link under a 'Vouchers' group.
+    """Idempotent: pin 'Office Expense Voucher' in BOTH workspaces the
+    user navigates through — the standard 'Accounting' workspace AND
+    the custom 'Chundakadan' workspace (which is where the breadcrumb
+    points by default for this install).
     """
     import frappe
 
     if not frappe.db.exists("DocType", "Office Expense Voucher"):
         return
-    if not frappe.db.exists("Workspace", "Accounting"):
-        return
 
-    ws = frappe.get_doc("Workspace", "Accounting")
+    for ws_name in ("Accounting", "Chundakadan"):
+        if not frappe.db.exists("Workspace", ws_name):
+            continue
+        _pin_oev_in_workspace(ws_name)
+
+
+def _pin_oev_in_workspace(ws_name: str) -> None:
+    import frappe
+
+    ws = frappe.get_doc("Workspace", ws_name)
     changed = False
 
-    # --- Shortcut tile (top of workspace) ---
+    # Shortcut tile
     has_shortcut = any(
         (s.link_to == "Office Expense Voucher" and s.type == "DocType")
         for s in (ws.shortcuts or [])
@@ -813,15 +821,12 @@ def ensure_oev_workspace_pin(*args, **kwargs):
         })
         changed = True
 
-    # --- Card link (under a 'Vouchers' card-break group) ---
+    # Card link under a 'Chundakadan Vouchers' break
     has_link = any(
         (l.link_to == "Office Expense Voucher" and l.type == "Link")
         for l in (ws.links or [])
     )
     if not has_link:
-        # Find the position right after Payment Entry / Journal Entry in
-        # the links table — both live under "Direct Entries" or similar.
-        # Simpler: append at the end with our own Card Break header.
         has_break = any(
             (l.type == "Card Break" and l.label == "Chundakadan Vouchers")
             for l in (ws.links or [])
@@ -845,10 +850,11 @@ def ensure_oev_workspace_pin(*args, **kwargs):
             ws.flags.ignore_permissions = True
             ws.save()
             frappe.db.commit()
-            print("chundakadan.install: pinned 'Office Expense Voucher' on "
-                  "Accounting workspace")
+            print(f"chundakadan.install: pinned 'Office Expense Voucher' "
+                  f"on '{ws_name}' workspace")
         except Exception as e:
-            print(f"chundakadan.install: could not pin OEV on workspace: {e}")
+            print(f"chundakadan.install: could not pin OEV on "
+                  f"'{ws_name}': {e}")
 
 
 def ensure_employee_advance_defaults(*args, **kwargs):

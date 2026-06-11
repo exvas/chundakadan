@@ -157,6 +157,22 @@ class OfficeExpenseVoucher(AccountsController):
         # our job. AccountsController hooks ARE useful for fiscal year
         # checks etc., so call super after our pre-checks.
         self._validate_submit_preconditions()
+        # Defensive invariant: at the moment of submit, custom_approval_status
+        # MUST be 'Approved' (workflow approve() sets it). If something
+        # bypassed the workflow and submitted directly, force the field to
+        # 'Approved' here so the post-submit state is internally consistent.
+        if self.custom_approval_status != "Approved":
+            self.custom_approval_status = "Approved"
+            self.current_approver = None
+            # Mark the last pending row Approved too
+            for row in (self.approval_flow or []):
+                if row.status == "Pending":
+                    row.status = "Approved"
+                    row.approved_on = frappe.utils.now()
+                    break
+            self.db_set("custom_approval_status", "Approved",
+                        update_modified=False)
+            self.db_set("current_approver", None, update_modified=False)
         self.make_gl_entries()
         self.set_status(update=True)
 

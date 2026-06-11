@@ -359,6 +359,13 @@ def approve(doctype: str, docname: str):
                 doc.submit()
             else:
                 doc.save(ignore_permissions=True)
+            # Belt-and-braces: write the final approval state straight to
+            # the DB row so no downstream validate hook can leave the doc
+            # in a (docstatus=1, cas='Pending') inconsistent state.
+            frappe.db.set_value(doctype, docname, {
+                "custom_approval_status": "Approved",
+                "current_approver": None,
+            }, update_modified=False)
             next_approver_email = None
             send_approved = True
         else:
