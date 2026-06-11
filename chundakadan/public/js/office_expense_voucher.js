@@ -9,6 +9,21 @@
 
 frappe.ui.form.on('Office Expense Voucher', {
     setup(frm) {
+        // Force the Lines grid to stay inline-editable — Frappe by default
+        // opens the row-editor modal when a user clicks "+ Add Row" or the
+        // row chevron. We patch add_new_row() so it never passes show=true,
+        // and hide the chevron in refresh() (below).
+        const items_grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+        if (items_grid && !items_grid._oev_no_auto_open_patched) {
+            const original_add_new_row = items_grid.add_new_row.bind(items_grid);
+            items_grid.add_new_row = function (idx, callback, show, copy_doc, position) {
+                // Force show=false so the new row appears in the grid
+                // for direct cell editing instead of jumping to the modal.
+                return original_add_new_row(idx, callback, false, copy_doc, position);
+            };
+            items_grid._oev_no_auto_open_patched = true;
+        }
+
         // Filter Paid From to only Bank / Cash accounts of the selected company
         frm.set_query('paid_from', () => ({
             filters: {
@@ -65,6 +80,17 @@ frappe.ui.form.on('Office Expense Voucher', {
             frm.page.set_inner_btn_group_as_primary(__('Create'));
         }
         recompute_totals(frm);
+
+        // Hide the row-expand chevron on each Lines row — users should
+        // only edit cells inline. setTimeout because Frappe renders rows
+        // async after refresh.
+        setTimeout(() => {
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            if (grid && grid.wrapper) {
+                grid.wrapper.find('.btn-open-row').hide();
+                grid.wrapper.find('.row-index').css('cursor', 'default');
+            }
+        }, 50);
     },
 
     company(frm) {
