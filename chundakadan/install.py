@@ -1027,6 +1027,48 @@ def _pin_oev_in_workspace(ws_name: str) -> None:
                   f"'{ws_name}': {e}")
 
 
+def ensure_je_oev_reference_option(*args, **kwargs):
+    """Add 'Office Expense Voucher' to Journal Entry Account.reference_type
+    Select options so the Make Payment JV can reference the OEV that
+    triggered it (for the on_submit/on_cancel status sync hook).
+
+    Idempotent — patches the existing options string only if OEV
+    isn't already in it.
+    """
+    import frappe
+
+    df = frappe.get_meta("Journal Entry Account").get_field("reference_type")
+    if not df:
+        return
+    options = df.options or ""
+    if "Office Expense Voucher" in options.split("\n"):
+        return  # already present
+
+    new_options = options.rstrip("\n") + "\nOffice Expense Voucher"
+    ps_name = "Journal Entry Account-reference_type-options"
+
+    try:
+        if frappe.db.exists("Property Setter", ps_name):
+            frappe.db.set_value("Property Setter", ps_name, "value",
+                                new_options, update_modified=False)
+        else:
+            frappe.get_doc({
+                "doctype": "Property Setter",
+                "doctype_or_field": "DocField",
+                "doc_type": "Journal Entry Account",
+                "field_name": "reference_type",
+                "property": "options",
+                "property_type": "Text",
+                "value": new_options,
+            }).insert(ignore_permissions=True)
+        frappe.db.commit()
+        frappe.clear_cache(doctype="Journal Entry Account")
+        print("chundakadan.install: added 'Office Expense Voucher' to "
+              "Journal Entry Account.reference_type options")
+    except Exception as e:
+        print(f"chundakadan.install: could not patch JE reference_type: {e}")
+
+
 def ensure_employee_advance_defaults(*args, **kwargs):
     """Tick 'Repay Unclaimed Amount from Salary' by default on Employee
     Advance — unclaimed advances should be recovered automatically
