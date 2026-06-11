@@ -248,6 +248,19 @@ function oev_override_page_indicator(frm) {
 function oev_update_indicator(frm) {
     const status = frm.doc.custom_approval_status;
     if (!status) return;
+
+    // Frappe's set_headline_alert appends a new div on every refresh
+    // (it doesn't dedupe), so wipe any prior alert FIRST. Then add ours.
+    try {
+        if (frm.dashboard && frm.dashboard.wrapper) {
+            frm.dashboard.wrapper.find('.form-dashboard-section.has-headline-alert,'
+                + ' .headline-alert').remove();
+        }
+        if (frm.dashboard && frm.dashboard.clear_headline) {
+            frm.dashboard.clear_headline();
+        }
+    } catch (e) { /* swallow */ }
+
     const color_map = {
         'Pending': 'orange',
         'Partially Approved': 'orange',
