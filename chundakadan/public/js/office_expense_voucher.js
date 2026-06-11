@@ -159,25 +159,30 @@ function enforce_inline_grid(frm) {
     const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
     if (!grid) return;
 
-    // 1. Patch add_new_row so it never passes show=true.
+    // Patch add_new_row so '+ Add Row' / 'Insert Below' / 'Insert Above'
+    // never pass show=true (which would open the row-editor modal).
     if (!grid._oev_inline_patched) {
         const original_add_new_row = grid.add_new_row.bind(grid);
         grid.add_new_row = function (idx, callback, show, copy_doc, position) {
             return original_add_new_row(idx, callback, false, copy_doc, position);
         };
 
-        // 2. Patch each row's toggle_view (now and going forward) so the
-        //    chevron / Insert Below / Insert Above can't open the modal.
+        // Surgical toggle_view patch — only block OPENING the modal
+        // (show=true). Closing it (show=false / undefined) stays
+        // intact so inline cell editing isn't affected.
         const patch_rows = () => {
             (grid.grid_rows || []).forEach(row => {
-                if (row && !row._oev_toggle_disabled) {
-                    row.toggle_view = function () { /* no-op */ };
-                    row._oev_toggle_disabled = true;
+                if (row && !row._oev_toggle_patched) {
+                    const orig = row.toggle_view.bind(row);
+                    row.toggle_view = function (show, callback) {
+                        if (show === true) return;  // block open
+                        return orig(show, callback);
+                    };
+                    row._oev_toggle_patched = true;
                 }
             });
         };
         patch_rows();
-        // Re-patch whenever Frappe rebuilds the rows
         const original_refresh = grid.refresh.bind(grid);
         grid.refresh = function () {
             const r = original_refresh.apply(this, arguments);
@@ -188,11 +193,10 @@ function enforce_inline_grid(frm) {
         grid._oev_inline_patched = true;
     }
 
-    // 3. Hide the row-expand chevron button entirely (CSS-level, robust).
+    // Hide the row-expand chevron button so users don't even see it.
     setTimeout(() => {
         if (grid.wrapper) {
             grid.wrapper.find('.btn-open-row').css('display', 'none');
-            grid.wrapper.find('.row-index').css('cursor', 'default');
         }
     }, 100);
 }
