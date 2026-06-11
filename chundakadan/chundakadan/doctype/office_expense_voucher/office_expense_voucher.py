@@ -66,16 +66,16 @@ class OfficeExpenseVoucher(AccountsController):
         pass
 
     def _autofill_from_settings(self):
-        """Fill paid_from / payable_account / per-line cost_center from
-        Chundakadan Settings defaults if user didn't pick them."""
+        """Fill payable_account + per-line cost_center from Chundakadan
+        Settings defaults if user didn't pick them.
+
+        Note: paid_from is INTENTIONALLY not auto-filled server-side —
+        client JS fills it on new docs only, so a user who clears it to
+        go into deferred-payment mode doesn't get it auto-restored.
+        """
         if not frappe.db.exists("DocType", "Chundakadan Settings"):
             return
         cs = frappe.get_cached_doc("Chundakadan Settings")
-
-        if not self.paid_from and not self.is_reimbursable:
-            d = cs.get(_SETTINGS_DEFAULTS["paid_from"])
-            if d:
-                self.paid_from = d
 
         if not self.payable_account:
             d = cs.get(_SETTINGS_DEFAULTS["payable_account"])
