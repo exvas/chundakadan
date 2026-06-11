@@ -199,24 +199,44 @@ function oev_user_can_act(frm) {
 }
 
 function oev_override_page_indicator(frm) {
-    // Replace Frappe's default 'Draft' / 'Submitted' / 'Cancelled' badge
-    // with our status field so users see "Pending Approval" etc.
+    // Two-status page badge — combines workflow + payment lifecycle
+    // (e.g. 'Pending · Draft', 'Approved · Unpaid', 'Approved · Paid')
     if (frm.is_new()) return;
-    const status = frm.doc.status;
-    if (!status) return;
-    const color_map = {
-        'Draft':                 'red',
-        'Pending Approval':      'orange',
-        'Partially Approved':    'orange',
-        'Approved':              'green',
-        'Unpaid':                'orange',
-        'Paid':                  'green',
-        'Rejected':              'red',
-        'Cancelled':             'gray',
-    };
-    const color = color_map[status] || 'gray';
+    const ws = frm.doc.custom_approval_status;  // workflow
+    const ds = frm.doc.status;                  // document / payment
+
+    // Rejected / Cancelled override everything else
+    if (ws === 'Rejected') {
+        frm.page.set_indicator(__('Rejected'), 'red');
+        return;
+    }
+    if (ds === 'Cancelled') {
+        frm.page.set_indicator(__('Cancelled'), 'gray');
+        return;
+    }
+
+    const ds_color = {
+        'Draft':           'red',
+        'Unpaid':          'orange',
+        'Partially Paid':  'orange',
+        'Paid':            'green',
+        'Cancelled':       'gray',
+    }[ds] || 'gray';
+
+    // Pre-submit: lead with workflow status (Pending / Partially Approved)
+    if (frm.doc.docstatus === 0) {
+        const ws_label = ws || 'Draft';
+        const ws_color = ws === 'Approved' ? 'green'
+                       : ws === 'Rejected' ? 'red'
+                       : (ws === 'Pending' || ws === 'Partially Approved') ? 'orange'
+                       : 'red';
+        frm.page.set_indicator(__(ws_label), ws_color);
+        return;
+    }
+
+    // Post-submit: show payment status (workflow is implicitly 'Approved')
     if (frm.page && frm.page.set_indicator) {
-        frm.page.set_indicator(__(status), color);
+        frm.page.set_indicator(__(ds || 'Approved'), ds_color);
     }
 }
 

@@ -154,21 +154,13 @@ class OfficeExpenseVoucher(AccountsController):
                     "'Pay Later' if you want to defer the payment."))
 
     def _set_status_pre_submit(self):
+        # Document Status (status field) is PAYMENT-only — workflow state
+        # lives in custom_approval_status. Pre-submit, the doc isn't
+        # paid yet, so status stays Draft until docstatus=1.
         if self.docstatus == 2:
             self.status = "Cancelled"
-            return
-        if self.docstatus == 0:
-            cas = self.custom_approval_status
-            if cas == "Rejected":
-                self.status = "Rejected"
-            elif cas == "Approved":
-                self.status = "Approved"
-            elif cas == "Partially Approved":
-                self.status = "Partially Approved"
-            elif cas == "Pending":
-                self.status = "Pending Approval"
-            else:
-                self.status = "Draft"
+        elif self.docstatus == 0:
+            self.status = "Draft"
 
     # --- Submit / Cancel ---------------------------------------------
 
@@ -397,20 +389,58 @@ class OfficeExpenseVoucher(AccountsController):
     # --- Status ------------------------------------------------------
 
     def set_status(self, update=False, status=None, update_modified=True):
+        """Compute the PAYMENT lifecycle status (workflow status lives
+        on custom_approval_status — set independently by approve()/reject()).
+
+        Post-submit:
+          - paid_from-mode (immediate payment) → Paid
+          - pay_later mode → Unpaid / Partially Paid / Paid depending on
+            how much has been settled via JV references against this voucher
+        """
         if self.is_new():
             return
         if not status:
             if self.docstatus == 2:
                 status = "Cancelled"
             elif self.docstatus == 0:
-                return  # draft / approval-pipeline statuses set elsewhere
+                return  # stays "Draft" — pre-submit
             else:
-                # Submitted = workflow approval is complete (the submit-guard
-                # ensures cas='Approved' before submit). Show "Approved"
-                # except for the deferred-only case where the payable hasn't
-                # been cleared yet (paid_from blank, payable_account set).
-                deferred_only = (self.payable_account and not self.paid_from)
-                status = "Unpaid" if deferred_only else "Approved"
+                if self.paid_from:
+                    # Immediate payment via Paid From — fully paid on submit
+                    status = "Paid"
+                else:
+                    # Deferred — compute from JV settlements that reference us
+                    settled = self._payable_settled_amount()
+                    grand = flt(self.grand_total, self.precision("grand_total"))
+                    if settled <= 0:
+                        status = "Unpaid"
+                    elif settled < grand:
+                        status = "Partially Paid"
+                    else:
+                        status = "Paid"
+        self.status = status
+        if update:
+            self.db_set("status", status, update_modified=update_modified)
+
+    def _payable_settled_amount(self) -> float:
+        """Sum of Dr Payable amounts on active GL Entries that reference
+        this voucher BUT come from a different voucher (i.e. JV/PE
+        clearing entries). Used to detect partial vs full settlement."""
+        rows = frappe.db.sql(
+            """
+            SELECT COALESCE(SUM(debit), 0) AS d
+            FROM `tabGL Entry`
+            WHERE against_voucher_type = %(vt)s
+              AND against_voucher = %(vn)s
+              AND voucher_no != %(vn)s
+              AND account = %(payable)s
+              AND is_cancelled = 0
+            """,
+            {"vt": self.doctype, "vn": self.name,
+             "payable": self.payable_account},
+            as_dict=True,
+        )
+        return flt(rows[0]["d"]) if rows else 0.0
         self.status = status
         if update:
             self.db_set("status", status, update_modified=update_modified)
@@ -514,10 +544,12 @@ def update_voucher_status_on_payment(payment_doc, method=None):
             if voucher.docstatus != 1:
                 continue
             if voucher.paid_from:
-                # Immediate-payment mode — status stays Approved
+                # Immediate-payment mode — already 'Paid' on OEV submit
                 continue
-            new_status = "Paid" if payment_doc.docstatus == 1 else "Unpaid"
-            voucher.db_set("status", new_status, update_modified=False)
+            # Recompute status from CURRENT GL state — handles partial
+            # payments naturally (multiple JVs settling fractions of
+            # the voucher's outstanding amount).
+            voucher.set_status(update=True)
         except Exception as e:
             frappe.log_error(
                 f"OEV status sync failed for {name}: {e}",

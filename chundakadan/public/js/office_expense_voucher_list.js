@@ -5,17 +5,22 @@
 
 frappe.listview_settings['Office Expense Voucher'] = {
     add_fields: ['status', 'custom_approval_status', 'docstatus', 'grand_total'],
+    // Both columns ARE rendered in the row (driven by in_list_view: 1
+    // on the doctype). The indicator pill below uses `status`
+    // (payment lifecycle) as the headline; users can also filter by
+    // 'Workflow Status' from the standard filter bar.
     get_indicator: function (doc) {
-        const color_map = {
-            'Draft':                ['Draft',                'red',    'status,=,Draft'],
-            'Pending Approval':     ['Pending Approval',     'orange', 'status,=,Pending Approval'],
-            'Partially Approved':   ['Partially Approved',   'orange', 'status,=,Partially Approved'],
-            'Approved':             ['Approved',             'green',  'status,=,Approved'],
-            'Unpaid':               ['Unpaid',               'orange', 'status,=,Unpaid'],
-            'Paid':                 ['Paid',                 'green',  'status,=,Paid'],
-            'Rejected':             ['Rejected',             'red',    'status,=,Rejected'],
-            'Cancelled':            ['Cancelled',            'gray',   'status,=,Cancelled'],
+        const status_map = {
+            'Draft':           ['Draft',          'red',    'status,=,Draft'],
+            'Unpaid':          ['Unpaid',         'orange', 'status,=,Unpaid'],
+            'Partially Paid':  ['Partially Paid', 'orange', 'status,=,Partially Paid'],
+            'Paid':            ['Paid',           'green',  'status,=,Paid'],
+            'Cancelled':       ['Cancelled',      'gray',   'status,=,Cancelled'],
         };
-        return color_map[doc.status] || ['Draft', 'red', 'status,=,Draft'];
+        // For a rejected workflow, fall back to showing that on the row
+        if (doc.custom_approval_status === 'Rejected') {
+            return ['Rejected', 'red', 'custom_approval_status,=,Rejected'];
+        }
+        return status_map[doc.status] || ['Draft', 'red', 'status,=,Draft'];
     },
 };

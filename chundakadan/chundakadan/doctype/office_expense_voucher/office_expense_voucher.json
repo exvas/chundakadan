@@ -164,13 +164,14 @@
   },
   {
    "default": "Draft",
+   "description": "Payment lifecycle: Unpaid → Partially Paid → Paid",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Status",
+   "label": "Document Status",
    "no_copy": 1,
-   "options": "Draft\nPending Approval\nPartially Approved\nApproved\nUnpaid\nPaid\nRejected\nCancelled",
+   "options": "Draft\nUnpaid\nPartially Paid\nPaid\nCancelled",
    "read_only": 1
   },
   {
@@ -196,10 +197,12 @@
    "label": "Approval Workflow"
   },
   {
+   "description": "Approval workflow: Pending → Partially Approved → Approved (or Rejected)",
    "fieldname": "custom_approval_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Approval Status",
+   "label": "Workflow Status",
    "options": "\nPending\nPartially Approved\nApproved\nRejected",
    "read_only": 1
   },
@@ -240,8 +243,19 @@
  "links": [
   {
    "group": "Payments",
+   "link_doctype": "Journal Entry",
+   "link_fieldname": "reference_name",
+   "table_fieldname": "accounts"
+  },
+  {
+   "group": "Payments",
    "link_doctype": "Payment Entry",
    "link_fieldname": "reference_name"
+  },
+  {
+   "group": "Accounting",
+   "link_doctype": "GL Entry",
+   "link_fieldname": "voucher_no"
   }
  ],
  "modified": "2026-06-11 13:24:14.708871",
