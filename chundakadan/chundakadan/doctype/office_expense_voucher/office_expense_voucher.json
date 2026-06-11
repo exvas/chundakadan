@@ -20,7 +20,6 @@
   "payable_account",
   "totals_section",
   "subtotal",
-  "total_tax",
   "column_break_totals",
   "grand_total",
   "status",
@@ -137,13 +136,6 @@
    "fieldname": "subtotal",
    "fieldtype": "Currency",
    "label": "Subtotal",
-   "options": "currency",
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_tax",
-   "fieldtype": "Currency",
-   "label": "Total Tax",
    "options": "currency",
    "read_only": 1
   },

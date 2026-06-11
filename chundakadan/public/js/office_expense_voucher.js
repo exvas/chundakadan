@@ -57,6 +57,7 @@ frappe.ui.form.on('Office Expense Voucher', {
         oev_update_indicator(frm);
         oev_hide_standard_submit(frm);
         oev_add_approve_reject_buttons(frm);
+        oev_override_page_indicator(frm);
         if (frm.fields_dict.approval_flow) {
             frm.set_df_property('approval_flow', 'read_only', 1);
         }
@@ -155,14 +156,13 @@ function apply_company_defaults(frm) {
 
 function recompute_totals(frm) {
     let subtotal = 0;
-    let total_tax = 0;
+    let line_tax = 0;
     (frm.doc.items || []).forEach(row => {
         subtotal += flt(row.amount);
-        total_tax += flt(row.tax_amount);
+        line_tax += flt(row.tax_amount);
     });
     frm.set_value('subtotal', subtotal);
-    frm.set_value('total_tax', total_tax);
-    frm.set_value('grand_total', subtotal + total_tax);
+    frm.set_value('grand_total', subtotal + line_tax);
 }
 
 // ============================================================
@@ -186,6 +186,28 @@ function oev_user_can_act(frm) {
         if (row.approver_role && frappe.user_roles.includes(row.approver_role)) return true;
     }
     return false;
+}
+
+function oev_override_page_indicator(frm) {
+    // Replace Frappe's default 'Draft' / 'Submitted' / 'Cancelled' badge
+    // with our status field so users see "Pending Approval" etc.
+    if (frm.is_new()) return;
+    const status = frm.doc.status;
+    if (!status) return;
+    const color_map = {
+        'Draft':                 'red',
+        'Pending Approval':      'orange',
+        'Partially Approved':    'orange',
+        'Approved':              'green',
+        'Unpaid':                'orange',
+        'Paid':                  'green',
+        'Rejected':              'red',
+        'Cancelled':             'gray',
+    };
+    const color = color_map[status] || 'gray';
+    if (frm.page && frm.page.set_indicator) {
+        frm.page.set_indicator(__(status), color);
+    }
 }
 
 function oev_update_indicator(frm) {

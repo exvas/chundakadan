@@ -118,11 +118,14 @@ class OfficeExpenseVoucher(AccountsController):
                 ).format(row.idx))
 
     def _compute_totals(self):
+        # tax_amount on each line is treated as a non-recoverable add-on
+        # (folded into the same expense account in the GL). For real GST
+        # input credit, book via Purchase Invoice instead.
         subtotal = sum(flt(r.amount) for r in (self.items or []))
-        total_tax = sum(flt(r.tax_amount) for r in (self.items or []))
+        line_taxes = sum(flt(r.get("tax_amount") or 0)
+                          for r in (self.items or []))
         self.subtotal = subtotal
-        self.total_tax = total_tax
-        self.grand_total = subtotal + total_tax
+        self.grand_total = subtotal + line_taxes
 
     def _validate_payment_target(self):
         """At least one of Paid From / Payable Account must be set.
@@ -230,11 +233,12 @@ class OfficeExpenseVoucher(AccountsController):
         cr_cc_fallback = (self.items[0].cost_center if self.items else None) \
             or self._fallback_cost_center()
 
-        # 1. Debits — one row per expense line (tax folded into expense
-        # account for non-recoverable case).
+        # 1. Debits — one row per expense line (line tax_amount, if any,
+        # folded into the expense account; OEV treats it as
+        # non-recoverable. Use Purchase Invoice for proper GST input credit.)
         for row in (self.items or []):
             cc = row.cost_center or self._fallback_cost_center()
-            line_dr = flt(row.amount) + flt(row.tax_amount)
+            line_dr = flt(row.amount) + flt(row.get("tax_amount") or 0)
             if line_dr <= 0:
                 continue
             gl.append(self.get_gl_dict({
