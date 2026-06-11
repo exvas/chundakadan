@@ -252,6 +252,16 @@ before_migrate = [
 # -----------
 # Permissions evaluated in scripted ways
 
+# When a doctype is deleted/cancelled, Frappe's check_if_doc_is_linked
+# refuses if other doctypes link to it. ERPNext lists these auto-managed
+# accounting side-effects in its own ignore_links_on_delete hook; ours
+# adds doctypes specific to chundakadan flows. Combined via Frappe's
+# hooks merger.
+ignore_links_on_delete = [
+    "GL Entry",
+    "Payment Ledger Entry",
+]
+
 permission_query_conditions = {
     "Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",

@@ -34,22 +34,6 @@ from chundakadan.install import get_oev_defaults_for_company
 class OfficeExpenseVoucher(AccountsController):
     """Multi-line, direct-payment expense voucher."""
 
-    # Tell Frappe's check_if_doc_is_linked to skip these doctypes when
-    # evaluating whether this voucher can be cancelled/deleted. Without
-    # this, cancel is blocked by the linked GL Entries (even though our
-    # on_cancel reverses them via make_reverse_gl_entries). Mirrors the
-    # pattern ERPNext AccountsController sets for Sales / Purchase
-    # Invoice — we declare it explicitly here in case the inherited
-    # value misses our additions.
-    ignore_linked_doctypes = (
-        "GL Entry",
-        "Payment Ledger Entry",
-        "Repost Payment Ledger",
-        "Repost Payment Ledger Items",
-        "Repost Accounting Ledger",
-        "Repost Accounting Ledger Items",
-    )
-
     # --- Validation ---------------------------------------------------
 
     def validate(self):
@@ -190,6 +174,20 @@ class OfficeExpenseVoucher(AccountsController):
         self.set_status(update=True)
 
     def on_cancel(self):
+        # Tell Frappe's check_if_doc_is_linked to skip these doctypes
+        # for any subsequent link check fired during this cancel
+        # transaction. Set as INSTANCE attribute (not class) — Frappe's
+        # doc.get('ignore_linked_doctypes') only reads instance __dict__,
+        # not class attributes. Mirrors how ERPNext Sales/Purchase
+        # Invoice handle the same problem.
+        self.ignore_linked_doctypes = (
+            "GL Entry",
+            "Payment Ledger Entry",
+            "Repost Payment Ledger",
+            "Repost Payment Ledger Items",
+            "Repost Accounting Ledger",
+            "Repost Accounting Ledger Items",
+        )
         make_reverse_gl_entries(
             voucher_type=self.doctype, voucher_no=self.name)
         self.set_status(update=True)
