@@ -159,41 +159,37 @@ function enforce_inline_grid(frm) {
     const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
     if (!grid) return;
 
-    // Patch add_new_row so '+ Add Row' / 'Insert Below' / 'Insert Above'
-    // never pass show=true (which would open the row-editor modal).
-    if (!grid._oev_inline_patched) {
-        const original_add_new_row = grid.add_new_row.bind(grid);
-        grid.add_new_row = function (idx, callback, show, copy_doc, position) {
-            return original_add_new_row(idx, callback, false, copy_doc, position);
-        };
+    // The 'Editing Row' modal is opened via GridRow.show_form().
+    // Patch it on EVERY grid row to be a no-op — covers:
+    //   - Form load auto-open (Frappe opens row 1 if it's empty)
+    //   - Chevron / Insert Below / Insert Above
+    //   - Programmatic open via toggle_view(true) → show_form()
+    //   - '+ Add Row' / add_new_row(.., show=true)
+    const neutralise_rows = () => {
+        (grid.grid_rows || []).forEach(row => {
+            if (row && !row._oev_show_form_patched) {
+                row.show_form = function () { /* inline-only */ };
+                row._oev_show_form_patched = true;
+            }
+        });
+    };
 
-        // Surgical toggle_view patch — only block OPENING the modal
-        // (show=true). Closing it (show=false / undefined) stays
-        // intact so inline cell editing isn't affected.
-        const patch_rows = () => {
-            (grid.grid_rows || []).forEach(row => {
-                if (row && !row._oev_toggle_patched) {
-                    const orig = row.toggle_view.bind(row);
-                    row.toggle_view = function (show, callback) {
-                        if (show === true) return;  // block open
-                        return orig(show, callback);
-                    };
-                    row._oev_toggle_patched = true;
-                }
-            });
-        };
-        patch_rows();
+    if (!grid._oev_inline_patched) {
+        neutralise_rows();
+        // Re-patch any rows added later (via Add Row, Insert Below, etc.)
         const original_refresh = grid.refresh.bind(grid);
         grid.refresh = function () {
             const r = original_refresh.apply(this, arguments);
-            patch_rows();
+            neutralise_rows();
             return r;
         };
-
         grid._oev_inline_patched = true;
+    } else {
+        // Patch any new rows on subsequent form refreshes
+        neutralise_rows();
     }
 
-    // Hide the row-expand chevron button so users don't even see it.
+    // Hide the row-expand chevron button visually.
     setTimeout(() => {
         if (grid.wrapper) {
             grid.wrapper.find('.btn-open-row').css('display', 'none');
