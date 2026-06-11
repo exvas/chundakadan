@@ -9,21 +9,6 @@
 
 frappe.ui.form.on('Office Expense Voucher', {
     setup(frm) {
-        // Force the Lines grid to stay inline-editable — Frappe by default
-        // opens the row-editor modal when a user clicks "+ Add Row" or the
-        // row chevron. We patch add_new_row() so it never passes show=true,
-        // and hide the chevron in refresh() (below).
-        const items_grid = frm.fields_dict.items && frm.fields_dict.items.grid;
-        if (items_grid && !items_grid._oev_no_auto_open_patched) {
-            const original_add_new_row = items_grid.add_new_row.bind(items_grid);
-            items_grid.add_new_row = function (idx, callback, show, copy_doc, position) {
-                // Force show=false so the new row appears in the grid
-                // for direct cell editing instead of jumping to the modal.
-                return original_add_new_row(idx, callback, false, copy_doc, position);
-            };
-            items_grid._oev_no_auto_open_patched = true;
-        }
-
         // Filter Paid From to only Bank / Cash accounts of the selected company
         frm.set_query('paid_from', () => ({
             filters: {
@@ -81,16 +66,13 @@ frappe.ui.form.on('Office Expense Voucher', {
         }
         recompute_totals(frm);
 
-        // Hide the row-expand chevron on each Lines row — users should
-        // only edit cells inline. setTimeout because Frappe renders rows
-        // async after refresh.
-        setTimeout(() => {
-            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
-            if (grid && grid.wrapper) {
-                grid.wrapper.find('.btn-open-row').hide();
-                grid.wrapper.find('.row-index').css('cursor', 'default');
-            }
-        }, 50);
+        // Force inline-only editing on the Lines grid. Frappe by default
+        // opens the row-editor modal on:
+        //   1. "+ Add Row" button (calls add_new_row(.., show=true))
+        //   2. Row chevron click (.btn-open-row)
+        //   3. Insert Below / Insert Above buttons in the row toolbar
+        // We disable all three.
+        enforce_inline_grid(frm);
     },
 
     company(frm) {
@@ -171,6 +153,48 @@ function recompute_totals(frm) {
     frm.set_value('subtotal', subtotal);
     frm.set_value('total_tax', total_tax);
     frm.set_value('grand_total', subtotal + total_tax);
+}
+
+function enforce_inline_grid(frm) {
+    const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+    if (!grid) return;
+
+    // 1. Patch add_new_row so it never passes show=true.
+    if (!grid._oev_inline_patched) {
+        const original_add_new_row = grid.add_new_row.bind(grid);
+        grid.add_new_row = function (idx, callback, show, copy_doc, position) {
+            return original_add_new_row(idx, callback, false, copy_doc, position);
+        };
+
+        // 2. Patch each row's toggle_view (now and going forward) so the
+        //    chevron / Insert Below / Insert Above can't open the modal.
+        const patch_rows = () => {
+            (grid.grid_rows || []).forEach(row => {
+                if (row && !row._oev_toggle_disabled) {
+                    row.toggle_view = function () { /* no-op */ };
+                    row._oev_toggle_disabled = true;
+                }
+            });
+        };
+        patch_rows();
+        // Re-patch whenever Frappe rebuilds the rows
+        const original_refresh = grid.refresh.bind(grid);
+        grid.refresh = function () {
+            const r = original_refresh.apply(this, arguments);
+            patch_rows();
+            return r;
+        };
+
+        grid._oev_inline_patched = true;
+    }
+
+    // 3. Hide the row-expand chevron button entirely (CSS-level, robust).
+    setTimeout(() => {
+        if (grid.wrapper) {
+            grid.wrapper.find('.btn-open-row').css('display', 'none');
+            grid.wrapper.find('.row-index').css('cursor', 'default');
+        }
+    }, 100);
 }
 
 function make_payment_entry(frm) {
