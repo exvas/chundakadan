@@ -22,7 +22,7 @@
   },
   {
    "fieldname": "description",
-   "fieldtype": "Small Text",
+   "fieldtype": "Data",
    "label": "Description",
    "in_list_view": 1,
    "columns": 3
