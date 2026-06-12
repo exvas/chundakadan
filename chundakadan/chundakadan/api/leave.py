@@ -9,34 +9,53 @@ def _caller_can_act_on(doc):
     """Return True if the calling user is authorised to approve / reject
     the current step of `doc`.
 
-    Originally the gate was a strict `current_user == doc.current_approver`
-    check. That broke whenever `get_approver_by_role(...)` resolved a step
-    to user A while user B (who also holds the role) wanted to act —
-    e.g. Bindu (binduudayan334@gmail.com) couldn't approve a leave where
-    the chain resolved the GM step to Najeeb (chundakadangm@gmail.com),
-    even though Bindu also holds the "GM Leave Approver" role.
+    STRICT policy (tightened 2026-06-12 after the Bindu-as-Sales-HOD
+    incident on HR-LAP-2026-00194):
 
-    Widened policy — caller is authorised if ANY of:
-      1. caller is Administrator
-      2. caller == doc.current_approver (the resolved user)
-      3. caller == doc.leave_approver (the standard ERPNext designated
-         approver field; set per-doc by HR)
-      4. caller has the role attached to the CURRENT step
-         (approval_flow[current_approval_index].approver_role)
+      The role attached to the CURRENT step is the ultimate authority.
+      No caller can act on a step whose role they don't hold, even if
+      they're the designated Employee.leave_approver or happen to
+      match the resolved current_approver email.
+
+      Allowed if:
+        1. caller is Administrator
+        2. caller holds the role of approval_flow[current_approval_index]
+
+    Before this change, condition (3) "caller == doc.leave_approver"
+    was a free pass — letting anyone designated as the per-employee
+    leave_approver approve EVERY step regardless of role. That's how
+    Bindu (HR Leave Approver only) was able to approve a Sales HOD
+    step on Beeran Ashraf's leave: she was his Employee.leave_approver,
+    and the old gate ignored role mismatch.
+
+    The widened-role behaviour (Bindu can approve a step assigned to
+    another GM Leave Approver holder, since she's in the role) is
+    preserved by condition (2): any role-holder may approve, not just
+    the resolved current_approver.
+
+    Edge case — empty chain: if approval_flow is missing or the step
+    row has no role label, fall back to the original tight check
+    (caller == current_approver). This shouldn't happen in normal
+    operation; the chain-integrity hook regenerates empty chains on
+    every save.
     """
     user = frappe.session.user
     if user == "Administrator":
         return True
-    if doc.current_approver and user == doc.current_approver:
-        return True
-    if doc.get("leave_approver") and user == doc.leave_approver:
-        return True
+
     idx = doc.current_approval_index or 0
-    if doc.approval_flow and 0 <= idx < len(doc.approval_flow):
-        step_role = doc.approval_flow[idx].approver_role
-        if step_role and step_role in frappe.get_roles(user):
-            return True
-    return False
+    if not (doc.approval_flow and 0 <= idx < len(doc.approval_flow)):
+        # No chain rows — fall back to the strict-original gate
+        return bool(doc.current_approver and user == doc.current_approver)
+
+    step_role = doc.approval_flow[idx].approver_role
+    if not step_role:
+        # Chain row has no role label — defensive fallback
+        return bool(doc.current_approver and user == doc.current_approver)
+
+    # AUTHORITY: caller must hold the role of THIS step.
+    # No leave_approver-field bypass. No current_approver-match bypass.
+    return step_role in frappe.get_roles(user)
 
 
 def get_approver_by_role(role):
@@ -143,17 +162,24 @@ def generate_approval_flow(doc, designation):
     else:
         role_sequence = ["HR Leave Approver", "GM Leave Approver"]
         
-    # Clear the existing approval flow child table
-    doc.set("approval_flow", [])
-    
-    # Populate the approval flow child table
+    # TRANSACTIONAL: resolve ALL approvers BEFORE touching the doc's
+    # approval_flow. Avoids the corruption pattern where clear-then-
+    # throw left the leave with an empty chain (HR-LAP-2026-00194
+    # incident 2026-06-12).
+    resolved = []
     for role in role_sequence:
         approver = get_approver_by_role(role)
         if not approver:
             frappe.throw(
-                _("Could not locate an active user with the role '{0}'. Please make sure a user is configured with this role and linked to an active Employee.").format(role)
+                _("Could not locate an active user with the role '{0}'. "
+                  "Please make sure a user is configured with this role "
+                  "and linked to an active Employee.").format(role)
             )
-            
+        resolved.append((role, approver))
+
+    # All resolved — NOW commit to the doc
+    doc.set("approval_flow", [])
+    for role, approver in resolved:
         doc.append("approval_flow", {
             "approver": approver,
             "approver_role": role,
@@ -240,6 +266,11 @@ def validate_leave(doc, method=None):
     """
     Hook triggered on validation of Leave Application.
     - Generates the multi-step approval chain dynamically per designation.
+    - SELF-HEALS corrupted state: if `custom_approval_status` is set but
+      `approval_flow` is empty (the corruption pattern that caused
+      HR-LAP-2026-00194 to render with Bindu in the Sales HOD slot on
+      2026-06-12), regenerate the chain BEFORE save commits — preventing
+      future stale-render incidents.
     - Enforces supporting-certificate upload when the selected Leave Type
       has custom_require_certificate flagged (e.g. Sick Leave).
     """
@@ -256,13 +287,22 @@ def validate_leave(doc, method=None):
 
     designation = frappe.db.get_value("Employee", doc.employee, "designation")
 
-    # Auto generate approval flow on creation or when employee changes
-    if doc.is_new():
+    # SELF-HEAL: cas/index set but no chain → regenerate
+    needs_regen = bool(
+        doc.is_new()
+        or not doc.approval_flow
+        or (doc.get("custom_approval_status") and not doc.approval_flow)
+    )
+
+    if not needs_regen:
+        # Also handle the employee-change case
+        db_employee = frappe.db.get_value(
+            "Leave Application", doc.name, "employee")
+        if db_employee != doc.employee:
+            needs_regen = True
+
+    if needs_regen:
         generate_approval_flow(doc, designation)
-    else:
-        db_employee = frappe.db.get_value("Leave Application", doc.name, "employee")
-        if db_employee != doc.employee or not doc.approval_flow:
-            generate_approval_flow(doc, designation)
 
 
 def _enforce_certificate_requirement(doc):
