@@ -14,6 +14,16 @@ frappe.ui.form.on('Employee Transfer', {
         if (frm.doc.docstatus === 1) {
             frm.dashboard.add_indicator(
                 __('Side-effects auto-applied'), 'green');
+            // Cancel-prevention notice — server also hard-blocks
+            // before_cancel, this just sets the expectation up front.
+            frm.dashboard.add_comment(
+                __('🚫 Cancel disabled — cancelling would not undo the '
+                + 'side-effects. To undo this transfer, create a NEW '
+                + 'Employee Transfer in the REVERSE direction '
+                + '(e.g. Sales → Billing) and submit it.'),
+                'orange',
+                true
+            );
         }
     },
 

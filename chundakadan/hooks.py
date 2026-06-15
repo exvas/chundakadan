@@ -148,7 +148,8 @@ doc_events = {
         "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
     },
     "Employee Transfer": {
-        "on_submit": "chundakadan.doc_events.employee_transfer.apply_chundakadan_side_effects"
+        "on_submit": "chundakadan.doc_events.employee_transfer.apply_chundakadan_side_effects",
+        "before_cancel": "chundakadan.doc_events.employee_transfer.block_cancel"
     },
     "Customer Visit Log": {
         "after_insert": "chundakadan.doc_events.customer_visit_log.resolve_location"

@@ -39,6 +39,48 @@ DEPT_TO_STRUCTURE = {
 }
 
 
+def block_cancel(doc, method=None):
+    """before_cancel hook on Employee Transfer.
+
+    Hard-block cancellation. Cancelling does NOT auto-reverse the
+    side-effects this app applied (Sales Person enable, MOP rows,
+    shift_location, Salary Structure switch, Role Profile, leave_approver).
+    Letting HR cancel would leave the system in a half-applied state
+    that's painful to clean up manually.
+
+    The supported "undo" path is to submit a NEW Employee Transfer in
+    the OPPOSITE direction — the same hook then reverses everything
+    symmetrically and the audit trail keeps both transfers visible.
+
+    Administrator bypass: kept for emergency data fixes only. Anyone
+    else gets a clear error message pointing to the reverse-transfer
+    pattern.
+    """
+    if frappe.session.user == "Administrator":
+        # Admin override — log a Comment so we still see who did it
+        doc.add_comment(
+            "Info",
+            "<b>⚠ Cancel allowed via Administrator bypass.</b> "
+            "Side-effects (Sales Person, MOP, SSA, etc.) were NOT "
+            "auto-reversed. Verify the affected records manually.",
+        )
+        return
+
+    frappe.throw(
+        _(
+            "Cancellation of Employee Transfer is disabled.<br><br>"
+            "Cancelling would not undo the side-effects this transfer "
+            "applied (Sales Person, MOP Mapping, Shift Location, "
+            "Salary Structure, Role Profile, Leave Approver).<br><br>"
+            "<b>To undo:</b> create a NEW Employee Transfer in the "
+            "REVERSE direction (e.g. Sales → Billing) and submit it. "
+            "That re-runs all side-effects symmetrically and leaves "
+            "both transfers visible in the audit log."
+        ),
+        title=_("Cancel Not Allowed"),
+    )
+
+
 def apply_chundakadan_side_effects(doc, method=None):
     """on_submit hook on Employee Transfer.
 
