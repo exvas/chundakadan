@@ -65,6 +65,7 @@ doctype_js = {
     "Employee Advance" : "public/js/expense_approval.js",
     "Payment Request" : "public/js/expense_approval.js",
     "Office Expense Voucher" : "public/js/office_expense_voucher.js",
+    "Employee Transfer" : "public/js/employee_transfer.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",
@@ -146,6 +147,9 @@ doc_events = {
         ],
         "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
     },
+    "Employee Transfer": {
+        "on_submit": "chundakadan.doc_events.employee_transfer.apply_chundakadan_side_effects"
+    },
     "Customer Visit Log": {
         "after_insert": "chundakadan.doc_events.customer_visit_log.resolve_location"
     },
@@ -206,6 +210,7 @@ before_install = [
     "chundakadan.install.ensure_oev_settings_fields",
     "chundakadan.install.ensure_oev_workspace_pin",
     "chundakadan.install.ensure_je_oev_reference_option",
+    "chundakadan.install.ensure_employee_transfer_custom_fields",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
@@ -228,6 +233,7 @@ before_migrate = [
     "chundakadan.install.ensure_oev_settings_fields",
     "chundakadan.install.ensure_oev_workspace_pin",
     "chundakadan.install.ensure_je_oev_reference_option",
+    "chundakadan.install.ensure_employee_transfer_custom_fields",
 ]
 
 # Uninstallation

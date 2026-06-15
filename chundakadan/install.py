@@ -1112,3 +1112,64 @@ def ensure_employee_advance_defaults(*args, **kwargs):
     except Exception as e:
         print(f"chundakadan.install: could not set default on "
               f"repay_unclaimed_amount_from_salary: {e}")
+
+
+def ensure_employee_transfer_custom_fields(*args, **kwargs):
+    """Add `custom_transfer_type` Select + `custom_transfer_remarks`
+    on Employee Transfer.
+
+    The transfer_type drives the chundakadan side-effect engine in
+    doc_events.employee_transfer.apply_chundakadan_side_effects —
+    deciding whether to create/disable Sales Person, add/remove MOP
+    mapping, set/clear shift_location, switch Salary Structure, etc.
+
+    Idempotent. Skipped if HRMS Employee Transfer doctype is absent.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Employee Transfer"):
+        return
+
+    fields = [
+        {
+            "fieldname": "custom_transfer_type",
+            "label": "Transfer Type",
+            "fieldtype": "Select",
+            "options": "\nTo Sales & Marketing\nFrom Sales & Marketing\n"
+                       "Office to Office\nCompany Change\nOther",
+            "insert_after": "department",
+            "description": "Auto-detected from department change. Drives "
+                           "Sales Person, MOP Mapping, Shift Location and "
+                           "Salary Structure side-effects on submit.",
+            "read_only": 0,
+            "in_standard_filter": 1,
+        },
+        {
+            "fieldname": "custom_transfer_remarks",
+            "label": "Internal Transfer Notes",
+            "fieldtype": "Small Text",
+            "insert_after": "custom_transfer_type",
+            "description": "HR-internal notes — not shown to the employee.",
+        },
+    ]
+
+    created = 0
+    for cf in fields:
+        cf_name = f"Employee Transfer-{cf['fieldname']}"
+        if frappe.db.exists("Custom Field", cf_name):
+            continue
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Employee Transfer",
+                **cf,
+            }).insert(ignore_permissions=True)
+            created += 1
+            print(f"chundakadan.install: created Custom Field "
+                  f"Employee Transfer.{cf['fieldname']}")
+        except Exception as e:
+            print(f"chundakadan.install: could not create "
+                  f"{cf_name}: {e}")
+    if created:
+        frappe.db.commit()
+        frappe.clear_cache(doctype="Employee Transfer")
