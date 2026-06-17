@@ -212,6 +212,7 @@ before_install = [
     "chundakadan.install.ensure_oev_workspace_pin",
     "chundakadan.install.ensure_je_oev_reference_option",
     "chundakadan.install.ensure_employee_transfer_custom_fields",
+    "chundakadan.install.ensure_payroll_entry_form_defaults",
 ]
 before_migrate = [
     "chundakadan.install.ensure_firebase_admin_installed",
@@ -235,6 +236,7 @@ before_migrate = [
     "chundakadan.install.ensure_oev_workspace_pin",
     "chundakadan.install.ensure_je_oev_reference_option",
     "chundakadan.install.ensure_employee_transfer_custom_fields",
+    "chundakadan.install.ensure_payroll_entry_form_defaults",
 ]
 
 # Uninstallation

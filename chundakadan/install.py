@@ -1114,6 +1114,72 @@ def ensure_employee_advance_defaults(*args, **kwargs):
               f"repay_unclaimed_amount_from_salary: {e}")
 
 
+def ensure_payroll_entry_form_defaults(*args, **kwargs):
+    """Two Payroll Entry form tweaks for Chundakadan:
+
+      1. Hide `salary_slip_based_on_timesheet` — Chundakadan doesn't
+         use timesheets for salary computation (Fixed-30-Days basis +
+         static earnings, see [[project-chundakadan-hr-payroll]]).
+         Leaving the box visible just tempts HR to tick it and break
+         the payroll run.
+
+      2. Default `payroll_frequency` to "Monthly" — every Chundakadan
+         run is monthly. Forcing HR to pick it each time wastes a click
+         and risks them picking the wrong frequency.
+
+    Both via Property Setters on the standard HRMS doctype — no schema
+    changes, no fork. Idempotent.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Payroll Entry"):
+        return
+
+    setters = [
+        {
+            "doc_type": "Payroll Entry",
+            "field_name": "salary_slip_based_on_timesheet",
+            "property": "hidden",
+            "property_type": "Check",
+            "value": "1",
+        },
+        {
+            "doc_type": "Payroll Entry",
+            "field_name": "payroll_frequency",
+            "property": "default",
+            "property_type": "Text",
+            "value": "Monthly",
+        },
+    ]
+
+    for ps in setters:
+        ps_name = (f"{ps['doc_type']}-{ps['field_name']}"
+                   f"-{ps['property']}")
+        if frappe.db.exists("Property Setter", ps_name):
+            # Update value if it drifted
+            cur = frappe.db.get_value("Property Setter", ps_name, "value")
+            if cur != ps["value"]:
+                frappe.db.set_value("Property Setter", ps_name, "value",
+                                     ps["value"], update_modified=False)
+                print(f"chundakadan.install: updated PS {ps_name} "
+                      f"({cur!r} → {ps['value']!r})")
+            continue
+        try:
+            frappe.get_doc({
+                "doctype": "Property Setter",
+                "doctype_or_field": "DocField",
+                **ps,
+            }).insert(ignore_permissions=True)
+            print(f"chundakadan.install: created PS {ps_name} "
+                  f"= {ps['value']!r}")
+        except Exception as e:
+            print(f"chundakadan.install: could not create {ps_name}: "
+                  f"{str(e)[:120]}")
+
+    frappe.db.commit()
+    frappe.clear_cache(doctype="Payroll Entry")
+
+
 def ensure_employee_transfer_custom_fields(*args, **kwargs):
     """Add `custom_transfer_type` Select + `custom_transfer_remarks`
     on Employee Transfer.
