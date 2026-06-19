@@ -292,11 +292,14 @@ def reset_employee_password(employee, new_password=None, send_reset_email=0):
 
     log = []
     if int(send_reset_email or 0) and not new_password:
-        from frappe.utils.password import update_password
-        from frappe.core.doctype.user.user import reset_password
+        # Use the User._reset_password method directly — this generates a
+        # reset key, stamps last_reset_password_key_generated_on, and emails
+        # the link. Wrap user_doc fetch in ignore_permissions because plain
+        # HR User can't read the User doctype without help.
         try:
-            user = frappe.get_doc("User", user_id)
-            user.reset_password(send_email=True)
+            user_doc = frappe.get_doc("User", user_id)
+            user_doc.validate_reset_password()
+            user_doc._reset_password(send_email=True)
             log.append(f"Password-reset email sent to {user_id}")
         except Exception as e:
             frappe.throw(_("Failed to send reset email: {0}").format(str(e)))
@@ -346,15 +349,31 @@ def disable_employee_user(employee, relieving_date=None, reason=None):
     else:
         log.append("No User linked — skipping user disable")
 
-    # 3. Employee.status = Left + relieving_date
+    # 3. Employee.status = Left + relieving_date.
+    # ERPNext blocks Active → Left if anyone reports_to this employee
+    # (InactiveEmployeeStatusError). The user disable + session revoke
+    # above is the security-critical part — degrade gracefully if the
+    # status change fails so HR can fix the reports-to chain separately.
     if emp.status != "Left":
         emp.status = "Left"
         emp.relieving_date = getdate(relieving_date)
         if reason and not emp.reason_for_leaving:
             emp.reason_for_leaving = reason
         emp.flags.ignore_permissions = True
-        emp.save()
-        log.append(f"Employee marked Left, relieving_date={relieving_date}")
+        try:
+            emp.save()
+            log.append(f"Employee marked Left, relieving_date={relieving_date}")
+        except Exception as e:
+            # Rollback the in-memory mutation so subsequent reads are clean
+            emp.reload()
+            err_msg = str(e)
+            # Surface the specific blocker (usually reports_to) to HR
+            if "reporting to" in err_msg or "Inactive" in err_msg:
+                log.append("⚠ Employee status NOT changed — other employees still "
+                            "report to this person. Reassign their reports_to "
+                            "and then click Disable User again.")
+            else:
+                log.append(f"⚠ Employee status NOT changed: {err_msg[:150]}")
 
     # 4. Disable Sales Person
     _disable_sales_person(employee, log)
