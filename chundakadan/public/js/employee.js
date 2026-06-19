@@ -6,6 +6,52 @@
 // Idempotent server-side: rows already covered by an existing
 // allocation in the same window are skipped.
 
+// Dispatch the right fix action for a pending setup key.
+// Re-uses existing HR Action button clicks where possible so we don't
+// duplicate dialog code.
+function handle_setup_fix(frm, key) {
+    if (key === 'user_account') {
+        // Trigger the existing "Create User & Setup" HR Action
+        const btn = frm.custom_buttons[__('Create User & Setup')];
+        if (btn) { btn.click(); }
+        else { frappe.show_alert({ message: __('Open HR Actions → Create User & Setup'), indicator: 'orange' }); }
+        return;
+    }
+    if (key === 'leave_allocation') {
+        // Trigger the existing "Allocate Annual Leaves" HR Action
+        const btn = frm.custom_buttons[__('Allocate Annual Leaves')];
+        if (btn) { btn.click(); }
+        else { frappe.show_alert({ message: __('Open HR Actions → Allocate Annual Leaves'), indicator: 'orange' }); }
+        return;
+    }
+    if (key === 'leave_policy') {
+        frappe.new_doc('Leave Policy Assignment', { employee: frm.doc.name });
+        return;
+    }
+    if (key === 'shift_assignment') {
+        frappe.new_doc('Shift Assignment', {
+            employee: frm.doc.name,
+            company: frm.doc.company,
+            status: 'Active',
+        });
+        return;
+    }
+    if (key === 'salary_structure') {
+        frappe.new_doc('Salary Structure Assignment', {
+            employee: frm.doc.name,
+            company: frm.doc.company,
+        });
+        return;
+    }
+    if (key === 'reports_to') {
+        // Switch to Joining tab and focus reports_to field
+        frm.scroll_to_field('reports_to');
+        frappe.show_alert({ message: __('Pick a manager and Save the Employee.'), indicator: 'blue' });
+        return;
+    }
+    frappe.show_alert({ message: __('No quick fix mapped for: {0}', [key]), indicator: 'red' });
+}
+
 // Render the "Setup Pending" banner + page-header indicator.
 // Pulls from chundakadan.api.employee_setup_status.get_setup_status and
 // shows HR exactly what's missing for this employee with one-click fix links.
@@ -38,16 +84,28 @@ function render_setup_status(frm) {
                 'blue',
             );
         } else {
-            // Required items pending — loud orange banner with fix links
+            // Required items pending — loud orange banner with real action buttons
+            const button_label = {
+                user_account:      __('Create User'),
+                leave_allocation:  __('Allocate Now'),
+                leave_policy:      __('Assign Policy'),
+                shift_assignment:  __('Assign Shift'),
+                salary_structure:  __('Assign Structure'),
+                reports_to:        __('Set Reports To'),
+            };
             const items = pending.map(p => {
-                const link = p.fix_url
-                    ? `<a href="${p.fix_url}" style="color:#b8590a;font-weight:600;">${frappe.utils.escape_html(p.fix_hint)} →</a>`
-                    : `<span style="color:#b8590a;font-weight:600;">${frappe.utils.escape_html(p.fix_hint)}</span>`;
                 const opt = p.optional ? ' <span style="font-size:11px;color:#888;">(optional)</span>' : '';
-                return `<div style="margin:6px 0;padding:6px 10px;background:#fff;border-radius:3px;">
-                    <span style="color:#d04a02;">✗</span>
-                    <b>${frappe.utils.escape_html(p.label)}</b>${opt}<br>
-                    <span style="margin-left:20px;font-size:12px;">${link}</span>
+                const btn_label = button_label[p.key] || __('Fix');
+                return `<div style="margin:6px 0;padding:8px 12px;background:#fff;border-radius:3px;display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <span style="color:#d04a02;font-size:14px;">✗</span>
+                        <b>${frappe.utils.escape_html(p.label)}</b>${opt}
+                    </div>
+                    <button class="btn btn-sm btn-warning cdn-setup-fix-btn"
+                            data-cdn-key="${p.key}"
+                            style="background:#f0ad4e;color:#fff;border:none;padding:4px 14px;font-weight:600;border-radius:3px;cursor:pointer;">
+                        ${btn_label} →
+                    </button>
                 </div>`;
             }).join('');
             const done_count = res.complete;
@@ -61,6 +119,16 @@ function render_setup_status(frm) {
                     ${items}
                 </div>`;
             frm.dashboard.set_headline_alert(banner, 'orange');
+
+            // Wire button click → run the right fix action
+            // (re-bind every refresh so the buttons stay attached after reload_doc)
+            setTimeout(() => {
+                const $banner = frm.dashboard.wrapper.find('.cdn-setup-fix-btn').off('click.cdn-setup');
+                $banner.on('click.cdn-setup', function () {
+                    const key = $(this).data('cdn-key');
+                    handle_setup_fix(frm, key);
+                });
+            }, 100);
         }
 
         // Page-level indicator (top breadcrumb area)
