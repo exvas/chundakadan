@@ -6,10 +6,81 @@
 // Idempotent server-side: rows already covered by an existing
 // allocation in the same window are skipped.
 
+// Render the "Setup Pending" banner + page-header indicator.
+// Pulls from chundakadan.api.employee_setup_status.get_setup_status and
+// shows HR exactly what's missing for this employee with one-click fix links.
+function render_setup_status(frm) {
+    if (frm.doc.__islocal || frm.doc.status !== 'Active') return;
+
+    frappe.call({
+        method: 'chundakadan.chundakadan.api.employee_setup_status.get_setup_status',
+        args: { employee: frm.doc.name },
+        no_spinner: true,
+    }).then((r) => {
+        const res = r && r.message;
+        if (!res) return;
+        const pending = res.checks.filter(c => !c.ok);
+        const required_pending = pending.filter(c => !c.optional);
+
+        // Page-header indicator (green / orange / red)
+        if (required_pending.length === 0 && pending.length === 0) {
+            frm.dashboard.set_headline_alert(
+                '<div style="padding:6px 0;color:#0a7f3f;"><b>✓ Setup Complete</b> — all onboarding items done for ' +
+                frappe.utils.escape_html(res.employee_name) + '.</div>',
+                'green',
+            );
+        } else if (required_pending.length === 0) {
+            // Only optional items missing — soft note
+            frm.dashboard.set_headline_alert(
+                '<div style="padding:6px 0;"><b>✓ Setup Complete</b> — ' + pending.length +
+                ' optional item(s) not set: ' +
+                pending.map(p => frappe.utils.escape_html(p.label)).join(', ') + '</div>',
+                'blue',
+            );
+        } else {
+            // Required items pending — loud orange banner with fix links
+            const items = pending.map(p => {
+                const link = p.fix_url
+                    ? `<a href="${p.fix_url}" style="color:#b8590a;font-weight:600;">${frappe.utils.escape_html(p.fix_hint)} →</a>`
+                    : `<span style="color:#b8590a;font-weight:600;">${frappe.utils.escape_html(p.fix_hint)}</span>`;
+                const opt = p.optional ? ' <span style="font-size:11px;color:#888;">(optional)</span>' : '';
+                return `<div style="margin:6px 0;padding:6px 10px;background:#fff;border-radius:3px;">
+                    <span style="color:#d04a02;">✗</span>
+                    <b>${frappe.utils.escape_html(p.label)}</b>${opt}<br>
+                    <span style="margin-left:20px;font-size:12px;">${link}</span>
+                </div>`;
+            }).join('');
+            const done_count = res.complete;
+            const total = res.total;
+            const banner = `
+                <div style="background:#fff7e6;padding:14px 16px;border-left:4px solid #f0ad4e;border-radius:4px;">
+                    <div style="font-size:14px;margin-bottom:8px;">
+                        <b style="color:#b8590a;">⚠ ${required_pending.length} setup step(s) pending</b>
+                        &nbsp;·&nbsp; <span style="color:#666;">${done_count} of ${total} done</span>
+                    </div>
+                    ${items}
+                </div>`;
+            frm.dashboard.set_headline_alert(banner, 'orange');
+        }
+
+        // Page-level indicator (top breadcrumb area)
+        if (required_pending.length > 0) {
+            frm.page.set_indicator(
+                __('Setup Pending: {0}', [required_pending.length]),
+                'orange',
+            );
+        } else if (pending.length === 0) {
+            frm.page.set_indicator(__('Setup Complete'), 'green');
+        }
+    });
+}
+
 frappe.ui.form.on('Employee', {
     refresh(frm) {
         if (frm.doc.__islocal) return;
         if (frm.doc.status !== 'Active') return;
+
+        render_setup_status(frm);
 
         frm.add_custom_button(
             __('Allocate Annual Leaves'),
