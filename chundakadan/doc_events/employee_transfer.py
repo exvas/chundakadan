@@ -113,6 +113,23 @@ def apply_chundakadan_side_effects(doc, method=None):
 
     actions_log = handler(doc, old_dept, new_dept)
 
+    # Step 7 (shared) — re-apply User Permissions using the NEW
+    # department/designation. Runs for EVERY transfer type:
+    #   • Promotion to Manager → strips Employee=self restriction so
+    #     they can see other employees to approve / report
+    #   • Demotion to Staff   → adds Employee=self restriction back
+    #   • Cross-company move  → swaps the Company restriction to the
+    #     new company in multi-company benches
+    # Idempotent (apply_user_permissions only writes deltas).
+    try:
+        actions_log.extend(_reapply_user_permissions(
+            emp,
+            new_dept=new_dept,
+            new_company=doc.new_company or doc.company,
+        ))
+    except Exception as e:
+        actions_log.append(f"User Permission re-apply failed: {str(e)[:120]}")
+
     if actions_log:
         body = (
             "<b>Chundakadan transfer side-effects:</b>"
@@ -146,6 +163,43 @@ def _detect_transfer_type(old_dept, new_dept, doc):
     if old_dept and new_dept and old_dept != new_dept:
         return "Office to Office"
     return "Other"
+
+
+def _reapply_user_permissions(employee_name, new_dept=None, new_company=None):
+    """Re-run chundakadan's user-permission policy on this employee
+    after a transfer. Returns log lines describing the changes.
+
+    Delegates to chundakadan.api.employee_user_actions._apply_user_permissions
+    so the same decision logic is used everywhere (Create User, the
+    HR Action "Apply Permissions" button, AND every Employee Transfer).
+
+    Common transfer scenarios this handles:
+      • Sales Exec promoted to Sales Manager
+        → strips Employee=self perm so they can see other employees
+      • Manager demoted back to staff (rare but possible)
+        → adds Employee=self perm back
+      • Move across companies in a multi-company bench
+        → swaps the Company restriction to the new company
+
+    new_dept / new_company override what's currently saved on Employee
+    (used at on_submit time when ERPNext hasn't applied the transfer
+    fields to the Employee record yet — Transfer Details rows update
+    fields piecemeal).
+    """
+    log = []
+    user_id = frappe.db.get_value("Employee", employee_name, "user_id")
+    if not user_id:
+        log.append("No User linked to employee — skipping user permission re-apply")
+        return log
+    emp = frappe.get_doc("Employee", employee_name)
+    # Override in-memory so the decision uses the post-transfer values
+    if new_dept and emp.department != new_dept:
+        emp.department = new_dept
+    if new_company and emp.company != new_company:
+        emp.company = new_company
+    from chundakadan.chundakadan.api.employee_user_actions import _apply_user_permissions
+    _apply_user_permissions(user_id, emp, log)
+    return log
 
 
 def _resolve_dept_targets(dept):

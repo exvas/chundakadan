@@ -208,6 +208,20 @@ frappe.ui.form.on('Employee', {
             __('HR Actions'),
         );
 
+        // Employee Transfer button — opens a new Employee Transfer
+        // pre-filled with this employee, so HR doesn't have to navigate
+        // away + look up the employee again. The transfer's on_submit
+        // hook re-applies user permissions automatically (so promotion
+        // → manager strips Employee=self perm; demotion adds it back).
+        if (frm.doc.status === 'Active') {
+            frm.add_custom_button(__('New Employee Transfer'), () => {
+                frappe.new_doc('Employee Transfer', {
+                    employee: frm.doc.name,
+                    company: frm.doc.company,
+                });
+            }, __('HR Actions'));
+        }
+
         // ===== Chundakadan user-management HR Actions =====
         // 4 buttons that let HR do common user-account chores without
         // touching the User doctype: create user, reset password,
