@@ -120,15 +120,15 @@ function render_setup_status(frm) {
                 </div>`;
             frm.dashboard.set_headline_alert(banner, 'orange');
 
-            // Wire button click → run the right fix action
-            // (re-bind every refresh so the buttons stay attached after reload_doc)
-            setTimeout(() => {
-                const $banner = frm.dashboard.wrapper.find('.cdn-setup-fix-btn').off('click.cdn-setup');
-                $banner.on('click.cdn-setup', function () {
-                    const key = $(this).data('cdn-key');
-                    handle_setup_fix(frm, key);
-                });
-            }, 100);
+            // Wire button click → run the right fix action.
+            // Use document-level delegation scoped by the unique class so we
+            // don't depend on which jQuery wrapper the dashboard exposes
+            // (frm.dashboard.wrapper vs $wrapper differs by Frappe version).
+            $(document).off('click.cdnSetup').on('click.cdnSetup', '.cdn-setup-fix-btn', function (e) {
+                e.preventDefault();
+                const key = $(this).attr('data-cdn-key');
+                if (key) handle_setup_fix(frm, key);
+            });
         }
 
         // Page-level indicator (top breadcrumb area)
