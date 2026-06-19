@@ -349,7 +349,7 @@ scheduler_events = {
 # Testing
 # -------
 
-# before_tests = "chundakadan.install.before_tests"
+before_tests = "chundakadan.install.before_tests"
 
 # Overriding Methods
 # ------------------------------
