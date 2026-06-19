@@ -42,11 +42,14 @@ def get_setup_status(employee):
         "fix_url": None,
     })
 
-    # 1b. User Permissions — only check if user_id is set. The expected
-    # set differs by role (manager / HR / GM don't get Employee=self;
-    # multi-company benches add a Company restriction). Re-uses the same
-    # decision logic as create_user_for_employee so the banner stays in
-    # sync with what Create User would actually apply.
+    # 1b. User Permissions — check both directions:
+    #   • Required perms MISSING → flag (e.g. normal staff with no
+    #     Employee=self perm, or multi-company user with no Company perm)
+    #   • Wrong perms PRESENT → flag (e.g. a manager who was previously
+    #     a regular staffer still has Employee=self perm restricting
+    #     their visibility — needs removal)
+    # Decision re-uses _should_restrict_to_self so banner ≡ what
+    # apply_user_permissions_for_employee would actually do.
     if emp.user_id:
         from chundakadan.chundakadan.api.employee_user_actions import (
             _should_restrict_to_self,
@@ -60,21 +63,29 @@ def get_setup_status(employee):
         has_company_perm = bool(emp.company and frappe.db.exists("User Permission", {
             "user": emp.user_id, "allow": "Company", "for_value": emp.company,
         }))
-        ok = (
-            (not needs_employee_perm or has_employee_perm)
-            and (not needs_company_perm or has_company_perm)
-        )
-        # Describe what's expected so HR knows WHY it's flagged
-        expected = []
-        if needs_employee_perm: expected.append(f"Employee={emp.name}")
-        if needs_company_perm:  expected.append(f"Company={emp.company}")
-        if not expected:        expected.append("none (manager/HR in single-company bench)")
+
+        missing = []
+        if needs_employee_perm and not has_employee_perm:
+            missing.append(f"add Employee={emp.name}")
+        if needs_company_perm and not has_company_perm:
+            missing.append(f"add Company={emp.company}")
+
+        wrong = []
+        if (not needs_employee_perm) and has_employee_perm:
+            # Manager/HR with leftover Employee=self perm → needs removal
+            wrong.append(f"remove Employee={emp.name} (manager/HR shouldn't be restricted)")
+
+        ok = not (missing or wrong)
+        if ok:
+            value = "all correct"
+        else:
+            value = "; ".join(missing + wrong)
         checks.append({
             "key": "user_permissions",
             "label": _("User Permissions"),
             "ok": ok,
-            "value": ", ".join(expected) if ok else "missing",
-            "fix_hint": _("Re-run HR Actions → Create User & Setup (or add manually)"),
+            "value": value,
+            "fix_hint": _("Click to apply / clean up user permissions"),
             "fix_url": f"/app/user-permission?user={emp.user_id}",
         })
 

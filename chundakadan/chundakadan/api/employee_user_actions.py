@@ -249,9 +249,23 @@ def _apply_user_permissions(user_id, emp, log):
             apply_to_all=1, hide_descendants=1, is_default=1,
         )
     else:
+        # Manager / HR / GM — they shouldn't be restricted. If a stale
+        # Employee=self perm exists from a previous role, REMOVE it so
+        # they can see other employees again. (Common scenario: regular
+        # staffer gets promoted to Manager; the old restriction would
+        # silently keep blocking their new responsibilities.)
         reason = "HR/GM dept" if _is_hr_dept(emp.department) else "manager designation"
-        log.append(f"Skipped Employee user permission ({reason}) — "
-                    f"this user needs to see other employees")
+        stale = frappe.db.get_value("User Permission", {
+            "user": user_id, "allow": "Employee", "for_value": emp.name,
+        }, "name")
+        if stale:
+            frappe.delete_doc("User Permission", stale,
+                                force=True, ignore_permissions=True)
+            log.append(f"Removed stale Employee=self user permission "
+                        f"({reason} — should see other employees)")
+        else:
+            log.append(f"Skipped Employee user permission ({reason}) — "
+                        f"this user needs to see other employees")
 
     # 2. Company restriction (only meaningful in multi-company benches)
     n_companies = frappe.db.count("Company")
