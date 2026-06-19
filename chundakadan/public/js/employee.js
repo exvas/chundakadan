@@ -41,5 +41,171 @@ frappe.ui.form.on('Employee', {
             },
             __('HR Actions'),
         );
+
+        // ===== Chundakadan user-management HR Actions =====
+        // 4 buttons that let HR do common user-account chores without
+        // touching the User doctype: create user, reset password,
+        // disable on exit, re-enable on re-hire. Each opens a small
+        // dialog and calls a chundakadan API method.
+        const has_user = !!frm.doc.user_id;
+
+        if (!has_user) {
+            frm.add_custom_button(__('Create User & Setup'), () => {
+                const default_email = frm.doc.company_email || frm.doc.personal_email || '';
+                const d = new frappe.ui.Dialog({
+                    title: __('Create User for {0}', [frm.doc.employee_name || frm.doc.name]),
+                    fields: [
+                        { fieldtype: 'Data', fieldname: 'email', label: __('Email'),
+                          options: 'Email', default: default_email, reqd: 1,
+                          description: __('Will become the login email. Auto-filled from Employee.company_email if set.') },
+                        { fieldtype: 'Check', fieldname: 'send_welcome_email', label: __('Send welcome email with password-setup link'),
+                          default: 1 },
+                        { fieldtype: 'Check', fieldname: 'is_manager', label: __('This employee is a manager / approver'),
+                          description: __('If checked, adds to Chundakadan Settings → Manager Details with edit + submit + approval flags. Auto-detected from designation (Manager / HOD / GM) when left unchecked.') },
+                    ],
+                    primary_action_label: __('Create User'),
+                    primary_action(values) {
+                        d.hide();
+                        frappe.call({
+                            method: 'chundakadan.chundakadan.api.employee_user_actions.create_user_for_employee',
+                            args: {
+                                employee: frm.doc.name,
+                                email: values.email,
+                                send_welcome_email: values.send_welcome_email ? 1 : 0,
+                                is_manager: values.is_manager ? 1 : 0,
+                            },
+                            freeze: true,
+                            freeze_message: __('Creating user...'),
+                        }).then((r) => {
+                            const res = r && r.message;
+                            if (!res) return;
+                            frappe.msgprint({
+                                title: __('User Created'),
+                                indicator: 'green',
+                                message: __('<b>User:</b> {0}<br><br>{1}',
+                                    [res.user, (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>')]),
+                            });
+                            frm.reload_doc();
+                        });
+                    },
+                });
+                d.show();
+            }, __('HR Actions'));
+        }
+
+        if (has_user) {
+            // Reset Password
+            frm.add_custom_button(__('Reset Password'), () => {
+                const d = new frappe.ui.Dialog({
+                    title: __('Reset password for {0}', [frm.doc.user_id]),
+                    fields: [
+                        { fieldtype: 'Select', fieldname: 'mode', label: __('How?'),
+                          options: ['Type a new password', 'Send password-reset email'].join('\n'),
+                          default: 'Type a new password', reqd: 1 },
+                        { fieldtype: 'Password', fieldname: 'new_password', label: __('New Password'),
+                          depends_on: "eval:doc.mode=='Type a new password'",
+                          mandatory_depends_on: "eval:doc.mode=='Type a new password'",
+                          description: __('Minimum 6 characters.') },
+                    ],
+                    primary_action_label: __('Reset'),
+                    primary_action(values) {
+                        d.hide();
+                        const send_email = values.mode === 'Send password-reset email';
+                        frappe.call({
+                            method: 'chundakadan.chundakadan.api.employee_user_actions.reset_employee_password',
+                            args: {
+                                employee: frm.doc.name,
+                                new_password: send_email ? null : values.new_password,
+                                send_reset_email: send_email ? 1 : 0,
+                            },
+                            freeze: true,
+                        }).then((r) => {
+                            const res = r && r.message;
+                            if (!res) return;
+                            frappe.msgprint({
+                                title: __('Password Reset'),
+                                indicator: 'green',
+                                message: (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                            });
+                        });
+                    },
+                });
+                d.show();
+            }, __('HR Actions'));
+
+            // Check user enabled status to decide which of Disable / Re-enable to show
+            frappe.db.get_value('User', frm.doc.user_id, 'enabled').then((r) => {
+                const user_enabled = !!(r && r.message && r.message.enabled);
+
+                if (user_enabled) {
+                    frm.add_custom_button(__('Disable User (Exit Employee)'), () => {
+                        const d = new frappe.ui.Dialog({
+                            title: __('Exit {0}', [frm.doc.employee_name || frm.doc.name]),
+                            fields: [
+                                { fieldtype: 'Date', fieldname: 'relieving_date', label: __('Relieving Date'),
+                                  default: frappe.datetime.nowdate(), reqd: 1 },
+                                { fieldtype: 'Small Text', fieldname: 'reason', label: __('Reason for Leaving') },
+                                { fieldtype: 'HTML', fieldname: 'warn', options:
+                                    '<div style="background:#fff7e6;padding:8px;border-left:4px solid #f0ad4e;margin-top:8px;">' +
+                                    '<b>This will:</b><br>' +
+                                    '• Disable the user account + force-logout all sessions<br>' +
+                                    '• Set Employee status = Left<br>' +
+                                    '• Disable the Sales Person record (if any)<br>' +
+                                    '• Remove from Chundakadan Settings → Manager Details (if present)<br><br>' +
+                                    '<b>Historical data is preserved.</b> Use "Re-enable" to undo.' +
+                                    '</div>' },
+                            ],
+                            primary_action_label: __('Disable User'),
+                            primary_action(values) {
+                                d.hide();
+                                frappe.call({
+                                    method: 'chundakadan.chundakadan.api.employee_user_actions.disable_employee_user',
+                                    args: {
+                                        employee: frm.doc.name,
+                                        relieving_date: values.relieving_date,
+                                        reason: values.reason || '',
+                                    },
+                                    freeze: true,
+                                    freeze_message: __('Disabling user...'),
+                                }).then((r) => {
+                                    const res = r && r.message;
+                                    if (!res) return;
+                                    frappe.msgprint({
+                                        title: __('Employee Exited'),
+                                        indicator: 'orange',
+                                        message: (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                                    });
+                                    frm.reload_doc();
+                                });
+                            },
+                        });
+                        d.show();
+                    }, __('HR Actions'));
+                } else {
+                    frm.add_custom_button(__('Re-enable User'), () => {
+                        frappe.confirm(
+                            __('Re-activate {0}? This re-enables the user, sets Employee status back to Active, and re-creates the Sales Person if applicable.',
+                               [frm.doc.employee_name || frm.doc.name]),
+                            () => {
+                                frappe.call({
+                                    method: 'chundakadan.chundakadan.api.employee_user_actions.enable_employee_user',
+                                    args: { employee: frm.doc.name },
+                                    freeze: true,
+                                }).then((r) => {
+                                    const res = r && r.message;
+                                    if (!res) return;
+                                    frappe.msgprint({
+                                        title: __('User Re-enabled'),
+                                        indicator: 'green',
+                                        message: (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                                    });
+                                    frm.reload_doc();
+                                });
+                            },
+                        );
+                    }, __('HR Actions'));
+                }
+            });
+        }
     },
 });
