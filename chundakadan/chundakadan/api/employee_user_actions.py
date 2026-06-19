@@ -87,6 +87,33 @@ def _is_manager_designation(designation):
     return False
 
 
+def _is_hr_dept(department):
+    """True if this department needs to see all employees (HR / GM)."""
+    if not department:
+        return False
+    d = department.lower()
+    return ("hr" in d) or ("general manager" in d)
+
+
+def _should_restrict_to_self(emp):
+    """Decide whether this user should be restricted to their own
+    Employee record via User Permission.
+
+    Restrict (return True) for normal staff — they should only see
+    themselves in Employee lists, leave histories, attendance, etc.
+
+    DON'T restrict (return False) for HR / GM / Manager / HOD roles —
+    they need to see other employees to approve leaves, run reports,
+    manage the org. Auto-detected dynamically from department +
+    designation so the rule scales as the org grows.
+    """
+    if _is_hr_dept(emp.department):
+        return False
+    if _is_manager_designation(emp.designation):
+        return False
+    return True
+
+
 # ---------- Sales person helpers (subset of _apply_to_sales) ------------------
 
 
@@ -165,20 +192,77 @@ def _remove_from_manager_details(employee, log):
 # ---------- User Permission helpers -------------------------------------------
 
 
-def _ensure_user_permission(user_id, doctype, name, log):
-    """Create User Permission row if not already present."""
+def _ensure_user_permission(user_id, doctype, name, log,
+                              apply_to_all=1, hide_descendants=1, is_default=1):
+    """Create User Permission row if not already present.
+
+    Default flags match what HR clicks in the UI:
+      • apply_to_all_doctypes=1 — permission applies to every linked DocType
+      • hide_descendants=1     — for tree doctypes (Employee/Territory),
+                                 children of For Value are also hidden
+      • is_default=1           — this value becomes the user's default
+                                 in fields linked to that doctype
+    """
     if frappe.db.exists("User Permission", {
         "user": user_id, "allow": doctype, "for_value": name,
     }):
-        return
+        return False
     frappe.get_doc({
         "doctype": "User Permission",
         "user": user_id,
         "allow": doctype,
         "for_value": name,
-        "apply_to_all_doctypes": 1,
+        "apply_to_all_doctypes": int(apply_to_all),
+        "hide_descendants": int(hide_descendants),
+        "is_default": int(is_default),
     }).insert(ignore_permissions=True)
-    log.append(f"User Permission: restrict {doctype} = {name}")
+    log.append(
+        f"User Permission: restrict {doctype}={name}  "
+        f"(apply_all={apply_to_all}, hide_desc={hide_descendants}, default={is_default})"
+    )
+    return True
+
+
+def _apply_user_permissions(user_id, emp, log):
+    """Apply the standard chundakadan User Permission set for this
+    employee:
+
+      1. If normal staff (not manager / HR / GM) → restrict Employee=self
+         so they only see their own record in Employee lists, leave
+         history, attendance dashboard, etc.
+
+      2. ALWAYS restrict by Company (no hard-coded list — picks up the
+         employee's actual company from the doc). Only applied when the
+         bench has more than one Company configured — otherwise it's
+         redundant noise.
+
+    Skipped for HR / GM / Manager / HOD so they can see other employees
+    to approve leaves, run reports, manage the org. Decision is
+    re-derived from Employee.department + Employee.designation, so
+    promoting someone to Manager later just means re-running this action
+    (or deleting the existing user permission rows manually).
+    """
+    # 1. Employee restriction (conditional)
+    if _should_restrict_to_self(emp):
+        _ensure_user_permission(
+            user_id, "Employee", emp.name, log,
+            apply_to_all=1, hide_descendants=1, is_default=1,
+        )
+    else:
+        reason = "HR/GM dept" if _is_hr_dept(emp.department) else "manager designation"
+        log.append(f"Skipped Employee user permission ({reason}) — "
+                    f"this user needs to see other employees")
+
+    # 2. Company restriction (only meaningful in multi-company benches)
+    n_companies = frappe.db.count("Company")
+    if emp.company and n_companies > 1:
+        _ensure_user_permission(
+            user_id, "Company", emp.company, log,
+            apply_to_all=1, hide_descendants=0, is_default=1,
+        )
+    elif emp.company and n_companies <= 1:
+        log.append(f"Single-company bench — skipping Company user permission "
+                    f"(no other companies to filter out)")
 
 
 # ---------- Endpoints ----------------------------------------------------------
@@ -248,8 +332,11 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
     frappe.db.set_value("Employee", employee, "user_id", new_user.name)
     log.append(f"Linked Employee.user_id → {new_user.name}")
 
-    # User Permission so they only see their own Employee record
-    _ensure_user_permission(new_user.name, "Employee", employee, log)
+    # User Permissions — auto-decides based on department + designation:
+    #   • Normal staff: restrict Employee=self + Company=their company
+    #   • HR / GM / Manager: skip Employee restriction (need to see all),
+    #     still apply Company restriction in multi-company benches
+    _apply_user_permissions(new_user.name, emp, log)
 
     # Sales Person automation
     if _is_sales_dept(emp.department):
@@ -276,6 +363,34 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
         "log": log,
         "welcome_email_sent": bool(int(send_welcome_email or 0)),
     }
+
+
+@frappe.whitelist()
+def apply_user_permissions_for_employee(employee):
+    """Apply / fix the standard User Permission set for an EXISTING
+    employee + user. Useful when:
+      • User was created externally (not via Create User & Setup)
+      • Department changed (manager promotion → still has self-restrict)
+      • New company added (need Company restriction now)
+    Idempotent — won't duplicate existing rows."""
+    _check_hr_user()
+    emp = frappe.get_doc("Employee", employee)
+    if not emp.user_id:
+        frappe.throw(_("No User linked to this employee. Click Create User & Setup first."))
+
+    log = []
+    _apply_user_permissions(emp.user_id, emp, log)
+    if not log:
+        log.append("All required user permissions already in place — no change")
+
+    emp.add_comment(
+        "Info",
+        "<b>User Permissions applied via HR Action</b><br>"
+        + "<br>".join("• " + ln for ln in log)
+        + f"<br><br><i>By {frappe.session.user}</i>",
+    )
+    frappe.db.commit()
+    return {"user": emp.user_id, "log": log}
 
 
 @frappe.whitelist()

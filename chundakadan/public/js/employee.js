@@ -17,6 +17,32 @@ function handle_setup_fix(frm, key) {
         else { frappe.show_alert({ message: __('Open HR Actions → Create User & Setup'), indicator: 'orange' }); }
         return;
     }
+    if (key === 'user_permissions') {
+        // Apply the standard chundakadan User Permission set to the
+        // existing user — restrict to own Employee if normal staff,
+        // restrict to Company in multi-company benches, skip for HR/GM.
+        frappe.confirm(
+            __('Apply standard user permissions for {0}? Normal staff get restricted to their own Employee + Company; managers / HR / GM stay unrestricted.',
+               [frm.doc.employee_name || frm.doc.name]),
+            () => {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.employee_user_actions.apply_user_permissions_for_employee',
+                    args: { employee: frm.doc.name },
+                    freeze: true,
+                }).then((r) => {
+                    const res = r && r.message;
+                    if (!res) return;
+                    frappe.msgprint({
+                        title: __('User Permissions Applied'),
+                        indicator: 'green',
+                        message: (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                    });
+                    frm.reload_doc();
+                });
+            },
+        );
+        return;
+    }
     if (key === 'leave_allocation') {
         // Trigger the existing "Allocate Annual Leaves" HR Action
         const btn = frm.custom_buttons[__('Allocate Annual Leaves')];
@@ -87,6 +113,7 @@ function render_setup_status(frm) {
             // Required items pending — loud orange banner with real action buttons
             const button_label = {
                 user_account:      __('Create User'),
+                user_permissions:  __('Apply Permissions'),
                 leave_allocation:  __('Allocate Now'),
                 leave_policy:      __('Assign Policy'),
                 shift_assignment:  __('Assign Shift'),

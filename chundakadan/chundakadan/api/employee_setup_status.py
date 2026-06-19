@@ -42,6 +42,42 @@ def get_setup_status(employee):
         "fix_url": None,
     })
 
+    # 1b. User Permissions — only check if user_id is set. The expected
+    # set differs by role (manager / HR / GM don't get Employee=self;
+    # multi-company benches add a Company restriction). Re-uses the same
+    # decision logic as create_user_for_employee so the banner stays in
+    # sync with what Create User would actually apply.
+    if emp.user_id:
+        from chundakadan.chundakadan.api.employee_user_actions import (
+            _should_restrict_to_self,
+        )
+        needs_employee_perm = _should_restrict_to_self(emp)
+        has_employee_perm = bool(frappe.db.exists("User Permission", {
+            "user": emp.user_id, "allow": "Employee", "for_value": emp.name,
+        }))
+        n_companies = frappe.db.count("Company")
+        needs_company_perm = bool(emp.company and n_companies > 1)
+        has_company_perm = bool(emp.company and frappe.db.exists("User Permission", {
+            "user": emp.user_id, "allow": "Company", "for_value": emp.company,
+        }))
+        ok = (
+            (not needs_employee_perm or has_employee_perm)
+            and (not needs_company_perm or has_company_perm)
+        )
+        # Describe what's expected so HR knows WHY it's flagged
+        expected = []
+        if needs_employee_perm: expected.append(f"Employee={emp.name}")
+        if needs_company_perm:  expected.append(f"Company={emp.company}")
+        if not expected:        expected.append("none (manager/HR in single-company bench)")
+        checks.append({
+            "key": "user_permissions",
+            "label": _("User Permissions"),
+            "ok": ok,
+            "value": ", ".join(expected) if ok else "missing",
+            "fix_hint": _("Re-run HR Actions → Create User & Setup (or add manually)"),
+            "fix_url": f"/app/user-permission?user={emp.user_id}",
+        })
+
     # 2. Leave Allocation — at least one active allocation covering today
     has_alloc = frappe.db.exists("Leave Allocation", {
         "employee": employee,
