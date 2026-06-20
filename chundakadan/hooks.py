@@ -190,6 +190,15 @@ doc_events = {
     "Customer": {
         "before_insert": "chundakadan.doc_events.tax_defaults.apply_customer_defaults",
     },
+    # Auto-apply In-State GST template + tax_category on NEW invoices so
+    # HR doesn't have to remember (Sales Invoice -> Output GST In-state - CA,
+    # Purchase Invoice -> Input GST In-state - CA). Fills only when blank.
+    "Sales Invoice": {
+        "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults",
+    },
+    "Purchase Invoice": {
+        "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
+    },
     "Payment Entry": {
         # When a PE references an Office Expense Voucher is submitted or
         # cancelled, sync the voucher's status (legacy path — keep in
