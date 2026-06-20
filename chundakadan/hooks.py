@@ -185,10 +185,10 @@ doc_events = {
     # In-State row on Item; tax_category = In-State on Customer).
     # Only fills when blank — never overrides explicit values.
     "Item": {
-        "before_insert": "chundakadan.chundakadan.doc_events.tax_defaults.apply_item_defaults",
+        "before_insert": "chundakadan.doc_events.tax_defaults.apply_item_defaults",
     },
     "Customer": {
-        "before_insert": "chundakadan.chundakadan.doc_events.tax_defaults.apply_customer_defaults",
+        "before_insert": "chundakadan.doc_events.tax_defaults.apply_customer_defaults",
     },
     "Payment Entry": {
         # When a PE references an Office Expense Voucher is submitted or
