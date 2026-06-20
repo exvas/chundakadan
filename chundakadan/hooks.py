@@ -180,6 +180,16 @@ doc_events = {
         "validate": "chundakadan.chundakadan.api.expense_approval.validate",
         "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
     },
+    # Auto-apply chundakadan tax defaults on NEW Item / Customer so HR
+    # doesn't have to remember (custom_tax_template + GST 18% - CA /
+    # In-State row on Item; tax_category = In-State on Customer).
+    # Only fills when blank — never overrides explicit values.
+    "Item": {
+        "before_insert": "chundakadan.chundakadan.doc_events.tax_defaults.apply_item_defaults",
+    },
+    "Customer": {
+        "before_insert": "chundakadan.chundakadan.doc_events.tax_defaults.apply_customer_defaults",
+    },
     "Payment Entry": {
         # When a PE references an Office Expense Voucher is submitted or
         # cancelled, sync the voucher's status (legacy path — keep in
