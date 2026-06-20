@@ -17,6 +17,30 @@ function handle_setup_fix(frm, key) {
         else { frappe.show_alert({ message: __('Open HR Actions → Create User & Setup'), indicator: 'orange' }); }
         return;
     }
+    if (key === 'sales_person') {
+        frappe.confirm(
+            __('Create / repair Sales Person record + MOP mapping for {0}? Required for the field_sales mobile app to log customer visits.',
+               [frm.doc.employee_name || frm.doc.name]),
+            () => {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.employee_user_actions.apply_sales_person_setup_for_employee',
+                    args: { employee: frm.doc.name },
+                    freeze: true,
+                }).then((r) => {
+                    const res = r && r.message;
+                    if (!res) return;
+                    frappe.msgprint({
+                        title: __('Sales Person Ready'),
+                        indicator: 'green',
+                        message: '<b>Sales Person:</b> ' + frappe.utils.escape_html(res.sales_person || '?') + '<br><br>'
+                            + (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                    });
+                    frm.reload_doc();
+                });
+            },
+        );
+        return;
+    }
     if (key === 'user_permissions') {
         // Apply the standard chundakadan User Permission set to the
         // existing user — restrict to own Employee if normal staff,
@@ -114,6 +138,7 @@ function render_setup_status(frm) {
             const button_label = {
                 user_account:      __('Create User'),
                 user_permissions:  __('Apply Permissions'),
+                sales_person:      __('Setup Sales Person'),
                 leave_allocation:  __('Allocate Now'),
                 leave_policy:      __('Assign Policy'),
                 shift_assignment:  __('Assign Shift'),
@@ -207,6 +232,26 @@ frappe.ui.form.on('Employee', {
             },
             __('HR Actions'),
         );
+
+        // Setup Sales Person — fixes the field_sales mobile app's
+        // "Missing required field: sales_person" error for sales/marketing
+        // employees whose User account was created without going through
+        // Create User & Setup. Visible only when this employee is in a
+        // sales-dept and either has no Sales Person OR has a disabled one.
+        const dept = (frm.doc.department || '').toLowerCase();
+        const is_sales = dept.includes('sales') || dept.includes('marketing');
+        if (is_sales) {
+            frappe.db.get_value('Sales Person', { employee: frm.doc.name },
+                                  ['name', 'enabled']).then((r) => {
+                const sp = r && r.message;
+                const needs = !sp || !sp.name || !sp.enabled;
+                if (needs) {
+                    frm.add_custom_button(__('Setup Sales Person'), () => {
+                        handle_setup_fix(frm, 'sales_person');
+                    }, __('HR Actions'));
+                }
+            });
+        }
 
         // Employee Transfer button — opens a new Employee Transfer
         // pre-filled with this employee, so HR doesn't have to navigate

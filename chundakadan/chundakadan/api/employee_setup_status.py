@@ -89,6 +89,24 @@ def get_setup_status(employee):
             "fix_url": f"/app/user-permission?user={emp.user_id}",
         })
 
+    # 1c. Sales Person (only for sales/marketing dept) — must exist + be
+    # enabled so the field_sales mobile app's log_customer_visit etc.
+    # endpoints can resolve user → employee → sales_person without
+    # throwing "Missing required field: sales_person".
+    if emp.department and ("sales" in emp.department.lower()
+                            or "marketing" in emp.department.lower()):
+        sp = frappe.db.get_value("Sales Person", {"employee": emp.name},
+                                  ["name", "enabled"], as_dict=True)
+        ok = bool(sp and sp.enabled)
+        checks.append({
+            "key": "sales_person",
+            "label": _("Sales Person record"),
+            "ok": ok,
+            "value": (sp.name if sp else "missing"),
+            "fix_hint": _("Click to create Sales Person + MOP rows"),
+            "fix_url": None,
+        })
+
     # 2. Leave Allocation — at least one active allocation covering today
     has_alloc = frappe.db.exists("Leave Allocation", {
         "employee": employee,

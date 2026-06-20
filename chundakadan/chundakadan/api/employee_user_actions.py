@@ -147,6 +147,58 @@ def _ensure_sales_person(employee, employee_name, log):
         return None
 
 
+def _ensure_mop_mapping(sp_name, company, log):
+    """Add Cash + Cheque rows to Chundakadan Settings.mop_mapping for this
+    Sales Person, if missing. Idempotent."""
+    if not sp_name or not company:
+        return
+    try:
+        cs = frappe.get_single("Chundakadan Settings")
+        existing = {(r.sales_person, r.mode_of_payment)
+                    for r in (cs.mop_mapping or [])}
+        cash_acct = frappe.db.get_value("Account",
+            {"company": company, "account_name": "Cash", "is_group": 0}, "name")
+        bank_acct = frappe.db.get_value("Account",
+            {"company": company, "account_name": ["like", "%Federal-Bank%"],
+             "is_group": 0}, "name")
+        added = 0
+        if (sp_name, "Cash") not in existing and cash_acct:
+            cs.append("mop_mapping", {
+                "sales_person": sp_name, "company": company,
+                "mode_of_payment": "Cash", "account": cash_acct})
+            added += 1
+        if (sp_name, "Cheque") not in existing and bank_acct:
+            cs.append("mop_mapping", {
+                "sales_person": sp_name, "company": company,
+                "mode_of_payment": "Cheque", "account": bank_acct})
+            added += 1
+        if added:
+            cs.save(ignore_permissions=True)
+            log.append(f"Added {added} MOP Mapping row(s) for {sp_name}")
+        else:
+            log.append(f"MOP Mapping already present for {sp_name}")
+    except Exception as e:
+        log.append(f"MOP Mapping update failed: {str(e)[:120]}")
+
+
+def _setup_sales_person_full(employee, log):
+    """Lightweight Sales Person setup — ONLY creates/enables the SP record
+    + adds MOP rows. Does NOT touch Role Profile, SSA, leave_approver,
+    or shift_location (those are Employee Transfer concerns, not "make
+    the visit log work" concerns).
+
+    Use this from:
+      • create_user_for_employee (during HR Actions Create User)
+      • apply_sales_person_setup (the standalone HR Action button)
+      • The auto-fix path for the Setup Pending banner
+    """
+    emp = frappe.get_doc("Employee", employee)
+    sp = _ensure_sales_person(emp.name, emp.employee_name, log)
+    if sp:
+        _ensure_mop_mapping(sp, emp.company, log)
+    return sp
+
+
 def _disable_sales_person(employee, log):
     sp_name = frappe.db.get_value("Sales Person", {"employee": employee}, "name")
     if not sp_name:
@@ -352,9 +404,11 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
     #     still apply Company restriction in multi-company benches
     _apply_user_permissions(new_user.name, emp, log)
 
-    # Sales Person automation
+    # Sales Person automation — create + add MOP rows so the field_sales
+    # mobile app's log_customer_visit etc. work immediately. Lightweight
+    # (no SSA / role profile / leave_approver mutations).
     if _is_sales_dept(emp.department):
-        _ensure_sales_person(employee, emp.employee_name, log)
+        _setup_sales_person_full(emp.name, log)
 
     # Manager details automation
     if is_manager is None:
@@ -377,6 +431,30 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
         "log": log,
         "welcome_email_sent": bool(int(send_welcome_email or 0)),
     }
+
+
+@frappe.whitelist()
+def apply_sales_person_setup_for_employee(employee):
+    """HR-runnable: setup / repair the Sales Person + MOP for a sales-dept
+    employee. Idempotent. Fixes the 'Missing sales_person' error on the
+    field_sales mobile visit log without needing IT staff."""
+    _check_hr_user()
+    emp = frappe.get_doc("Employee", employee)
+    if not _is_sales_dept(emp.department):
+        frappe.throw(_("This is for Sales/Marketing employees only. "
+                       "Current department: {0}").format(emp.department))
+    log = []
+    sp = _setup_sales_person_full(emp.name, log)
+    if not log:
+        log.append("All sales person setup already in place — no change")
+    emp.add_comment(
+        "Info",
+        "<b>Sales Person setup applied via HR Action</b><br>"
+        + "<br>".join("• " + ln for ln in log)
+        + f"<br><br><i>By {frappe.session.user}</i>",
+    )
+    frappe.db.commit()
+    return {"sales_person": sp, "log": log}
 
 
 @frappe.whitelist()
