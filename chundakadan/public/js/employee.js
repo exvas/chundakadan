@@ -6,6 +6,317 @@
 // Idempotent server-side: rows already covered by an existing
 // allocation in the same window are skipped.
 
+// Single-pane Employee Setup Dashboard — opens a big read+act dialog
+// summarising User / Permissions / Sales Person / Geofence / Leave /
+// Shift / Salary / Reports To / Manager Details for one employee.
+// Each section has a ✓/✗ pill + an action button that routes back to
+// the same handlers the Setup Pending banner uses, so the fix flows
+// are shared.
+function show_setup_dashboard(frm) {
+    frappe.call({
+        method: 'chundakadan.chundakadan.api.employee_user_actions.get_employee_dashboard',
+        args: { employee: frm.doc.name },
+        freeze: true,
+        freeze_message: __('Loading dashboard...'),
+    }).then((r) => {
+        const data = r && r.message;
+        if (!data) return;
+        render_setup_dashboard_dialog(frm, data);
+    });
+}
+
+function _pill(ok, label_ok, label_warn) {
+    const bg = ok ? '#e6f7ed' : '#fff7e6';
+    const fg = ok ? '#0a7f3f' : '#b8590a';
+    const border = ok ? '#0a7f3f' : '#f0ad4e';
+    const text = ok ? (label_ok || '✓ OK') : (label_warn || '⚠ Action needed');
+    return `<span style="display:inline-block;padding:2px 10px;background:${bg};color:${fg};
+        border:1px solid ${border};border-radius:10px;font-size:11px;font-weight:600;">${text}</span>`;
+}
+
+function render_setup_dashboard_dialog(frm, data) {
+    const s = data.sections;
+    const esc = frappe.utils.escape_html;
+
+    const section_html = [];
+
+    // 1. User Account
+    const ua = s.user_account;
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">👤 User Account ${_pill(ua.ok)}</div>
+            <div class="cdn-dash-body">
+                ${ua.user_id ? `Login: <b>${esc(ua.user_id)}</b> ${ua.enabled ? '(enabled)' : '<span style="color:#d04a02;">(DISABLED)</span>'}<br>
+                Last login: ${esc(ua.last_login || 'never')}<br>
+                Roles: ${esc((ua.roles || []).join(', ') || 'none')}` : '<i>No User linked yet — click Create User & Setup below.</i>'}
+            </div>
+            <div class="cdn-dash-actions">
+                ${!ua.user_id ? `<button class="btn btn-sm cdn-dash-btn" data-action="user_account">Create User & Setup</button>` : ''}
+                ${ua.user_id && ua.enabled ? `<button class="btn btn-sm cdn-dash-btn" data-action="reset_password">Reset Password</button>` : ''}
+                ${ua.user_id && ua.enabled ? `<button class="btn btn-sm cdn-dash-btn" data-action="disable_user">Disable User</button>` : ''}
+                ${ua.user_id && !ua.enabled ? `<button class="btn btn-sm cdn-dash-btn" data-action="enable_user">Re-enable</button>` : ''}
+            </div>
+        </div>`);
+
+    // 2. User Permissions
+    const up = s.user_permissions;
+    let up_detail = '';
+    if (ua.user_id) {
+        const lines = [];
+        if (up.needs_employee_perm) lines.push(up.has_employee_perm ? '✓ Employee = self' : '✗ Missing Employee=self');
+        if (up.needs_company_perm) lines.push(up.has_company_perm ? '✓ Company restriction' : '✗ Missing Company');
+        if (up.stale_employee_perm) lines.push('✗ Stale Employee=self perm (manager/HR shouldn\'t have)');
+        if (!up.needs_employee_perm && !up.needs_company_perm) lines.push('No restrictions needed (manager/HR/GM, single-company)');
+        up_detail = lines.join('<br>');
+    } else {
+        up_detail = '<i>No user linked — create user first</i>';
+    }
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">🔐 User Permissions ${_pill(up.ok)}</div>
+            <div class="cdn-dash-body">${up_detail}</div>
+            <div class="cdn-dash-actions">
+                ${ua.user_id && !up.ok ? `<button class="btn btn-sm cdn-dash-btn" data-action="user_permissions">Apply / Clean</button>` : ''}
+            </div>
+        </div>`);
+
+    // 3. Sales Person
+    const sp = s.sales_person;
+    if (sp.applicable) {
+        const sp_detail = sp.name
+            ? `Sales Person: <b>${esc(sp.name)}</b> ${sp.enabled ? '(enabled)' : '<span style="color:#d04a02;">(disabled)</span>'}<br>MOP rows: ${sp.mop_rows}`
+            : '✗ No Sales Person record';
+        section_html.push(`
+            <div class="cdn-dash-sec">
+                <div class="cdn-dash-head">💼 Sales Person ${_pill(sp.ok)}</div>
+                <div class="cdn-dash-body">${sp_detail}</div>
+                <div class="cdn-dash-actions">
+                    ${!sp.ok ? `<button class="btn btn-sm cdn-dash-btn" data-action="sales_person">Setup Sales Person</button>` : ''}
+                </div>
+            </div>`);
+    }
+
+    // 4. Geofence (Shift Assignment.shift_location)
+    const gf = s.geofence;
+    let gf_detail = '';
+    if (gf.applicable) {
+        gf_detail = gf.active_assignments.map(sa =>
+            `${esc(sa.name)}: shift_type=${esc(sa.shift_type || '?')}, geofence=<b>${esc(sa.shift_location || '<NONE — field staff>')}</b>`
+        ).join('<br>');
+        gf_detail += `<br><br>Expected for this dept (${data.is_sales_dept ? 'Sales/Marketing' : 'Office'}): <b>${esc(gf.expected || '<NONE — field staff>')}</b>`;
+    } else {
+        gf_detail = '<i>No active Shift Assignment — create one first via Setup Pending → Assign Shift</i>';
+    }
+    const loc_opts = ['', ...(gf.available_locations || [])].map(l =>
+        `<option value="${esc(l)}">${l ? esc(l) : '(none — field staff, no geofence)'}</option>`
+    ).join('');
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">📍 Geofence ${_pill(gf.ok, '✓ Matches policy', '⚠ Mismatch — set correctly')}</div>
+            <div class="cdn-dash-body">${gf_detail}</div>
+            ${gf.applicable ? `<div class="cdn-dash-actions">
+                <select class="form-control cdn-geofence-pick" style="display:inline-block;width:auto;">${loc_opts}</select>
+                <button class="btn btn-sm cdn-dash-btn" data-action="geofence_apply">Apply</button>
+            </div>` : ''}
+            <div style="font-size:11px;color:#888;margin-top:4px;">After change, ask the employee to LOG OUT + LOG BACK IN on mobile so cached config refreshes.</div>
+        </div>`);
+
+    // 5. Leave Allocation
+    const la = s.leave_allocation;
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">📅 Leave Allocation ${_pill(la.ok, `✓ ${la.count} active`, '⚠ No allocations')}</div>
+            <div class="cdn-dash-body">${la.ok ? `${la.count} allocation(s) covering today` : '✗ Employee can\'t apply for leave without an allocation'}</div>
+            <div class="cdn-dash-actions">
+                ${!la.ok ? `<button class="btn btn-sm cdn-dash-btn" data-action="leave_allocation">Allocate Annual Leaves</button>` : ''}
+            </div>
+        </div>`);
+
+    // 6. Shift Assignment
+    const sa = s.shift_assignment;
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">⏰ Shift Assignment ${_pill(sa.ok, `✓ ${sa.count} active`, '⚠ None')}</div>
+            <div class="cdn-dash-body">${sa.ok ? `Shifts: ${esc((sa.shifts || []).join(', '))}` : 'No active Shift Assignment'}</div>
+            <div class="cdn-dash-actions">
+                ${!sa.ok ? `<button class="btn btn-sm cdn-dash-btn" data-action="shift_assignment">Assign Shift</button>` : ''}
+            </div>
+        </div>`);
+
+    // 7. Salary Structure
+    const ss = s.salary_structure;
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">💰 Salary Structure ${_pill(ss.ok)}</div>
+            <div class="cdn-dash-body">${ss.ok ? `<b>${esc(ss.structure)}</b><br>Base: ₹${esc(String(ss.base || 0))} · from ${esc(ss.from_date || '')}` : '✗ Not assigned'}</div>
+            <div class="cdn-dash-actions">
+                ${!ss.ok ? `<button class="btn btn-sm cdn-dash-btn" data-action="salary_structure">Assign Structure</button>` : ''}
+            </div>
+        </div>`);
+
+    // 8. Reports To — inline picker, applies via dashboard_update
+    const rt = s.reports_to;
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">👔 Reports To ${_pill(rt.ok, '✓ Set', 'ℹ Not set')}</div>
+            <div class="cdn-dash-body">${rt.ok ? `Currently reports to: <b>${esc(rt.reports_to_name || rt.reports_to)}</b>` : '<i>Optional — set if this person has a manager</i>'}</div>
+            <div class="cdn-dash-actions">
+                <input type="text" class="form-control cdn-reports-to" style="display:inline-block;width:260px;" placeholder="Type employee name or ID to change..." />
+                <button class="btn btn-sm cdn-dash-btn" data-action="reports_to_apply">Apply</button>
+                ${rt.ok ? `<button class="btn btn-sm" data-action="reports_to_clear" style="background:#fff;border:1px solid #ccc;">Clear</button>` : ''}
+            </div>
+        </div>`);
+
+    // Inline shift type change — only if there's an active SA already
+    if (sa.ok) {
+        section_html.push(`
+            <div class="cdn-dash-sec">
+                <div class="cdn-dash-head">🔄 Change Shift Type</div>
+                <div class="cdn-dash-body">Cancels current active Shift Assignment + creates a new one with the chosen shift type. Geofence (shift_location) is preserved.</div>
+                <div class="cdn-dash-actions">
+                    <input type="text" class="form-control cdn-shift-type" style="display:inline-block;width:260px;" placeholder="Type Shift Type name..." />
+                    <button class="btn btn-sm cdn-dash-btn" data-action="shift_type_apply">Apply New Shift</button>
+                </div>
+            </div>`);
+    }
+
+    // 9. Manager Details — add/remove toggle
+    const md = s.manager_details;
+    section_html.push(`
+        <div class="cdn-dash-sec">
+            <div class="cdn-dash-head">🏢 Manager Details ${_pill(md.in_table || !md.expected, md.in_table ? '✓ Listed' : 'Not applicable', '⚠ Should be listed')}</div>
+            <div class="cdn-dash-body">${md.in_table
+                ? `In Chundakadan Settings → Manager Details<br>allow_edit=${md.allow_edit} · allow_submit=${md.allow_submit} · workflow_approval=${md.workflow_approval}`
+                : (md.expected ? '✗ Designation suggests manager role — not in manager_details' : '<i>Not applicable for this designation</i>')}</div>
+            <div class="cdn-dash-actions">
+                ${md.in_table
+                    ? `<button class="btn btn-sm" data-action="manager_details_remove" style="background:#fff;border:1px solid #ccc;">Remove from Manager Details</button>`
+                    : `<button class="btn btn-sm cdn-dash-btn" data-action="manager_details_add">Add to Manager Details</button>`}
+            </div>
+        </div>`);
+
+    // Toggle Sales Person enable/disable
+    if (sp.applicable && sp.name) {
+        section_html.push(`
+            <div class="cdn-dash-sec">
+                <div class="cdn-dash-head">🔁 Toggle Sales Person Active</div>
+                <div class="cdn-dash-body">Current: <b>${sp.enabled ? 'enabled' : 'disabled'}</b>. Flip the enabled flag on the Sales Person record (kept historically either way).</div>
+                <div class="cdn-dash-actions">
+                    <button class="btn btn-sm cdn-dash-btn" data-action="sales_person_toggle">${sp.enabled ? 'Disable' : 'Enable'} Sales Person</button>
+                </div>
+            </div>`);
+    }
+
+    const css = `
+        <style>
+        .cdn-dash-sec { padding:10px 12px; margin-bottom:10px; background:#fff;
+            border:1px solid #e0e0e0; border-radius:6px; }
+        .cdn-dash-head { font-weight:600; font-size:14px; margin-bottom:6px;
+            display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .cdn-dash-body { font-size:12px; color:#444; margin-bottom:8px; line-height:1.55; }
+        .cdn-dash-actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+        .cdn-dash-btn { background:#f0ad4e !important; color:#fff !important;
+            border:none !important; font-weight:600; }
+        .cdn-dash-btn:hover { background:#e8a14a !important; }
+        </style>`;
+
+    const d = new frappe.ui.Dialog({
+        title: __('Setup Dashboard — {0}', [data.employee_name]),
+        size: 'large',
+        fields: [{
+            fieldtype: 'HTML', fieldname: 'body',
+            options: css + `<div style="background:#f7f8fa;padding:12px;border-radius:6px;">
+                <div style="font-size:13px;margin-bottom:10px;">
+                    <b>${esc(data.employee_name)}</b> · ${esc(data.designation || '?')} · ${esc(data.department || '?')}
+                </div>
+                ${section_html.join('')}
+            </div>`,
+        }],
+        primary_action_label: __('Close'),
+        primary_action: () => d.hide(),
+    });
+    d.show();
+
+    // Wire dashboard action buttons — most route to the existing
+    // handle_setup_fix() dispatcher (same fixes the banner uses).
+    // Geofence has its own apply-with-dropdown flow.
+    d.$wrapper.on('click', '.cdn-dash-btn', function () {
+        const action = $(this).data('action');
+        if (action === 'reset_password') {
+            const btn = frm.custom_buttons[__('Reset Password')];
+            if (btn) { d.hide(); btn.click(); }
+            return;
+        }
+        if (action === 'disable_user') {
+            const btn = frm.custom_buttons[__('Disable User (Exit Employee)')];
+            if (btn) { d.hide(); btn.click(); }
+            return;
+        }
+        if (action === 'enable_user') {
+            const btn = frm.custom_buttons[__('Re-enable User')];
+            if (btn) { d.hide(); btn.click(); }
+            return;
+        }
+        // Inline editors — route through generic dashboard_update endpoint
+        const inline_actions = {
+            reports_to_apply:        { dash: 'reports_to',          val: () => d.$wrapper.find('.cdn-reports-to').val(),  confirm: 'Set reports_to?' },
+            reports_to_clear:        { dash: 'reports_to',          val: () => '',                                         confirm: 'Clear reports_to?' },
+            shift_type_apply:        { dash: 'shift_type',          val: () => d.$wrapper.find('.cdn-shift-type').val(),   confirm: 'Cancel current Shift Assignment + create new with this shift type?' },
+            sales_person_toggle:     { dash: 'sales_person_toggle', val: () => null,                                       confirm: 'Toggle Sales Person enabled flag?' },
+            manager_details_add:     { dash: 'manager_details_add', val: () => null,                                       confirm: 'Add to Chundakadan Settings → manager_details with all 3 flags ON?' },
+            manager_details_remove:  { dash: 'manager_details_remove', val: () => null,                                    confirm: 'Remove from manager_details?' },
+        };
+        if (inline_actions[action]) {
+            const cfg = inline_actions[action];
+            frappe.confirm(__(cfg.confirm), () => {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.employee_user_actions.dashboard_update',
+                    args: { employee: frm.doc.name, action: cfg.dash, value: cfg.val() },
+                    freeze: true,
+                }).then((r) => {
+                    const res = r && r.message;
+                    frappe.msgprint({
+                        title: __('Updated'),
+                        indicator: 'green',
+                        message: ((res && res.log) || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                    });
+                    d.hide();
+                    frm.reload_doc();
+                });
+            });
+            return;
+        }
+        if (action === 'geofence_apply') {
+            const picked = d.$wrapper.find('.cdn-geofence-pick').val();
+            frappe.confirm(
+                __('Apply geofence "{0}" to all active Shift Assignments? Employee must log out + back in on mobile after this.',
+                   [picked || '(none — field staff)']),
+                () => {
+                    frappe.call({
+                        method: 'chundakadan.chundakadan.api.employee_user_actions.apply_geofence_for_employee',
+                        args: { employee: frm.doc.name, shift_location: picked },
+                        freeze: true,
+                    }).then((r) => {
+                        const res = r && r.message;
+                        if (!res) return;
+                        frappe.msgprint({
+                            title: __('Geofence Applied'),
+                            indicator: 'green',
+                            message: (res.log || []).map(l => '• ' + frappe.utils.escape_html(l)).join('<br>'),
+                        });
+                        d.hide();
+                        frm.reload_doc();
+                    });
+                },
+            );
+            return;
+        }
+        // Everything else → existing dispatcher (handles 7 keys)
+        d.hide();
+        handle_setup_fix(frm, action);
+    });
+}
+
 // Dispatch the right fix action for a pending setup key.
 // Re-uses existing HR Action button clicks where possible so we don't
 // duplicate dialog code.
@@ -232,6 +543,20 @@ frappe.ui.form.on('Employee', {
             },
             __('HR Actions'),
         );
+
+        // Setup Dashboard — single-pane view of everything assigned to
+        // this employee (user account, permissions, sales person, geofence,
+        // leave allocation, shift, salary structure, reports_to, manager
+        // details). Replaces hunting across 6+ doctypes when HR wants to
+        // see "what's set up for this person" or fix a gap. Each section
+        // has ✓/✗ + an inline action button (Set Geofence / Apply Perms /
+        // Allocate Leaves / etc.) — every fix routes to the same handlers
+        // the Setup Pending banner uses, so behavior stays consistent.
+        if (frm.doc.status === 'Active') {
+            frm.add_custom_button(__('Setup Dashboard'), () => {
+                show_setup_dashboard(frm);
+            }, __('HR Actions'));
+        }
 
         // Setup Sales Person — fixes the field_sales mobile app's
         // "Missing required field: sales_person" error for sales/marketing

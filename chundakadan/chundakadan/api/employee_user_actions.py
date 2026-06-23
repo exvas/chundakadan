@@ -434,6 +434,338 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
 
 
 @frappe.whitelist()
+def apply_geofence_for_employee(employee, shift_location=None):
+    """Set or clear the geofence on every active Shift Assignment for this
+    employee.
+
+      • shift_location = "" / None  → CLEAR (field staff, no geofence)
+      • shift_location = "HOD" etc. → SET to that Shift Location
+
+    Reuses the same field (Shift Assignment.shift_location) that HRMS
+    + the field_sales mobile app's check-in flow read for distance
+    enforcement. After this runs, the affected employee should LOG OUT
+    + LOG BACK IN on the mobile app so their cached config refreshes —
+    the server change alone doesn't reset the client's locally-stored
+    geofence state.
+    """
+    _check_hr_user()
+    emp = frappe.get_doc("Employee", employee)
+    target = (shift_location or "").strip() or None
+    if target and not frappe.db.exists("Shift Location", target):
+        frappe.throw(_("Shift Location '{0}' does not exist.").format(target))
+
+    log = []
+    active = frappe.get_all("Shift Assignment",
+        filters={"employee": emp.name, "docstatus": 1, "status": "Active"},
+        fields=["name", "shift_location"])
+    if not active:
+        log.append("No active Shift Assignment found — create one first via "
+                    "HR Actions → Assign Shift before setting geofence.")
+    else:
+        changed = 0
+        for sa in active:
+            current = sa.shift_location or None
+            if current == target:
+                continue
+            frappe.db.set_value("Shift Assignment", sa.name, "shift_location",
+                                 target, update_modified=False)
+            label = target or "<cleared — field staff>"
+            log.append(f"Shift Assignment {sa.name}: {current or '<none>'} → {label}")
+            changed += 1
+        if not changed:
+            log.append(f"All active Shift Assignments already at "
+                        f"{target or '<cleared>'} — no change")
+
+    log.append("⚠ Remind the employee to log out + log back in on the mobile "
+                "app so their cached geofence config refreshes.")
+
+    emp.add_comment("Info",
+        "<b>Geofence updated via HR Action</b><br>"
+        + "<br>".join("• " + ln for ln in log)
+        + f"<br><br><i>By {frappe.session.user}</i>")
+    frappe.db.commit()
+    return {"shift_location": target, "log": log}
+
+
+@frappe.whitelist()
+def dashboard_update(employee, action, value=None):
+    """Generic inline-update entry point used by the Setup Dashboard
+    dialog. Each `action` maps to a specific change so HR can edit
+    values without leaving the dashboard. Permission gate is the same
+    HR Manager/HR User check as everywhere else.
+
+    Supported actions:
+      • reports_to          → set Employee.reports_to (or clear if value="")
+      • shift_type          → cancel active SA, create new SA with chosen shift_type
+      • sales_person_toggle → enable/disable Sales Person
+      • manager_details_add → add row to Chundakadan Settings.manager_details
+      • manager_details_remove → remove row
+    """
+    _check_hr_user()
+    emp = frappe.get_doc("Employee", employee)
+    log = []
+
+    if action == "reports_to":
+        new = (value or "").strip() or None
+        if new and not frappe.db.exists("Employee", new):
+            frappe.throw(_("Employee '{0}' not found").format(new))
+        if emp.reports_to == new:
+            log.append("reports_to already set to that value")
+        else:
+            old = emp.reports_to or "<none>"
+            frappe.db.set_value("Employee", emp.name, "reports_to", new,
+                                  update_modified=False)
+            log.append(f"reports_to: {old} → {new or '<cleared>'}")
+
+    elif action == "shift_type":
+        new = (value or "").strip()
+        if not new:
+            frappe.throw(_("Pick a shift type"))
+        if not frappe.db.exists("Shift Type", new):
+            frappe.throw(_("Shift Type '{0}' not found").format(new))
+        # Cancel current active SAs, create one new at new shift_type
+        active = frappe.get_all("Shift Assignment",
+            filters={"employee": emp.name, "docstatus": 1, "status": "Active"},
+            fields=["name", "shift_type", "shift_location", "start_date"])
+        if active and all(sa.shift_type == new for sa in active):
+            log.append("Already on that shift type — no change")
+        else:
+            kept_location = active[0].shift_location if active else None
+            for sa in active:
+                try:
+                    d = frappe.get_doc("Shift Assignment", sa.name)
+                    d.cancel()
+                    log.append(f"Cancelled SA {sa.name} ({sa.shift_type})")
+                except Exception as e:
+                    log.append(f"Could not cancel {sa.name}: {str(e)[:80]}")
+            try:
+                sa = frappe.get_doc({
+                    "doctype": "Shift Assignment",
+                    "employee": emp.name,
+                    "company": emp.company,
+                    "shift_type": new,
+                    "shift_location": kept_location,
+                    "status": "Active",
+                    "start_date": nowdate(),
+                })
+                sa.flags.ignore_permissions = True
+                sa.flags.ignore_mandatory = True
+                sa.insert()
+                sa.submit()
+                log.append(f"Created new SA {sa.name} ({new}) — geofence carried over: {kept_location or '<none>'}")
+            except Exception as e:
+                log.append(f"Could not create new SA: {str(e)[:120]}")
+
+    elif action == "sales_person_toggle":
+        sp = frappe.db.get_value("Sales Person", {"employee": emp.name},
+            ["name", "enabled"], as_dict=True)
+        if not sp:
+            frappe.throw(_("No Sales Person record — use Setup Sales Person first"))
+        new_state = 0 if sp.enabled else 1
+        frappe.db.set_value("Sales Person", sp.name, "enabled", new_state,
+                              update_modified=False)
+        log.append(f"Sales Person {sp.name}: enabled {sp.enabled} → {new_state}")
+
+    elif action == "manager_details_add":
+        cs = frappe.get_single("Chundakadan Settings")
+        if any(r.employee == emp.name for r in (cs.manager_details or [])):
+            log.append("Already in manager_details — no change")
+        else:
+            cs.append("manager_details", {
+                "employee": emp.name,
+                "allow_edit": 1, "allow_submit": 1, "workflow_approval": 1,
+            })
+            cs.save(ignore_permissions=True)
+            log.append("Added to Chundakadan Settings → manager_details")
+
+    elif action == "manager_details_remove":
+        cs = frappe.get_single("Chundakadan Settings")
+        before = len(cs.manager_details or [])
+        cs.manager_details = [r for r in (cs.manager_details or [])
+                                if r.employee != emp.name]
+        if before != len(cs.manager_details):
+            cs.save(ignore_permissions=True)
+            log.append("Removed from Chundakadan Settings → manager_details")
+        else:
+            log.append("Not in manager_details — no change")
+
+    else:
+        frappe.throw(_("Unknown dashboard action: {0}").format(action))
+
+    emp.add_comment("Info",
+        f"<b>Dashboard update via HR Action — {action}</b><br>"
+        + "<br>".join("• " + ln for ln in log)
+        + f"<br><br><i>By {frappe.session.user}</i>")
+    frappe.db.commit()
+    return {"log": log}
+
+
+@frappe.whitelist()
+def get_employee_dashboard(employee):
+    """Single-pane snapshot of everything assigned/linked to this employee
+    — used by the 'Setup Dashboard' HR Action button to give HR a
+    complete picture in one dialog instead of bouncing between 6+
+    doctypes. Each section returns enough data for the UI to render
+    a ✓/✗ indicator + an inline action button to fix gaps.
+
+    Sections returned (in display order):
+      1. user_account
+      2. user_permissions
+      3. sales_person
+      4. geofence
+      5. leave_allocation
+      6. shift_assignment
+      7. salary_structure
+      8. reports_to
+      9. manager_details
+    """
+    _check_hr_user()
+    emp = frappe.get_doc("Employee", employee)
+    is_sales = _is_sales_dept(emp.department)
+    out = {
+        "employee": emp.name,
+        "employee_name": emp.employee_name,
+        "department": emp.department,
+        "designation": emp.designation,
+        "is_sales_dept": is_sales,
+        "sections": {},
+    }
+
+    # 1. User Account
+    user_row = None
+    if emp.user_id:
+        user_row = frappe.db.get_value("User", emp.user_id,
+            ["enabled", "user_type", "last_login"], as_dict=True) or {}
+        roles = frappe.get_roles(emp.user_id)
+    else:
+        roles = []
+    out["sections"]["user_account"] = {
+        "ok": bool(user_row and user_row.get("enabled")),
+        "user_id": emp.user_id,
+        "enabled": bool(user_row and user_row.get("enabled")) if user_row else None,
+        "last_login": str(user_row["last_login"]) if user_row and user_row.get("last_login") else "",
+        "roles": sorted(set(r for r in roles if r not in ("All", "Guest"))),
+    }
+
+    # 2. User Permissions
+    needs_emp_perm = _should_restrict_to_self(emp) if emp.user_id else False
+    has_emp_perm = bool(emp.user_id and frappe.db.exists("User Permission", {
+        "user": emp.user_id, "allow": "Employee", "for_value": emp.name}))
+    n_companies = frappe.db.count("Company")
+    needs_company_perm = bool(emp.user_id and emp.company and n_companies > 1)
+    has_company_perm = bool(emp.user_id and emp.company and frappe.db.exists(
+        "User Permission",
+        {"user": emp.user_id, "allow": "Company", "for_value": emp.company}))
+    out["sections"]["user_permissions"] = {
+        "ok": bool(emp.user_id) and (not needs_emp_perm or has_emp_perm)
+              and (not needs_company_perm or has_company_perm)
+              and not ((not needs_emp_perm) and has_emp_perm),
+        "needs_employee_perm": needs_emp_perm,
+        "has_employee_perm": has_emp_perm,
+        "needs_company_perm": needs_company_perm,
+        "has_company_perm": has_company_perm,
+        "stale_employee_perm": (not needs_emp_perm) and has_emp_perm,
+    }
+
+    # 3. Sales Person
+    if is_sales:
+        sp = frappe.db.get_value("Sales Person", {"employee": emp.name},
+            ["name", "enabled"], as_dict=True)
+        mop_rows = 0
+        if sp:
+            mop_rows = frappe.db.count("Chundakadan Sales Person MOP",
+                {"sales_person": sp.name})
+        out["sections"]["sales_person"] = {
+            "applicable": True,
+            "ok": bool(sp and sp.enabled),
+            "name": sp.name if sp else None,
+            "enabled": bool(sp and sp.enabled) if sp else None,
+            "mop_rows": mop_rows,
+        }
+    else:
+        out["sections"]["sales_person"] = {
+            "applicable": False, "ok": True,
+            "note": "Not applicable (not in Sales/Marketing department)",
+        }
+
+    # 4. Geofence (Shift Assignment.shift_location)
+    active_sa = frappe.get_all("Shift Assignment",
+        filters={"employee": emp.name, "docstatus": 1, "status": "Active"},
+        fields=["name", "shift_type", "shift_location", "start_date", "end_date"])
+    sl_values = sorted(set(sa.shift_location or "" for sa in active_sa))
+    out["sections"]["geofence"] = {
+        "applicable": bool(active_sa),
+        "expected": "" if is_sales else "HOD",   # field staff: none, office: HOD
+        "actual": sl_values[0] if len(sl_values) == 1 else "<mixed>",
+        "ok": (
+            (is_sales and all(not (sa.shift_location or "") for sa in active_sa))
+            or ((not is_sales) and all((sa.shift_location or "") == "HOD" for sa in active_sa))
+        ) if active_sa else False,
+        "active_assignments": [
+            {"name": sa.name, "shift_type": sa.shift_type,
+             "shift_location": sa.shift_location or ""}
+            for sa in active_sa
+        ],
+        "available_locations": frappe.db.sql_list(
+            "SELECT name FROM `tabShift Location` ORDER BY name"),
+    }
+
+    # 5. Leave Allocation (covering today)
+    from frappe.utils import nowdate
+    n_alloc = frappe.db.count("Leave Allocation", {
+        "employee": emp.name, "docstatus": 1,
+        "from_date": ["<=", nowdate()], "to_date": [">=", nowdate()],
+    })
+    out["sections"]["leave_allocation"] = {
+        "ok": n_alloc > 0,
+        "count": n_alloc,
+    }
+
+    # 6. Shift Assignment (presence)
+    out["sections"]["shift_assignment"] = {
+        "ok": bool(active_sa),
+        "count": len(active_sa),
+        "shifts": [sa.shift_type for sa in active_sa],
+    }
+
+    # 7. Salary Structure Assignment (latest active)
+    ssa = frappe.db.get_value("Salary Structure Assignment",
+        {"employee": emp.name, "docstatus": 1},
+        ["name", "salary_structure", "base", "from_date"], as_dict=True,
+        order_by="from_date desc")
+    out["sections"]["salary_structure"] = {
+        "ok": bool(ssa),
+        "name": ssa.name if ssa else None,
+        "structure": ssa.salary_structure if ssa else None,
+        "base": ssa.base if ssa else None,
+        "from_date": str(ssa.from_date) if ssa and ssa.from_date else None,
+    }
+
+    # 8. Reports To
+    out["sections"]["reports_to"] = {
+        "ok": bool(emp.reports_to),
+        "reports_to": emp.reports_to,
+        "reports_to_name": (frappe.db.get_value("Employee", emp.reports_to,
+                                                 "employee_name") if emp.reports_to else None),
+    }
+
+    # 9. Manager Details (Chundakadan Settings child)
+    md = frappe.db.get_value("Chundakadan Manager Detail",
+        {"employee": emp.name, "parent": "Chundakadan Settings"},
+        ["allow_edit", "allow_submit", "workflow_approval"], as_dict=True)
+    out["sections"]["manager_details"] = {
+        "ok": bool(md),
+        "in_table": bool(md),
+        "allow_edit": bool(md and md.allow_edit) if md else False,
+        "allow_submit": bool(md and md.allow_submit) if md else False,
+        "workflow_approval": bool(md and md.workflow_approval) if md else False,
+        "expected": _is_manager_designation(emp.designation),
+    }
+
+    return out
+
+
+@frappe.whitelist()
 def apply_sales_person_setup_for_employee(employee):
     """HR-runnable: setup / repair the Sales Person + MOP for a sales-dept
     employee. Idempotent. Fixes the 'Missing sales_person' error on the
