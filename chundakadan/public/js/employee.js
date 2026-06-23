@@ -154,14 +154,14 @@ function render_setup_dashboard_dialog(frm, data) {
             </div>
         </div>`);
 
-    // 8. Reports To — inline picker, applies via dashboard_update
+    // 8. Reports To — inline picker (Link autocomplete attached on dialog open)
     const rt = s.reports_to;
     section_html.push(`
         <div class="cdn-dash-sec">
             <div class="cdn-dash-head">👔 Reports To ${_pill(rt.ok, '✓ Set', 'ℹ Not set')}</div>
             <div class="cdn-dash-body">${rt.ok ? `Currently reports to: <b>${esc(rt.reports_to_name || rt.reports_to)}</b>` : '<i>Optional — set if this person has a manager</i>'}</div>
             <div class="cdn-dash-actions">
-                <input type="text" class="form-control cdn-reports-to" style="display:inline-block;width:260px;" placeholder="Type employee name or ID to change..." />
+                <div class="cdn-reports-to-ctl" style="display:inline-block;min-width:260px;"></div>
                 <button class="btn btn-sm cdn-dash-btn" data-action="reports_to_apply">Apply</button>
                 ${rt.ok ? `<button class="btn btn-sm" data-action="reports_to_clear" style="background:#fff;border:1px solid #ccc;">Clear</button>` : ''}
             </div>
@@ -174,11 +174,38 @@ function render_setup_dashboard_dialog(frm, data) {
                 <div class="cdn-dash-head">🔄 Change Shift Type</div>
                 <div class="cdn-dash-body">Cancels current active Shift Assignment + creates a new one with the chosen shift type. Geofence (shift_location) is preserved.</div>
                 <div class="cdn-dash-actions">
-                    <input type="text" class="form-control cdn-shift-type" style="display:inline-block;width:260px;" placeholder="Type Shift Type name..." />
+                    <div class="cdn-shift-type-ctl" style="display:inline-block;min-width:260px;"></div>
                     <button class="btn btn-sm cdn-dash-btn" data-action="shift_type_apply">Apply New Shift</button>
                 </div>
             </div>`);
     }
+
+    // 📱 Mobile Sync — explains the "Jazeel scenario": server config is
+    // correct but the field_sales mobile app cached old data at login
+    // and keeps enforcing stale rules. Solution: send the employee a
+    // re-login reminder notification.
+    const last_login = ua.last_login || '';
+    const stale_warn = last_login ? (() => {
+        const d = new Date(last_login.replace(' ', 'T'));
+        const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+        return days > 3 ? `Last mobile login was ${days} days ago — likely cached old config.` : '';
+    })() : '';
+    section_html.push(`
+        <div class="cdn-dash-sec" style="background:#f0f7ff;border-color:#cfe2ff;">
+            <div class="cdn-dash-head">📱 Mobile Sync</div>
+            <div class="cdn-dash-body">
+                <b>Why this matters:</b> mobile app caches user config (geofence, role, dept) at LOGIN time.
+                If HR changes those on the server, the mobile keeps enforcing the OLD config until the user
+                logs out + logs back in.<br>
+                <b>Example (Jazeel, 2026-06-22):</b> server <code>shift_location=None</code> (no geofence) but
+                the mobile kept blocking him with "300m radius of office" error → caused by stale cache.
+                <br><br>
+                Last mobile login: <b>${esc(last_login || 'never')}</b>${stale_warn ? `<br><span style="color:#b8590a;">⚠ ${esc(stale_warn)}</span>` : ''}
+            </div>
+            <div class="cdn-dash-actions">
+                ${ua.user_id ? `<button class="btn btn-sm cdn-dash-btn" data-action="mobile_relogin">📱 Send Re-Login Reminder</button>` : '<i>No user linked — cannot notify</i>'}
+            </div>
+        </div>`);
 
     // 9. Manager Details — add/remove toggle
     const md = s.manager_details;
@@ -237,6 +264,42 @@ function render_setup_dashboard_dialog(frm, data) {
     });
     d.show();
 
+    // Attach Frappe Link autocomplete to the two inline editors so HR
+    // can SEARCH instead of typing exact names. make_control gives the
+    // standard awesomplete + server-side filter.
+    let reports_to_ctl = null, shift_type_ctl = null;
+    setTimeout(() => {
+        const $rt = d.$wrapper.find('.cdn-reports-to-ctl');
+        if ($rt.length) {
+            reports_to_ctl = frappe.ui.form.make_control({
+                parent: $rt[0],
+                df: {
+                    fieldtype: 'Link',
+                    options: 'Employee',
+                    fieldname: 'reports_to_pick',
+                    placeholder: __('Search active employees...'),
+                    get_query: () => ({ filters: { status: 'Active', name: ['!=', frm.doc.name] } }),
+                },
+                render_input: true,
+            });
+            reports_to_ctl.refresh();
+        }
+        const $st = d.$wrapper.find('.cdn-shift-type-ctl');
+        if ($st.length) {
+            shift_type_ctl = frappe.ui.form.make_control({
+                parent: $st[0],
+                df: {
+                    fieldtype: 'Link',
+                    options: 'Shift Type',
+                    fieldname: 'shift_type_pick',
+                    placeholder: __('Search shift types...'),
+                },
+                render_input: true,
+            });
+            shift_type_ctl.refresh();
+        }
+    }, 80);
+
     // Wire dashboard action buttons — most route to the existing
     // handle_setup_fix() dispatcher (same fixes the banner uses).
     // Geofence has its own apply-with-dropdown flow.
@@ -259,12 +322,12 @@ function render_setup_dashboard_dialog(frm, data) {
         }
         // Inline editors — route through generic dashboard_update endpoint
         const inline_actions = {
-            reports_to_apply:        { dash: 'reports_to',          val: () => d.$wrapper.find('.cdn-reports-to').val(),  confirm: 'Set reports_to?' },
-            reports_to_clear:        { dash: 'reports_to',          val: () => '',                                         confirm: 'Clear reports_to?' },
-            shift_type_apply:        { dash: 'shift_type',          val: () => d.$wrapper.find('.cdn-shift-type').val(),   confirm: 'Cancel current Shift Assignment + create new with this shift type?' },
-            sales_person_toggle:     { dash: 'sales_person_toggle', val: () => null,                                       confirm: 'Toggle Sales Person enabled flag?' },
-            manager_details_add:     { dash: 'manager_details_add', val: () => null,                                       confirm: 'Add to Chundakadan Settings → manager_details with all 3 flags ON?' },
-            manager_details_remove:  { dash: 'manager_details_remove', val: () => null,                                    confirm: 'Remove from manager_details?' },
+            reports_to_apply:        { dash: 'reports_to',          val: () => (reports_to_ctl && reports_to_ctl.get_value()) || '', confirm: 'Set reports_to?' },
+            reports_to_clear:        { dash: 'reports_to',          val: () => '',                                                    confirm: 'Clear reports_to?' },
+            shift_type_apply:        { dash: 'shift_type',          val: () => (shift_type_ctl && shift_type_ctl.get_value()) || '', confirm: 'Cancel current Shift Assignment + create new with this shift type? Geofence is preserved.' },
+            sales_person_toggle:     { dash: 'sales_person_toggle', val: () => null,                                                   confirm: 'Toggle Sales Person enabled flag?' },
+            manager_details_add:     { dash: 'manager_details_add', val: () => null,                                                   confirm: 'Add to Chundakadan Settings → manager_details with all 3 flags ON?' },
+            manager_details_remove:  { dash: 'manager_details_remove', val: () => null,                                                confirm: 'Remove from manager_details?' },
         };
         if (inline_actions[action]) {
             const cfg = inline_actions[action];
@@ -284,6 +347,35 @@ function render_setup_dashboard_dialog(frm, data) {
                     frm.reload_doc();
                 });
             });
+            return;
+        }
+        if (action === 'mobile_relogin') {
+            const d2 = new frappe.ui.Dialog({
+                title: __('Send Re-Login Reminder'),
+                fields: [
+                    { fieldtype: 'Small Text', fieldname: 'reason',
+                      label: __('Reason / what changed (shown to the employee)'),
+                      default: __('HR updated your settings. Please log out + log back in on the mobile app so your config refreshes.') },
+                ],
+                primary_action_label: __('Send'),
+                primary_action(v) {
+                    d2.hide();
+                    frappe.call({
+                        method: 'chundakadan.chundakadan.api.employee_user_actions.send_mobile_relogin_reminder',
+                        args: { employee: frm.doc.name, reason: v.reason || '' },
+                        freeze: true,
+                    }).then((r) => {
+                        const res = r && r.message;
+                        if (!res) return;
+                        frappe.msgprint({
+                            title: __('Reminder Sent'),
+                            indicator: 'green',
+                            message: __('Notification sent to {0}. They will see it on their mobile bell icon and should log out + log back in.', [res.sent_to]),
+                        });
+                    });
+                },
+            });
+            d2.show();
             return;
         }
         if (action === 'geofence_apply') {

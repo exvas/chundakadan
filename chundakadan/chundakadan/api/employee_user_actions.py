@@ -488,6 +488,56 @@ def apply_geofence_for_employee(employee, shift_location=None):
 
 
 @frappe.whitelist()
+def send_mobile_relogin_reminder(employee, reason=""):
+    """Notify an employee to log out + log back in on their mobile app.
+
+    Why this exists: classic case (Jazeel 2026-06-22) — HR changes
+    Employee.shift_location server-side to clear the geofence, but the
+    field_sales mobile app cached the OLD office-staff config at login
+    and keeps enforcing the 300m radius locally. The mobile only re-reads
+    the config on fresh login. So after any server-side change to a
+    field the mobile caches (shift_location / role / department), HR
+    needs to ping the employee to refresh their app.
+
+    Mechanism: writes a Notification Log entry the employee sees in
+    their mobile app's bell icon (chundakadan/public/js wires this).
+    """
+    _check_hr_user()
+    user_id = frappe.db.get_value("Employee", employee, "user_id")
+    if not user_id:
+        frappe.throw(_("Employee has no linked User — nothing to notify"))
+    emp_name = frappe.db.get_value("Employee", employee, "employee_name")
+    subject = "Please log out and log back in on the mobile app"
+    body = (reason or
+            "HR has updated your settings on the server. Please log out + "
+            "log back in on the chundakadan mobile app so your cached "
+            "configuration refreshes. Without this, you may see stale "
+            "geofence / permission errors.")
+    try:
+        nl = frappe.get_doc({
+            "doctype": "Notification Log",
+            "subject": subject,
+            "email_content": body,
+            "for_user": user_id,
+            "type": "Alert",
+            "document_type": "Employee",
+            "document_name": employee,
+        })
+        nl.flags.ignore_permissions = True
+        nl.insert()
+    except Exception as e:
+        frappe.throw(_("Could not create Notification Log: {0}").format(str(e)[:120]))
+
+    frappe.get_doc("Employee", employee).add_comment("Info",
+        f"<b>Mobile re-login reminder sent</b><br>"
+        f"To: {user_id}<br>"
+        f"Reason: {frappe.utils.escape_html(reason or '(default)')}"
+        f"<br><br><i>By {frappe.session.user}</i>")
+    frappe.db.commit()
+    return {"sent_to": user_id, "notification": nl.name}
+
+
+@frappe.whitelist()
 def dashboard_update(employee, action, value=None):
     """Generic inline-update entry point used by the Setup Dashboard
     dialog. Each `action` maps to a specific change so HR can edit
