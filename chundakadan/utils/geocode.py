@@ -33,6 +33,18 @@ def resolve_for_doc(
     lon = doc.get(lon_field)
     if not (lat and lon):
         return
+    # Field-staff checkins carry a tiny non-zero placeholder (1e-6, set in
+    # field_sales.create_employee_checkin) so HRMS's "lat/long required"
+    # throw doesn't fire. That point is Null Island (0,0) — Nominatim
+    # returns {'error': 'Unable to geocode'} and we'd log a bogus
+    # "empty display_name" error for every field punch. Skip anything
+    # within ~1km of (0,0); every real Chundakadan coordinate is in Kerala
+    # (~11,75) and never lands here.
+    try:
+        if abs(float(lat)) < 0.01 and abs(float(lon)) < 0.01:
+            return
+    except (TypeError, ValueError):
+        return
     if not doc.meta.has_field(location_field):
         return
     if doc.get(location_field):
@@ -113,13 +125,14 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
             return None
 
         data = res.json()
+        # Nominatim signals an un-geocodable point with {'error': ...}
+        # (e.g. ocean / Null Island placeholder coords) rather than an
+        # address. That's not a system fault — there is simply no address
+        # there — so return quietly instead of logging an error per row.
+        if isinstance(data, dict) and data.get("error"):
+            return None
         address = (data.get("display_name") or "").strip()
         if not address:
-            frappe.log_error(
-                "chundakadan.utils.geocode: empty display_name",
-                f"doctype={doctype} name={name} lat={lat} lon={lon}\n"
-                f"data={data}",
-            )
             return None
 
         if len(address) > 250:
