@@ -111,9 +111,6 @@ doctype_list_js = {
 # ------------
 doc_events = {
     "Payment Entry": {
-        "autoname":
-        "chundakadan.doc_events.voucher_naming.payment_entry_autoname",
-
         "validate":
         "chundakadan.doc_events.payment_entry.set_custom_sales_person",
 
@@ -123,10 +120,6 @@ doc_events = {
             "chundakadan.doc_events.payment_entry.set_custom_sales_person",
             "chundakadan.doc_events.payment_entry.validate_check_bounce"
         ]
-    },
-    "Journal Entry": {
-        "autoname":
-        "chundakadan.doc_events.voucher_naming.journal_entry_autoname"
     },
     "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
