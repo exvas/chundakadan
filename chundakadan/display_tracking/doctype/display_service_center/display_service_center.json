@@ -1,0 +1,25 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:service_center_name",
+ "creation": "2026-07-10 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["service_center_name", "address", "disabled"],
+ "fields": [
+  {"fieldname": "service_center_name", "fieldtype": "Data", "label": "Service Center Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+  {"fieldname": "address", "fieldtype": "Small Text", "label": "Address"},
+  {"fieldname": "disabled", "fieldtype": "Check", "label": "Disabled"}
+ ],
+ "links": [],
+ "module": "Display Tracking",
+ "name": "Display Service Center",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Display Manager", "read": 1, "write": 1, "create": 1},
+  {"role": "Warehouse User", "read": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
