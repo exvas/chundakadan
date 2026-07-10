@@ -1,0 +1,20 @@
+{
+ "actions": [],
+ "creation": "2026-07-10 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": ["image", "caption"],
+ "fields": [
+  {"fieldname": "image", "fieldtype": "Attach Image", "label": "Image", "in_list_view": 1},
+  {"fieldname": "caption", "fieldtype": "Data", "label": "Caption", "in_list_view": 1}
+ ],
+ "links": [],
+ "module": "Display Tracking",
+ "name": "Display Movement Photo",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

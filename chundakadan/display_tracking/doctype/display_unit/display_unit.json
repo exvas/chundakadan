@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "DISP-.YYYY.-.#####",
+ "creation": "2026-07-10 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "reg_section", "supplier", "display_type", "brand", "description", "size_model",
+  "cb_reg", "photo", "barcode", "remarks", "is_active",
+  "state_section", "current_status", "current_location_type", "current_location", "current_location_doctype", "current_custodian",
+  "cb_state", "current_customer", "customer_branch", "contact_person", "delivery_date", "expected_return_date", "last_movement", "last_movement_on"
+ ],
+ "fields": [
+  {"fieldname": "reg_section", "fieldtype": "Section Break", "label": "Registration"},
+  {"fieldname": "supplier", "fieldtype": "Link", "label": "Supplier", "options": "Supplier", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "display_type", "fieldtype": "Link", "label": "Display Type", "options": "Display Type", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "brand", "fieldtype": "Link", "label": "Brand", "options": "Brand"},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+  {"fieldname": "size_model", "fieldtype": "Data", "label": "Size / Model"},
+  {"fieldname": "cb_reg", "fieldtype": "Column Break"},
+  {"fieldname": "photo", "fieldtype": "Attach Image", "label": "Photo"},
+  {"fieldname": "barcode", "fieldtype": "Data", "label": "Barcode / QR", "read_only": 1},
+  {"fieldname": "remarks", "fieldtype": "Small Text", "label": "Remarks"},
+  {"fieldname": "is_active", "fieldtype": "Check", "label": "Active", "default": "1"},
+  {"fieldname": "state_section", "fieldtype": "Section Break", "label": "Current State (system-maintained)"},
+  {"fieldname": "current_status", "fieldtype": "Select", "label": "Current Status", "read_only": 1, "in_list_view": 1, "in_standard_filter": 1, "options": "At Supplier\nIn Warehouse\nReserved\nIn Transit\nInstalled at Customer\nReturned\nDamaged\nMissing\nUnder Repair\nReturned to Supplier"},
+  {"fieldname": "current_location_type", "fieldtype": "Select", "label": "Location Type", "read_only": 1, "in_standard_filter": 1, "options": "Warehouse\nCustomer\nDealer\nRetail Outlet\nService Center\nSupplier"},
+  {"fieldname": "current_location", "fieldtype": "Dynamic Link", "label": "Current Location", "options": "current_location_doctype", "read_only": 1},
+  {"fieldname": "current_location_doctype", "fieldtype": "Data", "label": "Current Location DocType", "hidden": 1, "read_only": 1},
+  {"fieldname": "current_custodian", "fieldtype": "Link", "label": "Responsible (Custodian)", "options": "Employee", "read_only": 1},
+  {"fieldname": "cb_state", "fieldtype": "Column Break"},
+  {"fieldname": "current_customer", "fieldtype": "Link", "label": "Current Customer", "options": "Customer", "read_only": 1},
+  {"fieldname": "customer_branch", "fieldtype": "Data", "label": "Customer Branch", "read_only": 1},
+  {"fieldname": "contact_person", "fieldtype": "Data", "label": "Contact Person", "read_only": 1},
+  {"fieldname": "delivery_date", "fieldtype": "Date", "label": "Delivery Date", "read_only": 1},
+  {"fieldname": "expected_return_date", "fieldtype": "Date", "label": "Expected Return Date", "read_only": 1, "in_standard_filter": 1},
+  {"fieldname": "last_movement", "fieldtype": "Link", "label": "Last Movement", "options": "Display Movement", "read_only": 1},
+  {"fieldname": "last_movement_on", "fieldtype": "Datetime", "label": "Last Movement On", "read_only": 1}
+ ],
+ "links": [
+  {"link_doctype": "Display Movement", "link_fieldname": "display_unit", "group": "History"}
+ ],
+ "module": "Display Tracking",
+ "name": "Display Unit",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+  {"role": "Display Manager", "read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
+  {"role": "Warehouse User", "read": 1, "write": 1, "create": 1, "report": 1},
+  {"role": "Sales User", "read": 1, "report": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
