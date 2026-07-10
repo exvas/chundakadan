@@ -1,0 +1,28 @@
+[
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-10 16:30:01.842805",
+  "name": "Display Manager",
+  "restrict_to_domain": null,
+  "role_name": "Display Manager",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-10 16:30:02.006914",
+  "name": "Warehouse User",
+  "restrict_to_domain": null,
+  "role_name": "Warehouse User",
+  "two_factor_auth": 0
+ }
+]

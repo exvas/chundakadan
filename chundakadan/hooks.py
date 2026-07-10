@@ -442,6 +442,13 @@ before_tests = "chundakadan.install.before_tests"
 # }
 
 fixtures = [
+    # --- Display Tracking (Phase 1) ---
+    # Workspace ships as a module file (display_tracking/workspace/); number
+    # cards are seeded via patch (seed_display_number_cards) to avoid clobbering
+    # the shared number_card.json fixture.
+    {"doctype": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
+    {"doctype": "Role", "filters": [["name", "in", ["Display Manager", "Warehouse User"]]]},
+    {"doctype": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
     {
         "doctype": "Report",
         "filters": [

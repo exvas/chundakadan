@@ -12,3 +12,5 @@ chundakadan.patches.delete_monthly_attendance_sheet_ck
 chundakadan.patches.add_leave_application_pending_status
 chundakadan.patches.revert_leave_application_naming_series
 chundakadan.patches.add_leave_application_partially_approved
+chundakadan.patches.seed_display_types
+chundakadan.patches.seed_display_number_cards

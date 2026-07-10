@@ -1,0 +1,30 @@
+[
+ {
+  "accounts": [],
+  "credit_limits": [],
+  "customer_group_name": "Dealer",
+  "default_price_list": null,
+  "docstatus": 0,
+  "doctype": "Customer Group",
+  "is_group": 0,
+  "modified": "2026-07-10 16:30:02.049058",
+  "name": "Dealer",
+  "old_parent": "All Customer Groups",
+  "parent_customer_group": "All Customer Groups",
+  "payment_terms": null
+ },
+ {
+  "accounts": [],
+  "credit_limits": [],
+  "customer_group_name": "Retail Outlet",
+  "default_price_list": null,
+  "docstatus": 0,
+  "doctype": "Customer Group",
+  "is_group": 0,
+  "modified": "2026-07-10 16:30:02.146438",
+  "name": "Retail Outlet",
+  "old_parent": "All Customer Groups",
+  "parent_customer_group": "All Customer Groups",
+  "payment_terms": null
+ }
+]
