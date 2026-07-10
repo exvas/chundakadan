@@ -12,7 +12,9 @@ CARDS = [
     ("Displays Missing", [["Display Unit", "current_status", "=", "Missing"]], None),
     ("Displays Due for Return",
         [["Display Unit", "current_status", "=", "Installed at Customer"]],
-        [["Display Unit", "expected_return_date", "<=", "frappe.utils.nowdate()"]]),
+        # dynamic filters are eval'd as JavaScript client-side (dashboard_utils.js),
+        # so this must be a JS expression, not Python.
+        [["Display Unit", "expected_return_date", "<=", "frappe.datetime.now_date()"]]),
 ]
 
 
