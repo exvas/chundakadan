@@ -47,8 +47,7 @@
  "permissions": [
   {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
   {"role": "Display Manager", "read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
-  {"role": "Warehouse User", "read": 1, "write": 1, "create": 1, "report": 1},
-  {"role": "Sales User", "read": 1, "report": 1}
+  {"role": "Display User", "read": 1, "write": 1, "create": 1, "report": 1}
  ],
  "sort_field": "modified",
  "sort_order": "DESC",

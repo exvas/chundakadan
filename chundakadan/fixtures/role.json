@@ -6,10 +6,10 @@
   "doctype": "Role",
   "home_page": null,
   "is_custom": 0,
-  "modified": "2026-07-10 16:30:01.842805",
-  "name": "Display Manager",
+  "modified": "2026-07-10 17:04:51.227956",
+  "name": "Display User",
   "restrict_to_domain": null,
-  "role_name": "Display Manager",
+  "role_name": "Display User",
   "two_factor_auth": 0
  },
  {
@@ -19,10 +19,10 @@
   "doctype": "Role",
   "home_page": null,
   "is_custom": 0,
-  "modified": "2026-07-10 16:30:02.006914",
-  "name": "Warehouse User",
+  "modified": "2026-07-10 16:30:01.842805",
+  "name": "Display Manager",
   "restrict_to_domain": null,
-  "role_name": "Warehouse User",
+  "role_name": "Display Manager",
   "two_factor_auth": 0
  }
 ]

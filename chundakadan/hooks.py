@@ -447,7 +447,7 @@ fixtures = [
     # cards are seeded via patch (seed_display_number_cards) to avoid clobbering
     # the shared number_card.json fixture.
     {"doctype": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
-    {"doctype": "Role", "filters": [["name", "in", ["Display Manager", "Warehouse User"]]]},
+    {"doctype": "Role", "filters": [["name", "in", ["Display Manager", "Display User"]]]},
     {"doctype": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
     {
         "doctype": "Report",

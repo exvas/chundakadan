@@ -17,21 +17,22 @@
    "label": "Display Movements per Month"
   }
  ],
- "content": "[{\"id\": \"hdr1\", \"type\": \"header\", \"data\": {\"text\": \"<span class='h4'>Display Tracking</span>\", \"col\": 12}}, {\"id\": \"nc_Total \", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Display Units\", \"col\": 3}}, {\"id\": \"nc_Displa\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Displays In Warehouse\", \"col\": 3}}, {\"id\": \"nc_Displa\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Displays At Customer\", \"col\": 3}}, {\"id\": \"nc_Displa\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Displays In Transit\", \"col\": 3}}, {\"id\": \"nc_Displa\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Displays Damaged\", \"col\": 3}}, {\"id\": \"nc_Displa\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Displays Missing\", \"col\": 3}}, {\"id\": \"nc_Displa\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Displays Due for Return\", \"col\": 3}}, {\"id\": \"hdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class='h4'>Overview</span>\", \"col\": 12}}, {\"id\": \"ch_Displa\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Display Units by Status\", \"col\": 6}}, {\"id\": \"ch_Displa\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Display Units by Location Type\", \"col\": 6}}, {\"id\": \"ch2_Displa\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Display Units by Supplier\", \"col\": 12}}, {\"id\": \"ch2_Displa\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Display Movements per Month\", \"col\": 12}}]",
+ "content": "[{\"id\":\"hdr1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Display Tracking</span>\",\"col\":12}},{\"id\":\"nc_Total \",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Display Units\",\"col\":3}},{\"id\":\"nc_Displa\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Displays In Warehouse\",\"col\":3}},{\"id\":\"nc_Displa\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Displays At Customer\",\"col\":3}},{\"id\":\"nc_Displa\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Displays In Transit\",\"col\":3}},{\"id\":\"nc_Displa\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Displays Damaged\",\"col\":3}},{\"id\":\"nc_Displa\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Displays Missing\",\"col\":3}},{\"id\":\"nc_Displa\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Displays Due for Return\",\"col\":3}},{\"id\":\"hdr2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Overview</span>\",\"col\":12}},{\"id\":\"ch_Displa\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Display Units by Status\",\"col\":6}},{\"id\":\"ch_Displa\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Display Units by Location Type\",\"col\":6}},{\"id\":\"ch2_Displa\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Display Units by Supplier\",\"col\":12}},{\"id\":\"ch2_Displa\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Display Movements per Month\",\"col\":12}}]",
  "creation": "2026-07-10 16:53:58.491105",
  "custom_blocks": [],
  "custom_hide_from_menu": 0,
  "custom_open_dashboard": 0,
  "docstatus": 0,
  "doctype": "Workspace",
+ "for_user": "",
  "hide_custom": 0,
- "icon": "box",
+ "icon": "external-link",
  "idx": 0,
- "indicator_color": "green",
+ "indicator_color": "",
  "is_hidden": 0,
  "label": "Display View",
  "links": [],
- "modified": "2026-07-10 16:53:58.491105",
+ "modified": "2026-07-10 17:05:26.812288",
  "modified_by": "Administrator",
  "module": "Display Tracking",
  "name": "Display View",
@@ -66,39 +67,11 @@
   }
  ],
  "owner": "Administrator",
+ "parent_page": "",
  "public": 1,
  "quick_lists": [],
  "roles": [],
  "sequence_id": 3.0,
- "shortcuts": [
-  {
-   "color": "Blue",
-   "doc_view": "",
-   "label": "Display Units",
-   "link_to": "Display Unit",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "doc_view": "",
-   "label": "Display Movements",
-   "link_to": "Display Movement",
-   "type": "DocType"
-  },
-  {
-   "doc_view": "",
-   "label": "Display Types",
-   "link_to": "Display Type",
-   "type": "DocType"
-  },
-  {
-   "color": "Red",
-   "doc_view": "",
-   "label": "Due for Return",
-   "link_to": "Display Unit",
-   "stats_filter": "{\"current_status\": \"Installed at Customer\", \"expected_return_date\": [\"<=\", \"Today\"]}",
-   "type": "DocType"
-  }
- ],
+ "shortcuts": [],
  "title": "Display View"
 }
