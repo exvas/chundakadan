@@ -128,6 +128,7 @@ PROFILES = [
         "roles": [
             "Sales User", "Stock User",
             "Sales HOD Leave Approver", "Leave Approver",
+            "Item Manager", "Accounts User",
             "Employee", "Employee Self Service",
         ],
         "modules_enabled": [

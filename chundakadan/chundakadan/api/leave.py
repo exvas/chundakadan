@@ -130,7 +130,7 @@ def generate_approval_flow(doc, designation):
     role_sequence = []
 
     # Sales chain: Sales Executive -> Sales HOD -> HR -> GM
-    if designation == "Sales Executive":
+    if designation in ("Sales Executive", "Business Development Executive", "BDE"):
         role_sequence = ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
     # Accounts/Purchasing chain: must clear Accounts Manager (HOD) first
     elif designation in ("Accountant", "Purchase Coordinator", "Purchaser"):
