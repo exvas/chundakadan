@@ -250,12 +250,14 @@ function oev_update_indicator(frm) {
     const status = frm.doc.custom_approval_status;
     if (!status) return;
 
-    // Surgical dedupe — only remove OUR previous banner (tagged with
-    // .oev-approval-banner). Don't touch other Frappe dashboard sections.
+    // Clear the prior headline first. set_headline_alert() renders through
+    // frm.layout.show_message() (NOT a .form-dashboard-section), so the old
+    // .closest('.form-dashboard-section') dedupe never matched — and on the
+    // save -> refresh cycle the banner stacked, showing "Approval: Pending"
+    // twice. clear_headline() empties it so we always render exactly one.
     try {
-        if (frm.dashboard && frm.dashboard.wrapper) {
-            frm.dashboard.wrapper.find('.oev-approval-banner')
-                .closest('.form-dashboard-section').remove();
+        if (frm.dashboard && frm.dashboard.clear_headline) {
+            frm.dashboard.clear_headline();
         }
     } catch (e) { /* swallow */ }
 
@@ -287,13 +289,18 @@ function oev_hide_standard_submit(frm) {
     setTimeout(() => {
         try {
             // Only hide if the primary button text is actually "Submit"
+            // Hide with the 'hide' CLASS (not .hide()/inline display:none):
+            // Frappe re-shows the primary via set_primary_action() ->
+            // .removeClass('hide'), which cannot clear an inline display:none.
+            // Using the class lets the button reappear as "Save" the moment
+            // the user edits a saved draft (else it stays hidden until reload).
             const primary = frm.page && frm.page.btn_primary;
             if (primary && primary.text().trim() === __('Submit')) {
-                primary.hide();
+                primary.addClass('hide');
             }
             frm.page.wrapper.find('.primary-action').filter(function () {
                 return $(this).text().trim() === __('Submit');
-            }).hide();
+            }).addClass('hide');
         } catch (e) { /* swallow */ }
     }, 50);
 }

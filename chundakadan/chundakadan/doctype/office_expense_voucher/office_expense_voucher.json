@@ -123,7 +123,6 @@
    "description": "Bank or Cash account. Required unless 'Pay Later' is ticked.",
    "fieldname": "paid_from",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Paid From",
    "mandatory_depends_on": "eval:!doc.pay_later",
    "options": "Account"
@@ -153,7 +152,7 @@
   },
   {
    "depends_on": "eval:doc.docstatus===1 && doc.balance_amount > 0",
-   "description": "Remaining unpaid amount (Grand Total − Paid). Click 'Make Payment' to settle.",
+   "description": "Remaining unpaid amount (Grand Total \u2212 Paid). Click 'Make Payment' to settle.",
    "fieldname": "balance_amount",
    "fieldtype": "Currency",
    "label": "Balance Amount",
@@ -221,7 +220,6 @@
    "description": "Approval workflow: Pending \u2192 Partially Approved \u2192 Approved (or Rejected)",
    "fieldname": "custom_approval_status",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Workflow Status",
    "options": "\nPending\nPartially Approved\nApproved\nRejected",
@@ -231,7 +229,6 @@
    "description": "User who needs to act on the current workflow step",
    "fieldname": "current_approver",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Next Approver",
    "options": "User",
    "read_only": 1
