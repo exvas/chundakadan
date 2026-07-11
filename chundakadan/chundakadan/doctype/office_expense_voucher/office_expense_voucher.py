@@ -215,6 +215,30 @@ class OfficeExpenseVoucher(AccountsController):
             merge_entries=False,
         )
 
+    def _narration(self, line_desc=None):
+        """Clean, HTML-stripped narration for GL `remarks` so a single-account
+        ledger reads well on ANY leg (bank / payable / expense).
+
+        Priority: the line's description → the voucher description → a
+        constructed "Paid to <vendor> for <first line>" fallback.
+        The description fields are rich-text (Text Editor), so strip HTML.
+        """
+        from frappe.utils import strip_html
+        from html import unescape
+        text = (unescape(strip_html(line_desc or "")).strip()
+                or unescape(strip_html(self.description or "")).strip())
+        if not text:
+            first_item = (unescape(strip_html(self.items[0].description or "")).strip()
+                          if self.items else "")
+            vendor = (self.vendor_payee or "").strip()
+            if vendor and first_item:
+                text = f"Paid to {vendor} for {first_item}"
+            elif vendor:
+                text = f"Paid to {vendor}"
+            else:
+                text = first_item
+        return text
+
     def get_gl_entries(self) -> list[dict]:
         """Build the GL entry rows.
 
@@ -259,7 +283,7 @@ class OfficeExpenseVoucher(AccountsController):
                 "cost_center": cc,
                 "against_voucher_type": self.doctype,
                 "against_voucher": self.name,
-                "remarks": row.description or self.description or "",
+                "remarks": self._narration(row.description),
             }, account_currency=company_currency, item=self))
 
         # 2/3. Credit side
@@ -276,7 +300,7 @@ class OfficeExpenseVoucher(AccountsController):
                 "cost_center": cr_cc_fallback,
                 "against_voucher_type": self.doctype,
                 "against_voucher": self.name,
-                "remarks": self.description or self.vendor_payee or "",
+                "remarks": self._narration(),
             }, account_currency=company_currency, item=self))
             # Dr Payable (clearing)
             gl.append(self.get_gl_dict({
@@ -289,7 +313,7 @@ class OfficeExpenseVoucher(AccountsController):
                 "cost_center": cr_cc_fallback,
                 "against_voucher_type": self.doctype,
                 "against_voucher": self.name,
-                "remarks": self.description or self.vendor_payee or "",
+                "remarks": self._narration(),
             }, account_currency=company_currency, item=self))
             # Cr Paid From (money out)
             gl.append(self.get_gl_dict({
@@ -302,7 +326,7 @@ class OfficeExpenseVoucher(AccountsController):
                 "cost_center": cr_cc_fallback,
                 "against_voucher_type": self.doctype,
                 "against_voucher": self.name,
-                "remarks": self.description or self.vendor_payee or "",
+                "remarks": self._narration(),
             }, account_currency=company_currency, item=self))
         else:
             # ====== Shapes B / C / D: single Cr leg ======
@@ -319,7 +343,7 @@ class OfficeExpenseVoucher(AccountsController):
                 "cost_center": cr_cc_fallback,
                 "against_voucher_type": self.doctype,
                 "against_voucher": self.name,
-                "remarks": self.description or self.vendor_payee or "",
+                "remarks": self._narration(),
             }
             if party_type and party:
                 cr_dict["party_type"] = party_type
