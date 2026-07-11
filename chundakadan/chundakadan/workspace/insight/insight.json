@@ -1,0 +1,133 @@
+{
+ "charts": [
+  {
+   "chart_name": "Monthly Sales Trend",
+   "label": "Monthly Sales Trend"
+  },
+  {
+   "chart_name": "Monthly Collections",
+   "label": "Monthly Collections"
+  },
+  {
+   "chart_name": "Monthly Purchases",
+   "label": "Monthly Purchases"
+  },
+  {
+   "chart_name": "Top Customers by Sales",
+   "label": "Top Customers by Sales"
+  }
+ ],
+ "content": "[{\"id\": \"hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class='h4'><b>Company Insight</b></span>\", \"col\": 12}}, {\"id\": \"nc_Sales\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales This Month\", \"col\": 3}}, {\"id\": \"nc_Sales\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales This Year\", \"col\": 3}}, {\"id\": \"nc_Purcha\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Purchases This Month\", \"col\": 3}}, {\"id\": \"nc_Receiv\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Receivables Outstanding\", \"col\": 3}}, {\"id\": \"nc_Payabl\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Payables Outstanding\", \"col\": 3}}, {\"id\": \"nc_Sales\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Orders This Month\", \"col\": 3}}, {\"id\": \"nc_Active\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Employees\", \"col\": 3}}, {\"id\": \"nc_Pendin\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Leave Approvals\", \"col\": 3}}, {\"id\": \"hdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class='h5'>Trends</span>\", \"col\": 12}}, {\"id\": \"ch_sales\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Monthly Sales Trend\", \"col\": 8}}, {\"id\": \"ch_coll\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Monthly Collections\", \"col\": 4}}, {\"id\": \"ch_pur\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Monthly Purchases\", \"col\": 6}}, {\"id\": \"ch_cust\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Top Customers by Sales\", \"col\": 6}}]",
+ "creation": "2026-07-11 12:29:05.486479",
+ "custom_blocks": [],
+ "custom_hide_from_menu": 0,
+ "custom_open_dashboard": 0,
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "dashboard",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Insight",
+ "links": [],
+ "modified": "2026-07-11 12:29:05.486479",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Insight",
+ "number_cards": [
+  {
+   "label": "Sales This Month",
+   "number_card_name": "Sales This Month"
+  },
+  {
+   "label": "Sales This Year",
+   "number_card_name": "Sales This Year"
+  },
+  {
+   "label": "Purchases This Month",
+   "number_card_name": "Purchases This Month"
+  },
+  {
+   "label": "Receivables Outstanding",
+   "number_card_name": "Receivables Outstanding"
+  },
+  {
+   "label": "Payables Outstanding",
+   "number_card_name": "Payables Outstanding"
+  },
+  {
+   "label": "Sales Orders This Month",
+   "number_card_name": "Sales Orders This Month"
+  },
+  {
+   "label": "Active Employees",
+   "number_card_name": "Active Employees"
+  },
+  {
+   "label": "Pending Leave Approvals",
+   "number_card_name": "Pending Leave Approvals"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Profit and Loss Statement",
+   "link_to": "Profit and Loss Statement",
+   "report_ref_doctype": "GL Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Balance Sheet",
+   "link_to": "Balance Sheet",
+   "report_ref_doctype": "GL Entry",
+   "type": "Report"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Accounts Receivable",
+   "link_to": "Accounts Receivable",
+   "report_ref_doctype": "Sales Invoice",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Accounts Payable",
+   "link_to": "Accounts Payable",
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Report"
+  },
+  {
+   "doc_view": "",
+   "label": "General Ledger",
+   "link_to": "General Ledger",
+   "report_ref_doctype": "GL Entry",
+   "type": "Report"
+  },
+  {
+   "doc_view": "",
+   "label": "Account Ledger Report",
+   "link_to": "Account Ledger Report",
+   "report_ref_doctype": "GL Entry",
+   "type": "Report"
+  },
+  {
+   "doc_view": "",
+   "label": "Sales Register",
+   "link_to": "Sales Register",
+   "report_ref_doctype": "Sales Invoice",
+   "type": "Report"
+  }
+ ],
+ "title": "Insight"
+}

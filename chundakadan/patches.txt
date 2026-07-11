@@ -14,3 +14,4 @@ chundakadan.patches.revert_leave_application_naming_series
 chundakadan.patches.add_leave_application_partially_approved
 chundakadan.patches.seed_display_types
 chundakadan.patches.seed_display_number_cards
+chundakadan.patches.seed_insight_dashboard
