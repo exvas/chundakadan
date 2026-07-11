@@ -15,3 +15,4 @@ chundakadan.patches.add_leave_application_partially_approved
 chundakadan.patches.seed_display_types
 chundakadan.patches.seed_display_number_cards
 chundakadan.patches.seed_insight_dashboard
+chundakadan.patches.backfill_oev_gl_narration

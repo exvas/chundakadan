@@ -228,15 +228,13 @@ class OfficeExpenseVoucher(AccountsController):
         text = (unescape(strip_html(line_desc or "")).strip()
                 or unescape(strip_html(self.description or "")).strip())
         if not text:
-            first_item = (unescape(strip_html(self.items[0].description or "")).strip()
-                          if self.items else "")
-            vendor = (self.vendor_payee or "").strip()
-            if vendor and first_item:
-                text = f"Paid to {vendor} for {first_item}"
-            elif vendor:
-                text = f"Paid to {vendor}"
-            else:
-                text = first_item
+            # Fall back to the expense line description(s) — THAT is the
+            # narration the user typed. Vendor name only as a last resort.
+            descs = [unescape(strip_html(r.description or "")).strip()
+                     for r in (self.items or [])]
+            text = "; ".join(d for d in descs if d)
+        if not text and (self.vendor_payee or "").strip():
+            text = "Paid to {0}".format(self.vendor_payee.strip())
         return text
 
     def get_gl_entries(self) -> list[dict]:
