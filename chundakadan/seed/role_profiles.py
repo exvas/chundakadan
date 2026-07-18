@@ -290,7 +290,7 @@ USER_PROFILE_MAP = {
 
     # HR
     "binduudayan334@gmail.com":       "CDN HR Manager",
-    "chundakadanadmi@gmail.com":      "CDN HR Assistant",
+    "chundakadanadmi@gmail.com":      "CDN HR Manager",
 
     # Sales HODs
     "marketing@chundakadan.in":       "CDN Sales HOD",
