@@ -434,6 +434,102 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
 
 
 @frappe.whitelist()
+def quick_create_user(email, first_name, last_name="", send_welcome_email=1):
+    """Create a bare login for a NOT-YET-SAVED Employee (Job Offer flow).
+
+    Employee.user_id is mandatory on this site, so HR can't save a new
+    Employee without a User — but ``create_user_for_employee`` needs a saved
+    Employee. This creates (or re-uses an unlinked) enabled System User with
+    NO role profile — department isn't final until the form is saved, so the
+    full provisioning (role profile / permissions / sales person / manager
+    details) runs in ``auto_provision_on_insert`` when the Employee is saved.
+    """
+    _check_hr_user()
+    email = (email or "").strip().lower()
+    if not email:
+        frappe.throw(_("Email is required."))
+    validate_email_address(email, throw=True)
+
+    if frappe.db.exists("User", email):
+        linked = frappe.db.get_value("Employee", {"user_id": email}, "employee_name")
+        if linked:
+            frappe.throw(_("Email {0} is already linked to employee {1}.")
+                          .format(email, linked))
+        user = frappe.get_doc("User", email)
+        if not user.enabled:
+            user.enabled = 1
+            user.flags.ignore_permissions = True
+            user.save()
+        return {"user": user.name, "existing": True}
+
+    user = frappe.get_doc({
+        "doctype": "User",
+        "email": email,
+        "first_name": (first_name or "").strip() or email.split("@")[0],
+        "last_name": (last_name or "").strip(),
+        "enabled": 1,
+        "send_welcome_email": 1 if int(send_welcome_email or 0) else 0,
+        "user_type": "System User",
+    })
+    user.flags.ignore_permissions = True
+    user.insert()
+    return {"user": user.name, "existing": False}
+
+
+def auto_provision_on_insert(doc, method=None):
+    """Employee ``after_insert`` — finish provisioning a pre-created User.
+
+    Complements ``quick_create_user``: once the Employee exists (department /
+    designation now known), assign the department Role Profile, user
+    permissions, Sales Person and manager details — the same steps
+    ``create_user_for_employee`` runs, via the same helpers. Idempotent; never
+    blocks Employee creation (failures land in the Error Log instead).
+    """
+    if not doc.user_id:
+        return
+    if frappe.flags.in_import or frappe.flags.in_patch or frappe.flags.in_migrate \
+            or frappe.flags.in_install or frappe.flags.in_test:
+        return
+    if not frappe.db.exists("User", doc.user_id):
+        return
+
+    try:
+        log = []
+        # role profile from department — only when the user has none yet
+        if not frappe.db.get_value("User", doc.user_id, "role_profile_name"):
+            role_profile = _resolve_role_profile_for_dept(doc.department)
+            if role_profile:
+                user = frappe.get_doc("User", doc.user_id)
+                user.role_profile_name = role_profile
+                user.flags.ignore_permissions = True
+                user.save()
+                log.append(f"Assigned Role Profile: {role_profile}")
+            else:
+                log.append("No Role Profile mapped for department "
+                           f"{doc.department or '(none)'} — assign manually")
+
+        _apply_user_permissions(doc.user_id, doc, log)
+
+        if _is_sales_dept(doc.department):
+            _setup_sales_person_full(doc.name, log)
+
+        if _is_manager_designation(doc.designation):
+            _add_to_manager_details(doc.name, log=log)
+
+        doc.add_comment(
+            "Info",
+            "<b>User auto-provisioned on Employee creation</b><br>"
+            + "<br>".join("• " + ln for ln in log)
+            + f"<br><br><i>By {frappe.session.user}</i>",
+        )
+    except Exception:
+        frappe.log_error(
+            title=f"auto_provision_on_insert failed for {doc.name}",
+            message=frappe.get_traceback(),
+        )
+
+
+@frappe.whitelist()
 def apply_geofence_for_employee(employee, shift_location=None):
     """Set or clear the geofence on every active Shift Assignment for this
     employee.

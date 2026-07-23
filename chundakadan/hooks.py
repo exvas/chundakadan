@@ -110,6 +110,10 @@ doctype_list_js = {
 # Installation
 # ------------
 doc_events = {
+    # NOTE: keep exactly ONE dict entry per doctype — a duplicate key later in
+    # this dict silently OVERWRITES the earlier one (plain Python dict), which
+    # is how the PE cheque-bounce + SI overdue validations went dead until
+    # 2026-07-23. Merge new events into the existing block.
     "Payment Entry": {
         "validate":
         "chundakadan.doc_events.payment_entry.set_custom_sales_person",
@@ -119,7 +123,12 @@ doc_events = {
         "before_submit": [
             "chundakadan.doc_events.payment_entry.set_custom_sales_person",
             "chundakadan.doc_events.payment_entry.validate_check_bounce"
-        ]
+        ],
+        # When a PE referencing an Office Expense Voucher is submitted or
+        # cancelled, sync the voucher's status (legacy path — keep in
+        # case real PEs ever reference an OEV).
+        "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+        "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
     },
     "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
@@ -127,7 +136,15 @@ doc_events = {
 	"Sales Invoice": {
         "autoname": "chundakadan.doc_events.sales_invoice.autoname",
         "validate": "chundakadan.doc_events.sales_invoice.validate_sales_invoice",
-        "on_trash": "chundakadan.doc_events.sales_invoice.on_trash"
+        "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
+        # Auto-apply In-State GST template + tax_category when blank
+        "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults"
+    },
+    # New Employee saved with a User ID (created via the quick "Create User ID"
+    # dialog on the new-employee form) -> auto-assign role profile from
+    # department, user permissions, sales person, manager details.
+    "Employee": {
+        "after_insert": "chundakadan.chundakadan.api.employee_user_actions.auto_provision_on_insert"
     },
     "Leave Policy": {
         "before_save": "chundakadan.doc_events.leave_policy.set_annual_allocation_from_leave_type",
@@ -190,21 +207,11 @@ doc_events = {
     "Customer": {
         "before_insert": "chundakadan.doc_events.tax_defaults.apply_customer_defaults",
     },
-    # Auto-apply In-State GST template + tax_category on NEW invoices so
-    # HR doesn't have to remember (Sales Invoice -> Output GST In-state - CA,
-    # Purchase Invoice -> Input GST In-state - CA). Fills only when blank.
-    "Sales Invoice": {
-        "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults",
-    },
+    # Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
+    # when blank (the Sales Invoice equivalent lives in the single merged
+    # "Sales Invoice" block above — do NOT re-add a duplicate key here).
     "Purchase Invoice": {
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
-    },
-    "Payment Entry": {
-        # When a PE references an Office Expense Voucher is submitted or
-        # cancelled, sync the voucher's status (legacy path — keep in
-        # case real PEs ever reference an OEV).
-        "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
-        "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
     },
     "Journal Entry": {
         # When a JV's account row references an OEV (deferred-payment

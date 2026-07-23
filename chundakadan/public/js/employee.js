@@ -598,9 +598,83 @@ function render_setup_status(frm) {
     });
 }
 
+// ===== Quick "Create User ID" for NEW employees (Job Offer flow) =====
+// Employee.user_id is mandatory on this site, so HR can't Save a new
+// Employee without a login — but the standard ERPNext "Create User" button
+// throws "Please enter Preferred Contact Email" on a fresh form AND creates
+// a bare user with none of the chundakadan provisioning. This dialog creates
+// the login immediately (email prefilled from the Job Applicant); the full
+// setup (role profile from Department, permissions, Sales Person, manager
+// details) runs automatically server-side when the Employee is saved
+// (Employee.after_insert -> auto_provision_on_insert).
+function setup_quick_user_button(frm) {
+    if (!frappe.user.has_role(['System Manager', 'HR Manager', 'HR User'])) return;
+    if (frm.doc.user_id) return;
+    frm.add_custom_button(__('Create User ID'), () => open_quick_user_dialog(frm));
+}
+
+async function open_quick_user_dialog(frm) {
+    let email = frm.doc.personal_email || frm.doc.company_email || '';
+    if (!email && frm.doc.job_applicant) {
+        try {
+            const r = await frappe.db.get_value('Job Applicant', frm.doc.job_applicant, 'email_id');
+            email = (r.message && r.message.email_id) || '';
+        } catch (e) { /* applicant gone — HR types the email */ }
+    }
+    const d = new frappe.ui.Dialog({
+        title: __('Create User ID for {0}', [frm.doc.employee_name || frm.doc.first_name || __('Employee')]),
+        fields: [
+            { fieldtype: 'Data', options: 'Email', fieldname: 'email',
+              label: __('Email (login ID)'), reqd: 1, default: email },
+            { fieldtype: 'Check', fieldname: 'send_welcome_email',
+              label: __('Send welcome email (password setup link)'), default: 1 },
+            { fieldtype: 'HTML', fieldname: 'note', options:
+              `<div class="text-muted" style="font-size:12px;margin-top:4px;">${
+                  __('The login is created immediately. Role Profile, permissions and Sales Person are auto-assigned from Department when you Save this employee.')
+              }</div>` },
+        ],
+        primary_action_label: __('Create User'),
+        primary_action(values) {
+            frappe.call({
+                method: 'chundakadan.chundakadan.api.employee_user_actions.quick_create_user',
+                args: {
+                    email: values.email,
+                    first_name: frm.doc.first_name || frm.doc.employee_name || values.email,
+                    last_name: frm.doc.last_name || '',
+                    send_welcome_email: values.send_welcome_email ? 1 : 0,
+                },
+                freeze: true,
+                freeze_message: __('Creating user...'),
+            }).then((r) => {
+                const res = r && r.message;
+                if (!res) return;
+                d.hide();
+                frm.set_value('user_id', res.user);
+                if (!frm.doc.personal_email) frm.set_value('personal_email', res.user);
+                frappe.show_alert({
+                    message: res.existing
+                        ? __('Linked existing user {0}. Now Save — role & permissions are assigned automatically.', [res.user])
+                        : __('User {0} created. Now Save — role & permissions are assigned automatically.', [res.user]),
+                    indicator: 'green',
+                }, 8);
+            });
+        },
+    });
+    d.show();
+}
+
 frappe.ui.form.on('Employee', {
     refresh(frm) {
-        if (frm.doc.__islocal) return;
+        // The standard ERPNext "Create User" button (create_user Button field)
+        // needs prefered_email and bypasses chundakadan provisioning — hide it
+        // everywhere. New form: quick dialog. Saved form: HR Actions →
+        // Create User & Setup.
+        frm.set_df_property('create_user', 'hidden', 1);
+
+        if (frm.doc.__islocal) {
+            setup_quick_user_button(frm);
+            return;
+        }
         if (frm.doc.status !== 'Active') return;
 
         render_setup_status(frm);
