@@ -343,10 +343,21 @@ override_doctype_class = {
 # Scheduled Tasks
 # ---------------
 
+# Guarantees the session-healing patch installs on every web worker even when
+# the app package was never otherwise imported (get_hooks serves from the redis
+# cache without importing app code). See overrides/session_healing.py.
+before_request = ["chundakadan.overrides.session_healing.install"]
+
 scheduler_events = {
 	"cron": {
 		"*/15 * * * *": [
 			"chundakadan.chundakadan.doctype.crosschex_settings.crosschex_settings.scheduled_attendance_sync"
+		],
+		# Hourly backstop for corrupt cached sessions ("User None is disabled"):
+		# even a worker that somehow resumes sessions unpatched heals within the
+		# hour because the corrupt redis entry is swept away.
+		"0 * * * *": [
+			"chundakadan.overrides.session_healing.clean_corrupt_sessions"
 		],
 		"0 */6 * * *": [
 			"chundakadan.chundakadan.doctype.crosschex_settings.crosschex_settings.check_and_refresh_token"

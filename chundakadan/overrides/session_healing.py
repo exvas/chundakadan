@@ -47,3 +47,22 @@ def install():
 
 	get_session_data_from_cache._cdn_session_heal = True
 	Session.get_session_data_from_cache = get_session_data_from_cache
+
+
+def clean_corrupt_sessions():
+	"""Hourly scheduler backstop: sweep cached sessions missing the ``user`` key.
+
+	Covers the theoretical worker that resumes sessions before anything imported
+	this app (``HTTPRequest`` runs before the ``before_request`` hooks, and
+	``get_hooks`` serves from the redis cache without importing app code).
+	"""
+	dropped = []
+	for sid, data in (frappe.cache.hgetall("session") or {}).items():
+		sid = sid if isinstance(sid, str) else sid.decode(errors="replace")
+		if "user" not in (frappe._dict(data).get("data") or {}):
+			frappe.cache.hdel("session", sid)
+			dropped.append(sid[:12])
+	if dropped:
+		frappe.logger("chundakadan").warning(
+			"session_healing: swept %d corrupt cached session(s): %s", len(dropped), dropped
+		)
