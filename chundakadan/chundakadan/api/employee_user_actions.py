@@ -377,7 +377,8 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
             new_user.save(ignore_permissions=True)
             log.append("Re-enabled existing User")
     else:
-        # Create fresh User
+        # Create fresh User — Role + Module Profile share names (seed
+        # convention); module profile is the module-visibility whitelist
         role_profile = _resolve_role_profile_for_dept(emp.department)
         new_user = frappe.get_doc({
             "doctype": "User",
@@ -388,6 +389,9 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1,
             "send_welcome_email": 1 if int(send_welcome_email or 0) else 0,
             "user_type": "System User",
             "role_profile_name": role_profile or "",
+            "module_profile": role_profile
+                if role_profile and frappe.db.exists("Module Profile", role_profile)
+                else "",
         })
         new_user.flags.ignore_permissions = True
         new_user.insert()
@@ -495,15 +499,20 @@ def auto_provision_on_insert(doc, method=None):
 
     try:
         log = []
-        # role profile from department — only when the user has none yet
+        # role profile from department — only when the user has none yet.
+        # Role + Module Profile share the same name per profile (seed
+        # convention), so set both: roles = what you can DO, module profile
+        # = which modules you SEE (whitelist; without it every module shows).
         if not frappe.db.get_value("User", doc.user_id, "role_profile_name"):
             role_profile = _resolve_role_profile_for_dept(doc.department)
             if role_profile:
                 user = frappe.get_doc("User", doc.user_id)
                 user.role_profile_name = role_profile
+                if frappe.db.exists("Module Profile", role_profile):
+                    user.module_profile = role_profile
                 user.flags.ignore_permissions = True
                 user.save()
-                log.append(f"Assigned Role Profile: {role_profile}")
+                log.append(f"Assigned Role Profile + Module Profile: {role_profile}")
             else:
                 log.append("No Role Profile mapped for department "
                            f"{doc.department or '(none)'} — assign manually")
