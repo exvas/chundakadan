@@ -10,3 +10,11 @@ try:
 	standard_report.execute = custom_report.execute
 except ImportError:
 	pass
+
+# Self-heal corrupt cached sessions ("User None is disabled") — see overrides/session_healing.py
+try:
+	from chundakadan.overrides import session_healing
+
+	session_healing.install()
+except ImportError:
+	pass
