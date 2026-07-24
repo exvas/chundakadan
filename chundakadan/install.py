@@ -419,6 +419,67 @@ def ensure_visit_log_sales_user_create_perm(*args, **kwargs):
         print(f"chundakadan.install: could not adjust visit-log perm: {e}")
 
 
+def ensure_user_permission_hr_access(*args, **kwargs):
+    """Grant HR Manager + HR User read + create + delete on User Permission.
+
+    Hit 2026-07-23: an HR user (chundakadanadmi@) saving a new Employee got
+    "User ... does not have doctype access via role permission for document
+    User Permission". ERPNext's Employee.update_user_permissions() runs on
+    every save WITHOUT ignore_permissions and (because create_user_permission
+    defaults to 1) tries to add/remove a User Permission row. The doctype's
+    only DocPerm is System Manager, so any HR create/delete is rejected.
+
+    The sync_user_permission_flag validate hook already keeps the flag in
+    step with chundakadan provisioning so ordinary creates no-op; this grant
+    covers the rarer promotion/edit case where the flag genuinely flips and a
+    real add/remove must run. HR are trusted onboarding admins, matching the
+    ERPNext intent that whoever manages employees manages their permissions.
+
+    Idempotent: skips a role that already has read+create+delete.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "User Permission"):
+        return
+
+    for role in ("HR Manager", "HR User"):
+        if not frappe.db.exists("Role", role):
+            continue
+        existing = frappe.db.get_value(
+            "Custom DocPerm",
+            {"parent": "User Permission", "role": role},
+            ["name", "read", "create", "delete"],
+            as_dict=True,
+        )
+        if existing and existing.get("read") and existing.get("create") and existing.get("delete"):
+            continue
+        try:
+            if existing:
+                doc = frappe.get_doc("Custom DocPerm", existing["name"])
+                doc.read = 1
+                doc.create = 1
+                doc.delete = 1
+                doc.flags.ignore_permissions = True
+                doc.save()
+                print(f"chundakadan.install: upgraded {role} Custom DocPerm "
+                      "on User Permission (read+create+delete)")
+            else:
+                frappe.get_doc({
+                    "doctype": "Custom DocPerm",
+                    "parent": "User Permission",
+                    "parenttype": "DocType",
+                    "parentfield": "permissions",
+                    "role": role,
+                    "read": 1, "create": 1, "delete": 1,
+                }).insert(ignore_permissions=True)
+                print(f"chundakadan.install: created {role} Custom DocPerm "
+                      "on User Permission (read+create+delete)")
+        except Exception as e:
+            print(f"chundakadan.install: could not grant {role} User Permission access: {e}")
+    frappe.db.commit()
+    frappe.clear_cache(doctype="User Permission")
+
+
 def ensure_visit_log_visit_type_field(*args, **kwargs):
     """Idempotent: create Customer Visit Log.visit_type Custom Field
     so HR can filter "real customer visits" vs "mobile check-in /

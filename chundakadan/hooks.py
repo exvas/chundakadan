@@ -144,6 +144,10 @@ doc_events = {
     # dialog on the new-employee form) -> auto-assign role profile from
     # department, user permissions, sales person, manager details.
     "Employee": {
+        # keep stock create_user_permission checkbox in step with our
+        # provisioning so HR (no User Permission doctype access) never trips
+        # ERPNext's un-permissioned add/remove on save
+        "validate": "chundakadan.chundakadan.api.employee_user_actions.sync_user_permission_flag",
         "after_insert": "chundakadan.chundakadan.api.employee_user_actions.auto_provision_on_insert"
     },
     "Leave Policy": {
@@ -230,6 +234,7 @@ before_install = [
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
+    "chundakadan.install.ensure_user_permission_hr_access",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.install.ensure_expense_approval_fields",
@@ -248,6 +253,7 @@ before_migrate = [
     "chundakadan.install.ensure_visit_log_location_field",
     "chundakadan.install.ensure_visit_log_visit_type_field",
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
+    "chundakadan.install.ensure_user_permission_hr_access",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.seed.privacy_policy.upsert_page",

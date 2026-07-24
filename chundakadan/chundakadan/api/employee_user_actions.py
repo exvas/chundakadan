@@ -480,6 +480,30 @@ def quick_create_user(email, first_name, last_name="", send_welcome_email=1):
     return {"user": user.name, "existing": False}
 
 
+def sync_user_permission_flag(doc, method=None):
+    """Employee ``validate`` — keep the stock ``create_user_permission``
+    checkbox in step with chundakadan's own provisioning decision.
+
+    The stock field defaults to ``1``, so ERPNext's
+    ``Employee.update_user_permissions()`` (which runs on every save WITHOUT
+    ``ignore_permissions``) tries to add/remove a User Permission row — and
+    HR, having no access to the ``User Permission`` doctype, gets
+    "Not permitted". chundakadan already owns this via
+    ``_apply_user_permissions`` (restrict normal staff to self, but NOT
+    HR/GM/managers). Setting the flag to that same decision means the stock
+    path finds reality already matching and no-ops — so HR never triggers the
+    unpermitted add/remove on ordinary creates.
+
+    (The ``ensure_user_permission_hr_access`` install hook grants HR the
+    doctype access as a belt-and-suspenders for the rarer promotion/edit case
+    where the flag genuinely flips and a real add/remove must run.)
+    """
+    if not doc.user_id:
+        doc.create_user_permission = 0
+        return
+    doc.create_user_permission = 1 if _should_restrict_to_self(doc) else 0
+
+
 def auto_provision_on_insert(doc, method=None):
     """Employee ``after_insert`` — finish provisioning a pre-created User.
 
