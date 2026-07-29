@@ -493,6 +493,37 @@ def ensure_additional_salary_fields(*args, **kwargs):
         frappe.clear_cache(doctype="Additional Salary")
 
 
+def ensure_employee_checkin_readonly(*args, **kwargs):
+    """Make every Employee Checkin field read-only at the DOCTYPE level via
+    Property Setters — so the form can only be corrected through the HR-gated
+    'Update Time' button, regardless of cached JS. read_only is UI-only, so
+    update_checkin_time() still writes the time server-side.
+    """
+    import frappe
+    from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+    if not frappe.db.exists("DocType", "Employee Checkin"):
+        return
+    skip = {"Section Break", "Column Break", "Tab Break", "HTML", "Button", "Fold", "Heading"}
+    made = 0
+    for f in frappe.get_meta("Employee Checkin").fields:
+        if f.fieldtype in skip or f.read_only:
+            continue
+        if frappe.db.exists("Property Setter",
+                            {"doc_type": "Employee Checkin", "field_name": f.fieldname,
+                             "property": "read_only"}):
+            continue
+        try:
+            make_property_setter("Employee Checkin", f.fieldname, "read_only", 1, "Check",
+                                 validate_fields_for_doctype=False)
+            made += 1
+        except Exception as e:
+            print(f"chundakadan.install: could not lock Employee Checkin.{f.fieldname}: {e}")
+    if made:
+        frappe.clear_cache(doctype="Employee Checkin")
+        print(f"chundakadan.install: set {made} Employee Checkin fields read-only")
+
+
 def ensure_checkin_notification_field(*args, **kwargs):
     """Idempotent: add a 'Check-in Update Notification Emails' field to
     Chundakadan Settings (comma/newline-separated). These recipients are
