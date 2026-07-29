@@ -275,6 +275,13 @@ before_migrate = [
     "chundakadan.install.ensure_payroll_entry_form_defaults",
 ]
 
+# Runs AFTER doctypes sync — needed for the Additional Salary custom Table
+# field whose child doctype (Late Entry Detail) ships with this app, since
+# before_migrate runs before the child doctype exists on a fresh bootstrap.
+after_migrate = [
+    "chundakadan.install.ensure_additional_salary_fields",
+]
+
 # Uninstallation
 # ------------
 
