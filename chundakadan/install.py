@@ -440,24 +440,45 @@ def ensure_additional_salary_fields(*args, **kwargs):
             "in_standard_filter": 0,
         },
         {
+            # own full-width section so the breakdown table isn't squeezed into
+            # the two-column top section
+            "fieldname": "custom_late_entry_section",
+            "label": "Late Entry Details",
+            "fieldtype": "Section Break",
+            "insert_after": "custom_reason",
+        },
+        {
             # per-day late check-in breakdown, filled by the "Fetch Late Arrival
             # Deduction" button (child doctype ships with the app)
             "fieldname": "custom_late_entry_details",
-            "label": "Late Entry Details",
+            "label": "",
             "fieldtype": "Table",
             "options": "Late Entry Detail",
-            "insert_after": "custom_reason",
+            "insert_after": "custom_late_entry_section",
             "read_only": 1,
         },
     ]
     made = False
     for spec in fields:
         cf_name = f"Additional Salary-{spec['fieldname']}"
-        if frappe.db.exists("Custom Field", cf_name):
-            continue
         if spec["fieldtype"] == "Table" and not frappe.db.exists("DocType", spec["options"]):
             print(f"chundakadan.install: child doctype {spec['options']} not synced yet, "
                   f"skipping {cf_name} (re-run after migrate)")
+            continue
+        if frappe.db.exists("Custom Field", cf_name):
+            # self-heal placement/label if it drifted (e.g. table moved under
+            # the new section break)
+            doc = frappe.get_doc("Custom Field", cf_name)
+            changed = False
+            for k in ("insert_after", "label", "fieldtype", "read_only"):
+                if k in spec and (doc.get(k) or "") != (spec[k] or ""):
+                    doc.set(k, spec[k])
+                    changed = True
+            if changed:
+                doc.flags.ignore_permissions = True
+                doc.save()
+                print(f"chundakadan.install: updated {cf_name} placement/label")
+                made = True
             continue
         try:
             frappe.get_doc({

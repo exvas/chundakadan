@@ -44,7 +44,6 @@ frappe.ui.form.on("Additional Salary", {
 						c.deduction = row.deduction;
 					});
 					frm.refresh_field("custom_late_entry_details");
-					frm.set_value("amount", d.total);
 					frm.set_value(
 						"custom_reason",
 						__("Late entry deduction {0} to {1}: {2} late min over {3} day(s)", [
@@ -54,6 +53,15 @@ frappe.ui.form.on("Additional Salary", {
 							d.late_days,
 						])
 					);
+					// Setting salary_component triggers ERPNext's async
+					// get_salary_component_amount, which overwrites `amount` with
+					// the component default (0) AFTER we set it. Re-assert the
+					// total once that async lookup has landed so ours wins.
+					const apply_amount = () => frm.set_value("amount", d.total);
+					apply_amount();
+					setTimeout(function () {
+						if (flt(frm.doc.amount) !== flt(d.total)) apply_amount();
+					}, 800);
 					frappe.show_alert(
 						{
 							message: __("{0} late day(s), {1} min → {2}", [
