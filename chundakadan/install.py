@@ -493,6 +493,44 @@ def ensure_additional_salary_fields(*args, **kwargs):
         frappe.clear_cache(doctype="Additional Salary")
 
 
+def ensure_checkin_notification_field(*args, **kwargs):
+    """Idempotent: add a 'Check-in Update Notification Emails' field to
+    Chundakadan Settings (comma/newline-separated). These recipients are
+    emailed whenever HR corrects an Employee Checkin's time."""
+    import frappe
+
+    if not frappe.db.exists("DocType", "Chundakadan Settings"):
+        return
+    for spec in [
+        {
+            "fieldname": "checkin_notification_section",
+            "label": "Check-in Notifications",
+            "fieldtype": "Section Break",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "checkin_update_notification_emails",
+            "label": "Check-in Update Notification Emails",
+            "fieldtype": "Small Text",
+            "description": "Emails notified when HR updates an Employee Checkin time. "
+                           "Separate multiple addresses with commas or new lines.",
+        },
+    ]:
+        cf_name = f"Chundakadan Settings-{spec['fieldname']}"
+        if frappe.db.exists("Custom Field", cf_name):
+            continue
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field", "dt": "Chundakadan Settings",
+                "module": "Chundakadan", "translatable": 0,
+                "insert_after": "fcm_credentials_json", **spec,
+            }).insert(ignore_permissions=True)
+            print(f"chundakadan.install: created {cf_name}")
+        except Exception as e:
+            print(f"chundakadan.install: could not create {cf_name}: {e}")
+    frappe.clear_cache(doctype="Chundakadan Settings")
+
+
 def ensure_user_permission_hr_access(*args, **kwargs):
     """Grant HR Manager + HR User read + create + delete on User Permission.
 

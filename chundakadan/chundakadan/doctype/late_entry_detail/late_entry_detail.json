@@ -30,14 +30,14 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Shift",
-   "columns": 3
+   "columns": 2
   },
   {
    "fieldname": "late_minutes",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Late Minutes",
-   "columns": 2
+   "columns": 1
   },
   {
    "fieldname": "deduction",

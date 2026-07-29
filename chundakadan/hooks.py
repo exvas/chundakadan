@@ -67,6 +67,7 @@ doctype_js = {
     "Office Expense Voucher" : "public/js/office_expense_voucher.js",
     "Employee Transfer" : "public/js/employee_transfer.js",
     "Additional Salary" : "public/js/additional_salary.js",
+    "Employee Checkin" : "public/js/employee_checkin.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",
@@ -237,6 +238,7 @@ before_install = [
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_user_permission_hr_access",
     "chundakadan.install.ensure_additional_salary_fields",
+    "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.install.ensure_expense_approval_fields",
@@ -257,6 +259,7 @@ before_migrate = [
     "chundakadan.install.ensure_visit_log_sales_user_create_perm",
     "chundakadan.install.ensure_user_permission_hr_access",
     "chundakadan.install.ensure_additional_salary_fields",
+    "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.seed.privacy_policy.upsert_page",
@@ -280,6 +283,7 @@ before_migrate = [
 # before_migrate runs before the child doctype exists on a fresh bootstrap.
 after_migrate = [
     "chundakadan.install.ensure_additional_salary_fields",
+    "chundakadan.install.ensure_checkin_notification_field",
 ]
 
 # Uninstallation
