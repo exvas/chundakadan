@@ -5,15 +5,36 @@
 
 const CHECKIN_EDIT_ROLES = ["HR User", "HR Manager", "System Manager", "Administrator"];
 
-frappe.ui.form.on("Employee Checkin", {
-	refresh(frm) {
-		// lock every field + block save so nothing is edited directly
-		(frm.meta.fields || []).forEach((f) => {
-			if (!["Section Break", "Column Break", "HTML"].includes(f.fieldtype)) {
-				frm.set_df_property(f.fieldname, "read_only", 1);
+const SKIP_TYPES = ["Section Break", "Column Break", "Tab Break", "HTML", "Button", "Fold"];
+
+function lock_checkin_form(frm) {
+	(frm.meta.fields || []).forEach((f) => {
+		if (SKIP_TYPES.includes(f.fieldtype)) return;
+		frm.set_df_property(f.fieldname, "read_only", 1);
+		// meta read_only can be stale in a cached SPA session, so also lock the
+		// already-rendered control directly and kill any date/time picker
+		const ctrl = frm.get_field(f.fieldname);
+		if (ctrl) {
+			if (ctrl.$input) ctrl.$input.prop("readonly", true).prop("disabled", true);
+			if (ctrl.datepicker && ctrl.datepicker.destroy) {
+				try {
+					ctrl.datepicker.destroy();
+					ctrl.datepicker = null;
+				} catch (e) {
+					/* noop */
+				}
 			}
-		});
-		frm.disable_save();
+		}
+	});
+	frm.disable_save();
+}
+
+frappe.ui.form.on("Employee Checkin", {
+	onload(frm) {
+		lock_checkin_form(frm);
+	},
+	refresh(frm) {
+		lock_checkin_form(frm);
 
 		if (frm.doc.__islocal) return;
 		if (!frappe.user.has_role(CHECKIN_EDIT_ROLES)) return;
