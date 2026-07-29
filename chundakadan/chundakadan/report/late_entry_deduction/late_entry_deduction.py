@@ -193,7 +193,7 @@ def create_additional_salary(rows, from_date, to_date, payroll_date=None, compan
                 "amount": amount,
                 "payroll_date": pdate,
                 "overwrite_salary_structure_amount": 0,
-                "remarks": _("Late entry deduction {0} to {1}: {2} late min").format(
+                "custom_reason": _("Late entry deduction {0} to {1}: {2} late min").format(
                     getdate(from_date), getdate(to_date), row.get("total_late_minutes") or ""),
             })
             doc.insert()          # DRAFT — HR submits before payroll

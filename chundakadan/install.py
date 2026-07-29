@@ -419,6 +419,39 @@ def ensure_visit_log_sales_user_create_perm(*args, **kwargs):
         print(f"chundakadan.install: could not adjust visit-log perm: {e}")
 
 
+def ensure_additional_salary_fields(*args, **kwargs):
+    """Idempotent: add a 'Reason / Remarks' custom field to Additional Salary.
+
+    Additional Salary ships with NO free-text remarks field, so HR had nowhere
+    to record WHY an addition/deduction was given (late entry, bonus, advance
+    recovery...). The Late Entry Deduction generator populates this field.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Additional Salary"):
+        return
+
+    cf_name = "Additional Salary-custom_reason"
+    if frappe.db.exists("Custom Field", cf_name):
+        return
+    try:
+        frappe.get_doc({
+            "doctype": "Custom Field",
+            "dt": "Additional Salary",
+            "module": "Chundakadan",
+            "translatable": 0,
+            "fieldname": "custom_reason",
+            "label": "Reason / Remarks",
+            "fieldtype": "Small Text",
+            "insert_after": "payroll_date",
+            "in_standard_filter": 0,
+        }).insert(ignore_permissions=True)
+        print("chundakadan.install: created Additional Salary.custom_reason (Reason / Remarks)")
+        frappe.clear_cache(doctype="Additional Salary")
+    except Exception as e:
+        print(f"chundakadan.install: could not create Additional Salary.custom_reason: {e}")
+
+
 def ensure_user_permission_hr_access(*args, **kwargs):
     """Grant HR Manager + HR User read + create + delete on User Permission.
 
