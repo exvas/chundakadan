@@ -66,6 +66,7 @@ doctype_js = {
     "Payment Request" : "public/js/expense_approval.js",
     "Office Expense Voucher" : "public/js/office_expense_voucher.js",
     "Employee Transfer" : "public/js/employee_transfer.js",
+    "Additional Salary" : "public/js/additional_salary.js",
 }
 doctype_list_js = {
     "Leave Application" : "public/js/leave_application_list.js",

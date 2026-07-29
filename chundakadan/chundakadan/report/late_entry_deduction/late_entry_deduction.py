@@ -99,6 +99,66 @@ def _late_rows(filters):
     )
 
 
+def compute_late_days(employee, from_date, to_date):
+    """Per-day late-entry breakdown for ONE employee over a period.
+
+    Returns a list of dicts: {date, check_in, shift, late_minutes, per_minute,
+    deduction}. Shared by both the report and the on-form "Fetch Late Arrival
+    Deduction" button so the math has a single source of truth.
+    """
+    shift_info = _grace_and_duration()
+    base = _base_map(getdate(to_date), employee).get(employee, 0.0)
+    rows = _late_rows(frappe._dict({"from_date": from_date, "to_date": to_date, "employee": employee}))
+
+    out = []
+    for r in rows:
+        grace, dur_from_type = shift_info.get(r.shift, (0, 0))
+        deadline = r.shift_start + timedelta(minutes=grace)
+        late_min = int(max(0.0, (r.first_in - deadline).total_seconds()) // 60)
+        if late_min <= 0:
+            continue
+        dur = 0.0
+        if r.shift_end:
+            dur = (r.shift_end - r.shift_start).total_seconds() / 60.0
+        if dur <= 0:
+            dur = dur_from_type
+        per_min = (base / DAYS_IN_MONTH) / dur if dur > 0 else 0.0
+        out.append({
+            "date": r.dt,
+            "check_in": r.first_in,
+            "shift": r.shift,
+            "late_minutes": late_min,
+            "per_minute": round(per_min, 4),
+            "deduction": round(late_min * per_min, 2),
+        })
+    out.sort(key=lambda d: d["date"])
+    return out
+
+
+@frappe.whitelist()
+def get_late_entries_for_month(employee, payroll_date):
+    """On-form button: late-entry breakdown for the employee for the whole
+    month containing payroll_date. Returns rows + rounded total for the child
+    table + Amount field on Additional Salary."""
+    from frappe.utils import get_first_day, get_last_day
+    if not employee or not payroll_date:
+        frappe.throw(_("Employee and Payroll Date are required."))
+    pdate = getdate(payroll_date)
+    from_date = get_first_day(pdate)
+    to_date = get_last_day(pdate)
+    days = compute_late_days(employee, from_date, to_date)
+    total_minutes = sum(d["late_minutes"] for d in days)
+    total = round(sum(d["deduction"] for d in days))
+    return {
+        "rows": days,
+        "late_days": len(days),
+        "total_minutes": total_minutes,
+        "total": total,
+        "from_date": str(from_date),
+        "to_date": str(to_date),
+    }
+
+
 def get_data(filters):
     if not filters.get("from_date") or not filters.get("to_date"):
         frappe.throw(_("Please select From Date and To Date."))

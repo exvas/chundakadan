@@ -431,25 +431,45 @@ def ensure_additional_salary_fields(*args, **kwargs):
     if not frappe.db.exists("DocType", "Additional Salary"):
         return
 
-    cf_name = "Additional Salary-custom_reason"
-    if frappe.db.exists("Custom Field", cf_name):
-        return
-    try:
-        frappe.get_doc({
-            "doctype": "Custom Field",
-            "dt": "Additional Salary",
-            "module": "Chundakadan",
-            "translatable": 0,
+    fields = [
+        {
             "fieldname": "custom_reason",
             "label": "Reason / Remarks",
             "fieldtype": "Small Text",
             "insert_after": "payroll_date",
             "in_standard_filter": 0,
-        }).insert(ignore_permissions=True)
-        print("chundakadan.install: created Additional Salary.custom_reason (Reason / Remarks)")
+        },
+        {
+            # per-day late check-in breakdown, filled by the "Fetch Late Arrival
+            # Deduction" button (child doctype ships with the app)
+            "fieldname": "custom_late_entry_details",
+            "label": "Late Entry Details",
+            "fieldtype": "Table",
+            "options": "Late Entry Detail",
+            "insert_after": "custom_reason",
+            "read_only": 1,
+        },
+    ]
+    made = False
+    for spec in fields:
+        cf_name = f"Additional Salary-{spec['fieldname']}"
+        if frappe.db.exists("Custom Field", cf_name):
+            continue
+        if spec["fieldtype"] == "Table" and not frappe.db.exists("DocType", spec["options"]):
+            print(f"chundakadan.install: child doctype {spec['options']} not synced yet, "
+                  f"skipping {cf_name} (re-run after migrate)")
+            continue
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field", "dt": "Additional Salary",
+                "module": "Chundakadan", "translatable": 0, **spec,
+            }).insert(ignore_permissions=True)
+            print(f"chundakadan.install: created {cf_name}")
+            made = True
+        except Exception as e:
+            print(f"chundakadan.install: could not create {cf_name}: {e}")
+    if made:
         frappe.clear_cache(doctype="Additional Salary")
-    except Exception as e:
-        print(f"chundakadan.install: could not create Additional Salary.custom_reason: {e}")
 
 
 def ensure_user_permission_hr_access(*args, **kwargs):
