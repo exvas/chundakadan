@@ -240,6 +240,7 @@ before_install = [
     "chundakadan.install.ensure_additional_salary_fields",
     "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_checkin_readonly",
+    "chundakadan.install.ensure_item_fields_visible",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.install.ensure_expense_approval_fields",
@@ -262,6 +263,7 @@ before_migrate = [
     "chundakadan.install.ensure_additional_salary_fields",
     "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_checkin_readonly",
+    "chundakadan.install.ensure_item_fields_visible",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.seed.privacy_policy.upsert_page",
@@ -287,6 +289,7 @@ after_migrate = [
     "chundakadan.install.ensure_additional_salary_fields",
     "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_checkin_readonly",
+    "chundakadan.install.ensure_item_fields_visible",
 ]
 
 # Uninstallation

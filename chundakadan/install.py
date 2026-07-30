@@ -493,6 +493,39 @@ def ensure_additional_salary_fields(*args, **kwargs):
         frappe.clear_cache(doctype="Additional Salary")
 
 
+def ensure_item_fields_visible(*args, **kwargs):
+    """Keep Item Code + Item Name usable on the Item form — self-heals every
+    migrate so the fields can't silently disappear again.
+
+    Root cause of the recurring "item code / item name not showing": stray
+    Customize-Form Property Setters `Item-item_code-hidden=1` and
+    `Item-item_name-read_only=1` (not in any fixture). This removes them so the
+    fields fall back to their correct core state (item_code visible + required,
+    item_name visible + editable). item.js still auto-composes item_name from
+    group/size/finish on validate for items that have those.
+    """
+    import frappe
+
+    if not frappe.db.exists("DocType", "Item"):
+        return
+    targets = [
+        ("item_code", "hidden"),      # was forced hidden
+        ("item_name", "read_only"),   # was forced read-only
+        ("item_code", "reqd"),        # was forced not-required (item_code IS the name)
+    ]
+    removed = 0
+    for field_name, prop in targets:
+        for ps in frappe.get_all("Property Setter",
+                                 filters={"doc_type": "Item", "field_name": field_name, "property": prop},
+                                 pluck="name"):
+            frappe.delete_doc("Property Setter", ps, ignore_permissions=True)
+            removed += 1
+            print(f"chundakadan.install: removed Property Setter {ps}")
+    if removed:
+        frappe.clear_cache(doctype="Item")
+        print(f"chundakadan.install: restored Item Code / Item Name visibility ({removed} override(s) removed)")
+
+
 def ensure_employee_checkin_readonly(*args, **kwargs):
     """Make every Employee Checkin field read-only at the DOCTYPE level via
     Property Setters — so the form can only be corrected through the HR-gated
