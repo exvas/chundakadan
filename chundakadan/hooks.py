@@ -185,7 +185,10 @@ doc_events = {
         "after_insert": "chundakadan.doc_events.notifications.newsletter_sent"
     },
     "Salary Slip": {
-        "validate": "chundakadan.doc_events.salary_slip.apply_payroll_basis"
+        "validate": [
+            "chundakadan.doc_events.salary_slip.apply_payroll_basis",
+            "chundakadan.doc_events.salary_slip.apply_sick_leave_deduction",
+        ]
     },
     "Expense Claim": {
         "validate": "chundakadan.chundakadan.api.expense_approval.validate",
@@ -241,6 +244,7 @@ before_install = [
     "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_checkin_readonly",
     "chundakadan.install.ensure_item_fields_visible",
+    "chundakadan.install.ensure_sick_leave_deduction_component",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.install.ensure_expense_approval_fields",
@@ -264,6 +268,7 @@ before_migrate = [
     "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_checkin_readonly",
     "chundakadan.install.ensure_item_fields_visible",
+    "chundakadan.install.ensure_sick_leave_deduction_component",
     "chundakadan.install.ensure_employee_payroll_fields",
     "chundakadan.install.ensure_payroll_config_fields",
     "chundakadan.seed.privacy_policy.upsert_page",
@@ -291,6 +296,7 @@ after_migrate = [
     "chundakadan.install.ensure_checkin_notification_field",
     "chundakadan.install.ensure_employee_checkin_readonly",
     "chundakadan.install.ensure_item_fields_visible",
+    "chundakadan.install.ensure_sick_leave_deduction_component",
 ]
 
 # Uninstallation

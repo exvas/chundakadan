@@ -493,6 +493,41 @@ def ensure_additional_salary_fields(*args, **kwargs):
         frappe.clear_cache(doctype="Additional Salary")
 
 
+def ensure_sick_leave_deduction_component(*args, **kwargs):
+    """Idempotent: create the 'Sick Leave Deduction' Salary Component used by
+    the graduated Sick-Leave pay logic (doc_events.salary_slip). Deduction
+    type, not payment-day-scaled (amount is set by the hook)."""
+    import frappe
+
+    if not frappe.db.exists("DocType", "Salary Component"):
+        return
+    name = "Sick Leave Deduction"
+    if frappe.db.exists("Salary Component", name):
+        return
+    try:
+        doc = frappe.get_doc({
+            "doctype": "Salary Component",
+            "salary_component": name,
+            "salary_component_abbr": "SLD",
+            "type": "Deduction",
+            "depends_on_payment_days": 0,
+            "do_not_include_in_total": 0,
+            "statistical_component": 0,
+            "description": "Graduated sick-leave pay clawback (days 11-20 half, 21-30 quarter).",
+        })
+        # mirror the deduction account of an existing component (Welfare Fund)
+        wf = frappe.db.get_value("Salary Component", "Welfare Fund", "name")
+        if wf:
+            for a in frappe.get_all("Salary Component Account",
+                                    filters={"parent": "Welfare Fund"},
+                                    fields=["company", "account"]):
+                doc.append("accounts", {"company": a.company, "account": a.account})
+        doc.insert(ignore_permissions=True)
+        print(f"chundakadan.install: created Salary Component '{name}'")
+    except Exception as e:
+        print(f"chundakadan.install: could not create '{name}': {e}")
+
+
 def ensure_item_fields_visible(*args, **kwargs):
     """Keep Item Code + Item Name usable on the Item form — self-heals every
     migrate so the fields can't silently disappear again.
