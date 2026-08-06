@@ -47,26 +47,32 @@ def _sl_year_start(employee, start_date, end_date):
     return getdate(f"{getdate(start_date).year}-01-01")
 
 
-def _prior_sl_days(employee, year_start, before_date):
-    """Sick days already TAKEN in [year_start, before_date) from the leave
-    ledger (taken entries have negative `leaves`)."""
+def _sl_days_taken(employee, from_start, from_end):
+    """Sick days from submitted Leave Applications whose START date is in
+    [from_start, from_end] (inclusive), summed from the leave ledger (taken
+    entries have negative `leaves`). Bucketing each spell by its start date
+    means a boundary-spanning spell is counted once, in its start month —
+    no double-count across slips, no missed days."""
     val = frappe.db.sql(
         """select ifnull(sum(leaves),0) from `tabLeave Ledger Entry`
            where employee=%s and leave_type=%s and transaction_type='Leave Application'
-             and leaves<0 and from_date>=%s and from_date<%s""",
-        (employee, SICK_LEAVE_TYPE, year_start, before_date),
+             and leaves<0 and from_date>=%s and from_date<=%s""",
+        (employee, SICK_LEAVE_TYPE, from_start, from_end),
     )[0][0]
     return abs(flt(val))
 
 
-def compute_sl_deduction(employee, start_date, end_date, gross, sl_days_this_period):
-    """PURE-ish calc (only reads ledger/allocation) → the deduction rupee amount.
-    Returns dict for transparency/testing: prior, m, ded_days, per_day, amount."""
-    m = flt(sl_days_this_period)
+def compute_sl_deduction(employee, start_date, end_date, gross):
+    """Graduated sick-leave deduction for one slip. Reads the leave ledger
+    only (m = SL spells starting this period; prior = spells starting earlier
+    in the allocation year). Returns a dict for transparency/testing."""
+    start_date, end_date = getdate(start_date), getdate(end_date)
+    year_start = _sl_year_start(employee, start_date, end_date)
+    m = _sl_days_taken(employee, start_date, end_date)
     if m <= 0 or flt(gross) <= 0:
         return {"prior": 0, "m": m, "ded_days": 0, "per_day": 0, "amount": 0}
-    year_start = _sl_year_start(employee, start_date, end_date)
-    prior = _prior_sl_days(employee, year_start, start_date)
+    day_before = frappe.utils.add_days(start_date, -1)
+    prior = _sl_days_taken(employee, year_start, day_before)
     ded_days = _sl_deduction_days(prior, m)
     per_day = flt(gross) / 30.0
     return {"prior": prior, "m": m, "ded_days": ded_days, "per_day": per_day,
@@ -128,13 +134,7 @@ def apply_sick_leave_deduction(doc, method=None):
     """
     if not doc.employee or not doc.get("start_date"):
         return
-    # sick days in THIS slip period, from the HRMS-populated leave_details
-    sl_days = sum(flt(r.get("total_leaves"))
-                  for r in (doc.get("leave_details") or [])
-                  if r.get("leave_type") == SICK_LEAVE_TYPE)
-
-    res = compute_sl_deduction(doc.employee, doc.start_date, doc.end_date,
-                               doc.gross_pay, sl_days)
+    res = compute_sl_deduction(doc.employee, doc.start_date, doc.end_date, doc.gross_pay)
     amount = flt(res["amount"])
 
     # remove any prior Sick Leave Deduction row(s), then add fresh if >0
