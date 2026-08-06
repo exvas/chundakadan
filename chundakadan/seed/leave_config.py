@@ -69,18 +69,25 @@ def ensure_leave_types(*args, **kwargs):
 def ensure_leave_policy(*args, **kwargs):
     if not frappe.db.exists("Leave Policy", LEAVE_POLICY):
         return
-    doc = frappe.get_doc("Leave Policy", LEAVE_POLICY)
-    current = {d.leave_type: d for d in doc.leave_policy_details}
     want = POLICY_ALLOCATION
-    # rewrite details to exactly the allocated set (drops retired + Comp Off/LOP)
-    if (set(current) != set(want)
-            or any(flt_ne(current[t].annual_allocation, want[t]) for t in want)):
-        doc.set("leave_policy_details", [])
-        for lt, alloc in want.items():
-            doc.append("leave_policy_details", {"leave_type": lt, "annual_allocation": alloc})
-        doc.flags.ignore_permissions = True
-        doc.save()
-        print(f"chundakadan.leave_config: updated Leave Policy {LEAVE_POLICY} -> {want}")
+    current = {d.leave_type: float(d.annual_allocation or 0)
+              for d in frappe.get_all("Leave Policy Detail",
+                                      filters={"parent": LEAVE_POLICY},
+                                      fields=["leave_type", "annual_allocation"])}
+    if set(current) == set(want) and all(not flt_ne(current[t], want[t]) for t in want):
+        return
+    # Leave Policy is a SUBMITTED doctype -> its detail table can't be changed
+    # via save(); rewrite the child rows directly (they only drive allocation
+    # amounts, not GL/ledger, so this is safe).
+    frappe.db.delete("Leave Policy Detail", {"parent": LEAVE_POLICY})
+    for idx, (lt, alloc) in enumerate(want.items(), start=1):
+        frappe.get_doc({
+            "doctype": "Leave Policy Detail", "parent": LEAVE_POLICY,
+            "parenttype": "Leave Policy", "parentfield": "leave_policy_details",
+            "idx": idx, "leave_type": lt, "annual_allocation": alloc,
+        }).db_insert()
+    frappe.clear_cache(doctype="Leave Policy")
+    print(f"chundakadan.leave_config: updated Leave Policy {LEAVE_POLICY} -> {want}")
 
 
 def flt_ne(a, b):
