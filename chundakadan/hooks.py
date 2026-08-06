@@ -270,6 +270,7 @@ before_migrate = [
     "chundakadan.seed.role_profiles.seed_profiles",
     "chundakadan.seed.role_profiles.cleanup_unused_profiles",
     "chundakadan.seed.payroll_period.ensure_current_fy_period",
+    "chundakadan.seed.leave_config.seed_leave_config",
     "chundakadan.seed.holiday_list.ensure_current_and_next_year",
     "chundakadan.seed.expense_ledgers.seed_expense_ledgers",
     "chundakadan.install.ensure_expense_approval_fields",

@@ -277,6 +277,9 @@ def validate_leave(doc, method=None):
     # Enforce the certificate even on submit attempts (docstatus changes)
     _enforce_certificate_requirement(doc)
 
+    # Casual / Compassionate: max 1 per calendar month
+    _enforce_monthly_cap(doc)
+
     # Do not execute the approval flow logic if document is already
     # submitted or cancelled — the chain was set at draft time.
     if doc.docstatus > 0:
@@ -303,6 +306,44 @@ def validate_leave(doc, method=None):
 
     if needs_regen:
         generate_approval_flow(doc, designation)
+
+
+# Leave types capped at one application per calendar month (per HR policy table)
+MONTHLY_CAP_TYPES = {"Casual Leave", "Compassionate Leave"}
+
+
+def _enforce_monthly_cap(doc):
+    """Block a 2nd Casual/Compassionate leave in the same calendar month.
+
+    Counts any other non-rejected (draft or submitted) application of the same
+    type for this employee whose from_date falls in the same month/year.
+    """
+    if doc.docstatus == 2 or not doc.leave_type or doc.leave_type not in MONTHLY_CAP_TYPES:
+        return
+    if not doc.employee or not doc.from_date:
+        return
+    from frappe.utils import getdate
+    d = getdate(doc.from_date)
+    existing = frappe.db.sql(
+        """
+        select name from `tabLeave Application`
+        where employee = %(emp)s and leave_type = %(lt)s
+          and name != %(self)s and docstatus < 2
+          and ifnull(custom_approval_status, '') != 'Rejected'
+          and month(from_date) = %(m)s and year(from_date) = %(y)s
+        limit 1
+        """,
+        {"emp": doc.employee, "lt": doc.leave_type, "self": doc.name or "new",
+         "m": d.month, "y": d.year},
+    )
+    if existing:
+        frappe.throw(
+            _("Only one {0} is allowed per month. {1} already has an application "
+              "for {2} {3}.").format(
+                doc.leave_type, doc.employee_name or doc.employee,
+                d.strftime("%B"), d.year),
+            title=_("Monthly Leave Limit"),
+        )
 
 
 def _enforce_certificate_requirement(doc):
