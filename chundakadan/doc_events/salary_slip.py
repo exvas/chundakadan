@@ -122,6 +122,16 @@ def apply_payroll_basis(doc, method=None):
             )
 
 
+def _sl_deduction_enabled():
+    """Global on/off switch in Chundakadan Settings. Default OFF (feature
+    disabled) when the field is unset or missing."""
+    try:
+        return bool(int(frappe.db.get_single_value(
+            "Chundakadan Settings", "custom_enable_sick_leave_deduction") or 0))
+    except Exception:
+        return False
+
+
 def apply_sick_leave_deduction(doc, method=None):
     """Graduated Sick-Leave pay: 100%/50%/25% across cumulative sick days
     1-10 / 11-20 / 21-30 in the allocation-year (deduct the unpaid portion).
@@ -134,8 +144,11 @@ def apply_sick_leave_deduction(doc, method=None):
     """
     if not doc.employee or not doc.get("start_date"):
         return
-    res = compute_sl_deduction(doc.employee, doc.start_date, doc.end_date, doc.gross_pay)
-    amount = flt(res["amount"])
+    if _sl_deduction_enabled():
+        res = compute_sl_deduction(doc.employee, doc.start_date, doc.end_date, doc.gross_pay)
+        amount = flt(res["amount"])
+    else:
+        amount = 0.0
 
     # remove any prior Sick Leave Deduction row(s), then add fresh if >0
     existing = [d for d in (doc.get("deductions") or [])

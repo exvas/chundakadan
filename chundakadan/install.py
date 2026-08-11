@@ -630,6 +630,40 @@ def ensure_checkin_notification_field(*args, **kwargs):
     frappe.clear_cache(doctype="Chundakadan Settings")
 
 
+def ensure_sick_leave_deduction_toggle(*args, **kwargs):
+    """Idempotent: add an 'Enable Sick Leave Pay Deduction' checkbox to
+    Chundakadan Settings. When OFF (the default), the graduated Sick-Leave
+    pay deduction (doc_events.salary_slip.apply_sick_leave_deduction) does
+    not apply. HR toggles it from Settings — no code change needed."""
+    import frappe
+
+    if not frappe.db.exists("DocType", "Chundakadan Settings"):
+        return
+    spec = {
+        "fieldname": "custom_enable_sick_leave_deduction",
+        "label": "Enable Sick Leave Pay Deduction",
+        "fieldtype": "Check",
+        "default": "0",
+        "description": "When ON, sick leave beyond 10 days in the allocation "
+                       "year is paid on a graduated scale (days 1-10 full, "
+                       "11-20 half, 21-30 quarter, 31+ none) and the unpaid "
+                       "portion is deducted on the salary slip. When OFF, no "
+                       "sick-leave pay deduction is applied.",
+    }
+    cf_name = f"Chundakadan Settings-{spec['fieldname']}"
+    if not frappe.db.exists("Custom Field", cf_name):
+        try:
+            frappe.get_doc({
+                "doctype": "Custom Field", "dt": "Chundakadan Settings",
+                "module": "Chundakadan", "translatable": 0,
+                "insert_after": "payroll_basis", **spec,
+            }).insert(ignore_permissions=True)
+            print(f"chundakadan.install: created {cf_name}")
+        except Exception as e:
+            print(f"chundakadan.install: could not create {cf_name}: {e}")
+    frappe.clear_cache(doctype="Chundakadan Settings")
+
+
 def ensure_user_permission_hr_access(*args, **kwargs):
     """Grant HR Manager + HR User read + create + delete on User Permission.
 
