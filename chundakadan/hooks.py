@@ -366,7 +366,8 @@ has_permission = {
 override_doctype_class = {
 	"Leave Policy Assignment": "chundakadan.overrides.leave_policy_assignment.CustomLeavePolicyAssignment",
 	"Leave Application":
-    "chundakadan.overrides.leave_application.CustomLeaveApplication"
+    "chundakadan.overrides.leave_application.CustomLeaveApplication",
+    "Employee Checkin": "chundakadan.overrides.employee_checkin.CustomEmployeeCheckin",
 }
 
 
