@@ -559,6 +559,15 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
             f"No Employee: {skipped_no_employee}, Duplicate: {skipped_duplicate}, Errors: {len(errors)}"
         )
 
+        # Normalize IN/OUT by time order for the synced window (biometric
+        # device flag is unreliable). Wrapped so it never breaks the sync.
+        try:
+            from chundakadan.doc_events.employee_checkin import normalize_log_types
+            normalize_log_types((begin_time - timedelta(days=1)).date(),
+                                (end_time + timedelta(days=1)).date())
+        except Exception as _norm_err:
+            frappe.logger().error(f"CrossChex log_type normalize failed: {_norm_err}")
+
         # Update last sync time on the config row
         config_doc.db_set('last_sync_time', now_datetime(), update_modified=False)
         config_doc.db_set('last_sync_status', f"Success - {processed_count} records processed", update_modified=False)
@@ -761,6 +770,15 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
             except Exception as e:
                 frappe.logger().error(f"Error in full resync: {str(e)}")
                 continue
+
+        # Normalize IN/OUT by time order for the synced window (biometric
+        # device flag is unreliable). Wrapped so it never breaks the sync.
+        try:
+            from chundakadan.doc_events.employee_checkin import normalize_log_types
+            normalize_log_types((begin_time - timedelta(days=1)).date(),
+                                (end_time + timedelta(days=1)).date())
+        except Exception as _norm_err:
+            frappe.logger().error(f"CrossChex log_type normalize failed: {_norm_err}")
 
         # Update sync status
         config_doc.db_set('last_sync_time', now_datetime(), update_modified=False)
