@@ -322,26 +322,29 @@ def _enforce_monthly_cap(doc):
         return
     if not doc.employee or not doc.from_date:
         return
-    from frappe.utils import getdate
+    from frappe.utils import getdate, flt
     d = getdate(doc.from_date)
-    existing = frappe.db.sql(
+    # Cap by total DAYS per calendar month (not application count), so two
+    # half-days (0.5 + 0.5 = 1.0) are allowed while a 2nd full day is blocked.
+    MAX_DAYS_PER_MONTH = 1.0
+    existing_days = flt(frappe.db.sql(
         """
-        select name from `tabLeave Application`
+        select ifnull(sum(total_leave_days), 0) from `tabLeave Application`
         where employee = %(emp)s and leave_type = %(lt)s
           and name != %(self)s and docstatus < 2
           and ifnull(custom_approval_status, '') != 'Rejected'
           and month(from_date) = %(m)s and year(from_date) = %(y)s
-        limit 1
         """,
         {"emp": doc.employee, "lt": doc.leave_type, "self": doc.name or "new",
          "m": d.month, "y": d.year},
-    )
-    if existing:
+    )[0][0])
+    this_days = flt(doc.total_leave_days) or (0.5 if doc.half_day else 1.0)
+    if existing_days + this_days > MAX_DAYS_PER_MONTH + 1e-9:
         frappe.throw(
-            _("Only one {0} is allowed per month. {1} already has an application "
-              "for {2} {3}.").format(
-                doc.leave_type, doc.employee_name or doc.employee,
-                d.strftime("%B"), d.year),
+            _("Only {0} day of {1} is allowed per month. {2} already has {3} day(s) "
+              "booked for {4} {5}.").format(
+                MAX_DAYS_PER_MONTH, doc.leave_type, doc.employee_name or doc.employee,
+                existing_days, d.strftime("%B"), d.year),
             title=_("Monthly Leave Limit"),
         )
 
