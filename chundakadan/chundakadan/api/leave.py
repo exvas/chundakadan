@@ -129,36 +129,56 @@ def generate_approval_flow(doc, designation):
     """
     role_sequence = []
 
-    # Sales chain: Sales Executive -> Sales HOD -> HR -> GM
-    if designation in ("Sales Executive", "Business Development Executive", "BDE"):
+    # === 2026-09-10: routing per the client's 50-designation Leave Approval
+    # table. Approver POSITIONS in that table map to the 4 existing roles:
+    #   "Sales & Marketing Manager / Deputy Manager" -> Sales HOD Leave Approver
+    #   "Administration Co-ordinator / HR Associate" -> HR Leave Approver
+    #   "Accounts Manager"                            -> Accounts Manager Leave Approver
+    #   "General Manager"                             -> GM Leave Approver
+    # A person's own approver-level is skipped so nobody self-approves (Sales &
+    # Marketing / Deputy Mgr, Accounts Mgr and GM fall to the shorter chains).
+
+    # Sales chain: Sales HOD -> HR -> GM  (table rows 1-15, 45, 46)
+    SALES_CHAIN = (
+        "Business Development Executive", "Senior Business Development Manager",
+        "Business Development Manager", "Senior Business Development Executive",
+        "Senior Business Development Co-ordinator", "Area Sales Manager",
+        "Business Development Co-ordinator", "Senior Sales Officer", "Sales Officer",
+        "Senior Brand Co-ordinator", "Brand Co-ordinator", "Senior Brand Manager",
+        "Brand Manager", "Senior Dispatch Co-ordinator", "Dispatch Co-ordinator",
+        "Marketing Specialist", "Product Manager",
+        # legacy / current spellings kept so existing staff don't break
+        "Sales Executive", "BDE", "Dispatch Coordinator",
+    )
+    # Accounts chain: Accounts Mgr -> HR -> GM  (table rows 22-28)
+    ACCOUNTS_CHAIN = (
+        "Senior Accountant", "Chief Accountant", "Accountant",
+        "Senior Purchaser", "Purchaser", "Senior Billing Executive",
+        "Billing Executive",
+        # legacy
+        "Purchase Coordinator",
+    )
+    # HR staff + Administration Co-ordinator: their OWN leave skips the HR step
+    # (they ARE the HR approver) -> GM only  (table rows 18, 19)
+    GM_ONLY = (
+        "HR Associate", "Administration Co-ordinator", "Administration Coordinator",
+        "HR Coordinator", "Coordinator",
+    )
+
+    if designation in SALES_CHAIN:
         role_sequence = ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
-    # Accounts/Purchasing chain: must clear Accounts Manager (HOD) first
-    elif designation in ("Accountant", "Purchase Coordinator", "Purchaser"):
-        role_sequence = [
-            "Accounts Manager Leave Approver",
-            "HR Leave Approver",
-            "GM Leave Approver",
-        ]
-    # HODs / department heads: skip their own level — HR -> GM
-    # Includes the historical "Area Sales Manager" / "Accounts Manager"
-    # titles AND the current ones used by Arjun (CDN/026/37) and Razeel
-    # (CDN/025/020). Matched explicitly so future default-chain changes
-    # don't silently affect HOD routing.
-    elif designation in (
-        "Area Sales Manager",
-        "Accounts Manager",
-        "Sales& Marketing Manager",          # Arjun (Marketing HOD)
-        "Sales & Marketing Manager",         # tolerant of corrected typo
-        "Deputy Sales & Marketing Manager",  # Razeel (Northern HOD)
-    ):
-        role_sequence = ["HR Leave Approver", "GM Leave Approver"]
-    # HR staff: HR self-approves, only GM needed
-    elif designation in ("HR Coordinator", "Coordinator", "HR Associate"):
+    elif designation in ACCOUNTS_CHAIN:
+        role_sequence = ["Accounts Manager Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+    elif designation in GM_ONLY:
         role_sequence = ["GM Leave Approver"]
-    # GM: only HR needs to sign off
+    # GM's own leave: HR signs off only (no self-approval; table row 20 literally
+    # ended at GM = self, which we avoid).
     elif designation == "General Manager":
         role_sequence = ["HR Leave Approver"]
-    # Everyone else (floor staff, BDE, coordinators, etc.): HR -> GM
+    # Everyone else -> HR -> GM. Covers the managers who are themselves approvers
+    # (Deputy Manager, Sales & Marketing Manager, Deputy Sales & Marketing
+    # Manager, Accounts Manager) plus all floor/ops/exec/other roles (rows 16-17,
+    # 21, 29-44, 47-50).
     else:
         role_sequence = ["HR Leave Approver", "GM Leave Approver"]
         
