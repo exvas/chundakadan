@@ -137,7 +137,10 @@ doc_events = {
     },
 	"Sales Invoice": {
         "autoname": "chundakadan.doc_events.sales_invoice.autoname",
-        "validate": "chundakadan.doc_events.sales_invoice.validate_sales_invoice",
+        "validate": [
+            "chundakadan.doc_events.sales_invoice.validate_sales_invoice",
+            "chundakadan.doc_events.sales_invoice.enforce_b2b_billing",
+        ],
         "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
         # Auto-apply In-State GST template + tax_category when blank
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults"

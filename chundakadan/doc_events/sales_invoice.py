@@ -60,3 +60,26 @@ def on_trash(doc, method):
 			frappe.model.naming.revert_series_if_last(doc.custom_naming_series1, doc.name)
 		except Exception:
 			pass
+
+
+def enforce_b2b_billing(doc, method):
+	"""B2B-only billing for company Chundakadan Agencies: require Customer GSTIN + Address.
+	Migrated from a Server Script so it also works on Frappe Cloud (where server
+	scripts may be disabled). Toggle: Chundakadan Settings > enforce_b2b_gstin_billing."""
+	if not frappe.db.get_single_value("Chundakadan Settings", "enforce_b2b_gstin_billing"):
+		return
+	if doc.company != "Chundakadan Agencies":
+		return
+	gstin = (doc.get("billing_address_gstin") or "").strip()
+	if not gstin and doc.get("customer"):
+		gstin = (frappe.db.get_value("Customer", doc.customer, "gstin") or "").strip()
+	if not doc.get("customer_address"):
+		frappe.throw(
+			"Chundakadan Agencies: cannot bill this customer - no Address. "
+			"Add a billing address (B2B only)."
+		)
+	if not gstin:
+		frappe.throw(
+			"Chundakadan Agencies: cannot bill this customer - no GSTIN/UIN. "
+			"Only B2B (registered) customers can be billed."
+		)
