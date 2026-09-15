@@ -26,7 +26,7 @@ def get_columns():
         {"label": _("Date"), "fieldname": "posting_date", "fieldtype": "Date", "width": 95},
         {"label": _("Voucher No"), "fieldname": "voucher_no", "fieldtype": "Dynamic Link",
          "options": "voucher_type", "width": 150},
-        {"label": _("Account Name"), "fieldname": "against_account", "fieldtype": "Data", "width": 200},
+        {"label": _("Account Name"), "fieldname": "against_account", "fieldtype": "Data", "width": 280},
         {"label": _("Narration"), "fieldname": "narration", "fieldtype": "Data", "width": 420},
         {"label": _("Debit Amount"), "fieldname": "debit", "fieldtype": "Currency", "width": 120},
         {"label": _("Credit Amount"), "fieldname": "credit", "fieldtype": "Currency", "width": 120},
@@ -36,6 +36,35 @@ def get_columns():
 
 def _fmt(bal):
     return "{:,.2f}  {}".format(abs(flt(bal)), "Dr" if flt(bal) >= 0 else "Cr")
+
+
+def _against_tokens(against):
+    return [t.strip() for t in (against or "").split(",") if t.strip()]
+
+
+def _party_labels(entries):
+    """Map customer/supplier codes found in GL Entry.against to "code - name".
+
+    GL Entry.against stores party codes (e.g. "2016") for party rows; account
+    names are left unchanged. Customers are checked before suppliers.
+    """
+    tokens = {t for e in entries for t in _against_tokens(e.against_account)}
+    if not tokens:
+        return {}
+    labels = {}
+    for doctype, name_field in (("Supplier", "supplier_name"), ("Customer", "customer_name")):
+        for row in frappe.get_all(
+            doctype, filters={"name": ["in", list(tokens)]}, fields=["name", name_field]
+        ):
+            party_name = row.get(name_field)
+            labels[row.name] = (
+                f"{row.name} - {party_name}" if party_name and party_name != row.name else row.name
+            )
+    return labels
+
+
+def _label_against(against, labels):
+    return ", ".join(labels.get(t, t) for t in _against_tokens(against))
 
 
 def get_data(filters):
@@ -74,6 +103,7 @@ def get_data(filters):
         "balance": _fmt(opening),
     }]
 
+    labels = _party_labels(entries)
     balance = opening
     total_debit = total_credit = 0.0
     for e in entries:
@@ -84,7 +114,7 @@ def get_data(filters):
             "posting_date": e.posting_date,
             "voucher_type": e.voucher_type,
             "voucher_no": e.voucher_no,
-            "against_account": e.against_account,
+            "against_account": _label_against(e.against_account, labels),
             "narration": unescape(strip_html(e.remarks or "")).strip(),
             "debit": flt(e.debit),
             "credit": flt(e.credit),
