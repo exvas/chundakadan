@@ -348,12 +348,18 @@ def _hidden_modules_for(profile):
 # SEED FUNCTIONS
 # ─────────────────────────────────────────────────────────────────────
 
-def _ensure_role_profile(profile):
-    """Idempotent: create or sync a Role Profile to match `profile`."""
+def _ensure_role_profile(profile, overwrite=False):
+    """Create the Role Profile if missing.
+
+    Existing profiles are left alone so roles changed from the UI survive
+    migrations. Pass overwrite=True (from a one-time patch) to force the
+    roles in `profile`."""
     name = profile["name"]
     target_roles = set(profile["roles"])
 
     if frappe.db.exists("Role Profile", name):
+        if not overwrite:
+            return "kept"
         doc = frappe.get_doc("Role Profile", name)
         existing_roles = {r.role for r in doc.roles}
         if target_roles == existing_roles:
@@ -375,8 +381,8 @@ def _ensure_role_profile(profile):
     return "created"
 
 
-def _ensure_module_profile(profile):
-    """Idempotent: create or sync a Module Profile so the modules in
+def _ensure_module_profile(profile, overwrite=False):
+    """Create (or with overwrite=True, sync) a Module Profile so the modules in
     the profile's `modules_enabled` whitelist are visible and
     everything else in ALL_MODULES is blocked.
     """
@@ -384,6 +390,8 @@ def _ensure_module_profile(profile):
     target_hidden = _hidden_modules_for(profile)
 
     if frappe.db.exists("Module Profile", name):
+        if not overwrite:
+            return "kept"
         doc = frappe.get_doc("Module Profile", name)
         existing_hidden = {b.module for b in doc.block_modules}
         if target_hidden == existing_hidden:

@@ -283,7 +283,6 @@ before_migrate = [
     "chundakadan.install.ensure_sick_leave_deduction_toggle",
     "chundakadan.seed.privacy_policy.upsert_page",
     "chundakadan.seed.role_profiles.seed_profiles",
-    "chundakadan.seed.role_profiles.cleanup_unused_profiles",
     "chundakadan.seed.payroll_period.ensure_current_fy_period",
     "chundakadan.seed.leave_config.seed_leave_config",
     "chundakadan.seed.holiday_list.ensure_current_and_next_year",
