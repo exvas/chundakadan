@@ -137,6 +137,7 @@ doc_events = {
     },
 	"Sales Invoice": {
         "autoname": "chundakadan.doc_events.sales_invoice.autoname",
+        "before_validate": "chundakadan.doc_events.sales_invoice.apply_stock_defaults",
         "validate": [
             "chundakadan.doc_events.sales_invoice.validate_sales_invoice",
             "chundakadan.doc_events.sales_invoice.enforce_b2b_billing",

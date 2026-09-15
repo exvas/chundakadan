@@ -127,8 +127,13 @@ if (!window.chundakadan_sales_invoice_loaded) {
       toggle_ui(frm);
     },
 
+    company(frm) {
+      apply_stock_defaults(frm);
+    },
+
     onload(frm) {
       if (frm.is_new()) {
+        apply_stock_defaults(frm);
         // Use direct doc assignment to avoid triggering change events during load
         frm.doc.set_posting_time = 1;
 
@@ -179,6 +184,22 @@ if (!window.chundakadan_sales_invoice_loaded) {
       }
     },
   });
+}
+
+// Update Stock always on + company Stores warehouse (server enforces the same
+// in chundakadan.doc_events.sales_invoice.apply_stock_defaults).
+const COMPANY_STORE_WAREHOUSE = {
+  "Chundakadan Agencies": "Stores - CA",
+  "Chundakadan Home Stop": "Stores - CHS",
+};
+
+function apply_stock_defaults(frm) {
+  if (!frm || !frm.doc || frm.doc.docstatus !== 0) return;
+  if (frm.doc.is_opening === "Yes") return;
+  const warehouse = COMPANY_STORE_WAREHOUSE[frm.doc.company];
+  if (!warehouse) return;
+  if (!frm.doc.update_stock) frm.set_value("update_stock", 1);
+  if (frm.doc.set_warehouse !== warehouse) frm.set_value("set_warehouse", warehouse);
 }
 
 function toggle_ui(frm) {

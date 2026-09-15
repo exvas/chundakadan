@@ -83,3 +83,37 @@ def enforce_b2b_billing(doc, method):
 			"Chundakadan Agencies: cannot bill this customer - no GSTIN/UIN. "
 			"Only B2B (registered) customers can be billed."
 		)
+
+
+# Default stock warehouse per company for Sales Invoice (Update Stock always on).
+COMPANY_STORE_WAREHOUSE = {
+	"Chundakadan Agencies": "Stores - CA",
+	"Chundakadan Home Stop": "Stores - CHS",
+}
+
+
+def apply_stock_defaults(doc, method=None):
+	"""before_validate on Sales Invoice: tick Update Stock and set the company's
+	Stores warehouse on the header and item rows.
+
+	Skipped for opening invoices (ERPNext does not allow Update Stock there) and
+	for invoices made against a Delivery Note (stock already moved by the DN)."""
+	if doc.docstatus != 0 or doc.get("is_opening") == "Yes":
+		return
+	if any(row.get("delivery_note") for row in doc.get("items") or []):
+		return
+
+	warehouse = COMPANY_STORE_WAREHOUSE.get(doc.company)
+	if not warehouse or not frappe.db.exists("Warehouse", warehouse):
+		return
+
+	doc.update_stock = 1
+
+	def belongs_to_company(wh):
+		return wh and frappe.get_cached_value("Warehouse", wh, "company") == doc.company
+
+	if not belongs_to_company(doc.get("set_warehouse")):
+		doc.set_warehouse = warehouse
+	for row in doc.get("items") or []:
+		if not belongs_to_company(row.get("warehouse")):
+			row.warehouse = doc.set_warehouse
