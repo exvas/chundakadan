@@ -244,20 +244,35 @@ PROFILES = [
         ],
     },
     {
-        # General Manager (Najeeb) — system admin
-        # Modules matched to Najeeb's spec 2026-06-05.
+        # General Manager (Najeeb) — system admin with full access.
+        # 2026-09-15: widened to full access (all business roles + all
+        # modules). Deliberately NOT included: roles that approval chains
+        # resolve to a user (Accounts Manager, Accounts Manager Leave
+        # Approver, HR Leave Approver, Sales HOD Leave Approver, Expense
+        # Approver). Leave/expense chains pick the first active employee
+        # holding the step role, so giving these to the GM could route
+        # other people's approvals to the GM. Also excluded: identity roles
+        # (Sales Person, Display User) and unused/unsafe ones (Script
+        # Manager, Website Manager, education/agriculture roles).
         "name": "CDN GM",
         "roles": [
-            "System Manager", "HR Manager",
+            "System Manager", "HR Manager", "HR User",
             "GM Leave Approver", "Leave Approver",
             "Newsletter Manager",
             "Employee", "Employee Self Service",
+            "Accounts User", "Auditor", "Analytics",
+            "Sales Manager", "Sales Master Manager", "Sales User", "Sales Report",
+            "Purchase Manager", "Purchase Master Manager", "Purchase User",
+            "Stock Manager", "Stock User", "Item Manager",
+            "Delivery Manager", "Delivery User", "Fleet Manager",
+            "Manufacturing Manager", "Manufacturing User",
+            "Maintenance Manager", "Maintenance User", "Quality Manager",
+            "Projects Manager", "Projects User", "Support Team",
+            "Display Manager",
+            "Report Manager", "Prepared Report User",
+            "Dashboard Manager", "Workspace Manager",
         ],
-        "modules_enabled": [
-            "Accounts", "Assets", "Buying", "CRM",
-            "Field Sales", "GST India", "HR", "Payroll",
-            "Selling", "Stock",
-        ],
+        "modules_enabled": list(ALL_MODULES),
     },
 ]
 
