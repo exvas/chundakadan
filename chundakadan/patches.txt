@@ -16,3 +16,4 @@ chundakadan.patches.seed_display_types
 chundakadan.patches.seed_display_number_cards
 chundakadan.patches.seed_insight_dashboard
 chundakadan.patches.backfill_oev_gl_narration
+chundakadan.patches.hide_invoice_fields

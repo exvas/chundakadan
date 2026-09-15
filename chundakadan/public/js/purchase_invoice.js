@@ -1,4 +1,12 @@
 frappe.ui.form.on('Purchase Invoice', {
+    onload: function (frm) {
+        if (frm.is_new()) apply_stock_defaults(frm);
+    },
+
+    company: function (frm) {
+        apply_stock_defaults(frm);
+    },
+
     refresh: function (frm) {
         if (frm.fields_dict.items && frm.fields_dict.items.grid) {
             const item_code_field = frm.fields_dict.items.grid.get_field('item_code');
@@ -294,3 +302,19 @@ window.select_item_from_dialog = function (item_code, cdt, cdn) {
         }, 3);
     });
 };
+
+// Update Stock always on + company Stores warehouse as Set Accepted Warehouse
+// (server enforces the same in chundakadan.doc_events.purchase_invoice).
+const PI_COMPANY_STORE_WAREHOUSE = {
+    "Chundakadan Agencies": "Stores - CA",
+    "Chundakadan Home Stop": "Stores - CHS",
+};
+
+function apply_stock_defaults(frm) {
+    if (!frm || !frm.doc || frm.doc.docstatus !== 0) return;
+    if (frm.doc.is_opening === "Yes" || frm.doc.is_subcontracted) return;
+    const warehouse = PI_COMPANY_STORE_WAREHOUSE[frm.doc.company];
+    if (!warehouse) return;
+    if (!frm.doc.update_stock) frm.set_value("update_stock", 1);
+    if (frm.doc.set_warehouse !== warehouse) frm.set_value("set_warehouse", warehouse);
+}

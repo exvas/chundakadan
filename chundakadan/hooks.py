@@ -225,6 +225,7 @@ doc_events = {
     # "Sales Invoice" block above — do NOT re-add a duplicate key here).
     "Purchase Invoice": {
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
+        "before_validate": "chundakadan.doc_events.purchase_invoice.apply_stock_defaults",
     },
     "Journal Entry": {
         # When a JV's account row references an OEV (deferred-payment
