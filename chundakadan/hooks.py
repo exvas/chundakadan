@@ -143,6 +143,8 @@ doc_events = {
             "chundakadan.doc_events.sales_invoice.enforce_b2b_billing",
         ],
         "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
+        "on_submit": "chundakadan.dispatch.events.create_dispatch_log",
+        "on_cancel": "chundakadan.dispatch.events.mark_invoice_cancelled",
         # Auto-apply In-State GST template + tax_category when blank
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults"
     },
@@ -263,6 +265,7 @@ before_install = [
     "chundakadan.install.ensure_payroll_entry_form_defaults",
 ]
 before_migrate = [
+    "chundakadan.dispatch.setup.ensure_dispatch_role",
     "chundakadan.install.ensure_firebase_admin_installed",
     "chundakadan.install.ensure_holidays_library_installed",
     "chundakadan.install.ensure_fcm_credentials_field",
@@ -304,6 +307,7 @@ after_migrate = [
     "chundakadan.install.ensure_employee_checkin_readonly",
     "chundakadan.install.ensure_item_fields_visible",
     "chundakadan.install.ensure_sick_leave_deduction_component",
+    "chundakadan.dispatch.setup.ensure_dispatch_setup",
 ]
 
 # Uninstallation
