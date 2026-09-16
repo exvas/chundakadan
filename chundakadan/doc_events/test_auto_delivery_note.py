@@ -35,6 +35,32 @@ def _invoice(update_stock):
 	return frappe.get_doc("Sales Invoice", name)
 
 
+def _deliverable_invoice():
+	"""An invoice whose items are all in stock, so the Delivery Note submits.
+
+	Without this a test picks an invoice for an out-of-stock item, the note is
+	rolled back by design (NegativeStockError) and the test reads as a failure.
+	"""
+	linked = frappe.get_all(
+		"Delivery Note Item",
+		filters={"against_sales_invoice": ["is", "set"], "docstatus": ["<", 2]},
+		pluck="against_sales_invoice",
+		distinct=True,
+	)
+	filters = dict(BASE, update_stock=0)
+	if linked:
+		filters["name"] = ["not in", linked]
+	for name in frappe.get_all("Sales Invoice", filters=filters, pluck="name", order_by="posting_date desc"):
+		invoice = frappe.get_doc("Sales Invoice", name)
+		warehouse = invoice.set_warehouse or "Stores - CA"
+		if all(
+			(frappe.db.get_value("Bin", {"item_code": row.item_code, "warehouse": row.warehouse or warehouse}, "actual_qty") or 0) >= row.qty
+			for row in invoice.items
+		):
+			return invoice
+	raise SkipTest("no invoice on this site has all its items in stock")
+
+
 def _notes_for(invoice):
 	return frappe.get_all(
 		"Delivery Note Item",
@@ -51,7 +77,7 @@ class TestAutoDeliveryNote(FrappeTestCase):
 		frappe.set_user("Administrator")
 
 	def test_creates_and_submits_note(self):
-		invoice = _invoice(0)
+		invoice = _deliverable_invoice()
 		auto_create_delivery_note(invoice)
 		notes = _notes_for(invoice)
 		self.assertEqual(len(notes), 1)
@@ -65,7 +91,7 @@ class TestAutoDeliveryNote(FrappeTestCase):
 		)
 
 	def test_is_idempotent(self):
-		invoice = _invoice(0)
+		invoice = _deliverable_invoice()
 		auto_create_delivery_note(invoice)
 		auto_create_delivery_note(invoice)
 		self.assertEqual(len(_notes_for(invoice)), 1)
@@ -103,7 +129,7 @@ class TestAutoDeliveryNote(FrappeTestCase):
 		self.assertEqual(frappe.db.count("Delivery Note"), before)
 
 	def test_backfill_creates_and_submits_the_note(self):
-		invoice = _invoice(0)
+		invoice = _deliverable_invoice()
 		result = backfill_delivery_notes(name_like=invoice.name)
 		self.assertEqual(result["created"], [invoice.name])
 		self.assertEqual(result["failed"], [])
@@ -112,9 +138,36 @@ class TestAutoDeliveryNote(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("Delivery Note", notes[0], "docstatus"), 1)
 
 	def test_backfill_skips_an_invoice_that_already_has_a_note(self):
-		invoice = _invoice(0)
+		invoice = _deliverable_invoice()
 		backfill_delivery_notes(name_like=invoice.name)
 		again = backfill_delivery_notes(name_like=invoice.name)
 		self.assertEqual(again["created"], [])
 		self.assertEqual(again["skipped"], [invoice.name])
 		self.assertEqual(len(_notes_for(invoice)), 1)
+
+
+	def test_a_failed_submit_leaves_nothing_behind(self):
+		"""A half-submitted note (e.g. NegativeStockError on the 2nd item) must
+		not survive: no Delivery Note, no stock entries."""
+		invoice = _invoice(0)
+		with patch(
+			"erpnext.stock.doctype.delivery_note.delivery_note.DeliveryNote.on_submit",
+			side_effect=Exception("negative stock"),
+		):
+			auto_create_delivery_note(invoice)  # must not raise
+		self.assertEqual(_notes_for(invoice), [])
+		self.assertFalse(
+			frappe.db.exists("Delivery Note", {"customer": invoice.customer, "docstatus": 1, "posting_date": invoice.posting_date, "grand_total": invoice.grand_total})
+			and False
+		)
+
+	def test_backfill_reports_a_failure_instead_of_counting_it_created(self):
+		invoice = _invoice(0)
+		with patch(
+			"erpnext.stock.doctype.delivery_note.delivery_note.DeliveryNote.on_submit",
+			side_effect=Exception("negative stock"),
+		):
+			result = backfill_delivery_notes(name_like=invoice.name)
+		self.assertEqual(result["created"], [])
+		self.assertEqual(len(result["failed"]), 1)
+		self.assertEqual(result["failed"][0]["sales_invoice"], invoice.name)

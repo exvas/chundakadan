@@ -145,8 +145,13 @@ def auto_create_delivery_note(doc, method=None):
 
 	from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_delivery_note
 
-	note = None
+	# A failure must leave nothing behind: submit() can fail half way (for
+	# example NegativeStockError while posting the second item) and without a
+	# savepoint the partly submitted note and its stock entries would survive
+	# the surrounding transaction.
+	savepoint = "auto_delivery_note"
 	try:
+		frappe.db.savepoint(savepoint)
 		note = make_delivery_note(doc.name)
 		note.posting_date = doc.posting_date
 		note.posting_time = doc.posting_time
@@ -155,6 +160,7 @@ def auto_create_delivery_note(doc, method=None):
 		note.insert(ignore_permissions=True)
 		note.submit()
 	except Exception:
+		frappe.db.rollback(save_point=savepoint)
 		frappe.log_error(title=f"Auto Delivery Note failed for {doc.name}")
 		frappe.msgprint(
 			frappe._("Delivery Note could not be created for {0}. Please create it manually.").format(doc.name),
