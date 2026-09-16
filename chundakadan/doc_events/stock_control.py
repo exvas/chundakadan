@@ -44,10 +44,19 @@ def ensure_update_stock_settings(*args, **kwargs):
 			}
 		)
 		previous = fieldname
+	# Seed the default only for a toggle that does not exist yet: once the
+	# field is there its stored value is the business decision, and a Check
+	# reads back as 0 rather than None, so "is None" would never seed it.
+	new_fields = {
+		fieldname
+		for _doctype, (fieldname, _label, _default) in UPDATE_STOCK_SETTINGS.items()
+		if not frappe.db.exists("Custom Field", f"{SETTINGS}-{fieldname}")
+	}
+
 	create_custom_fields({SETTINGS: fields}, update=True)
 
 	for doctype, (fieldname, _label, default) in UPDATE_STOCK_SETTINGS.items():
-		if frappe.db.get_single_value(SETTINGS, fieldname) is None:
+		if fieldname in new_fields:
 			frappe.db.set_single_value(SETTINGS, fieldname, default)
 		make_property_setter(
 			doctype, "update_stock", "read_only", 1, "Check", validate_fields_for_doctype=False

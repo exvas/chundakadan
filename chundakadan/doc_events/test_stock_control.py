@@ -82,3 +82,21 @@ class TestUpdateStockControl(FrappeTestCase):
 		self.assertFalse(
 			frappe.db.exists("Delivery Note Item", {"against_sales_invoice": doc.name, "docstatus": ["<", 2]})
 		)
+
+
+	def test_defaults_are_seeded_when_the_toggles_are_created(self):
+		# simulate a site that never had the toggles
+		for _doctype, (fieldname, _label, _default) in sc.UPDATE_STOCK_SETTINGS.items():
+			frappe.db.delete("Custom Field", {"name": f"{sc.SETTINGS}-{fieldname}"})
+			frappe.db.delete("Singles", {"doctype": sc.SETTINGS, "field": fieldname})
+		frappe.clear_cache(doctype=sc.SETTINGS)
+
+		sc.ensure_update_stock_settings()
+
+		self.assertEqual(sc.get_update_stock("Sales Invoice"), 0)
+		self.assertEqual(sc.get_update_stock("Purchase Invoice"), 1)
+
+	def test_an_existing_choice_is_never_overwritten(self):
+		self._set("Purchase Invoice", 0)
+		sc.ensure_update_stock_settings()
+		self.assertEqual(sc.get_update_stock("Purchase Invoice"), 0)
