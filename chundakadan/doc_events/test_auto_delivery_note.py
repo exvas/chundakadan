@@ -6,7 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from chundakadan.doc_events.sales_invoice import auto_create_delivery_note
+from chundakadan.doc_events.sales_invoice import auto_create_delivery_note, backfill_delivery_notes
 
 test_ignore = ["Sales Invoice", "Customer", "Supplier", "Company", "User"]
 
@@ -92,3 +92,29 @@ class TestAutoDeliveryNote(FrappeTestCase):
 		):
 			auto_create_delivery_note(invoice)  # must not raise
 		self.assertEqual(_notes_for(invoice), [])
+
+
+	def test_backfill_dry_run_changes_nothing(self):
+		invoice = _invoice(0)
+		before = frappe.db.count("Delivery Note")
+		result = backfill_delivery_notes(name_like=invoice.name, dry_run=1)
+		self.assertEqual(result["created"], [invoice.name])
+		self.assertTrue(result["dry_run"])
+		self.assertEqual(frappe.db.count("Delivery Note"), before)
+
+	def test_backfill_creates_and_submits_the_note(self):
+		invoice = _invoice(0)
+		result = backfill_delivery_notes(name_like=invoice.name)
+		self.assertEqual(result["created"], [invoice.name])
+		self.assertEqual(result["failed"], [])
+		notes = _notes_for(invoice)
+		self.assertEqual(len(notes), 1)
+		self.assertEqual(frappe.db.get_value("Delivery Note", notes[0], "docstatus"), 1)
+
+	def test_backfill_skips_an_invoice_that_already_has_a_note(self):
+		invoice = _invoice(0)
+		backfill_delivery_notes(name_like=invoice.name)
+		again = backfill_delivery_notes(name_like=invoice.name)
+		self.assertEqual(again["created"], [])
+		self.assertEqual(again["skipped"], [invoice.name])
+		self.assertEqual(len(_notes_for(invoice)), 1)

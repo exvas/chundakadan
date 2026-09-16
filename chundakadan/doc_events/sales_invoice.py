@@ -161,3 +161,61 @@ def auto_create_delivery_note(doc, method=None):
 			indicator="orange",
 			alert=True,
 		)
+
+
+@frappe.whitelist()
+def backfill_delivery_notes(name_like=None, limit=None, dry_run=0):
+	"""Create the missing Delivery Notes for already-submitted invoices.
+
+	auto_create_delivery_note only fires on submit, so invoices submitted
+	before it was deployed never moved their stock. This walks those
+	invoices and creates the note for each one, skipping any that already
+	have a note. Safe to run again: it only touches invoices with none.
+
+	    bench --site <site> execute chundakadan.doc_events.sales_invoice.backfill_delivery_notes --kwargs \"{name_like: SI-CA-26-%, dry_run: 1}\"
+
+	Returns {"created": [...], "skipped": [...], "failed": [...]}.
+	"""
+	frappe.only_for("System Manager")
+	dry_run = frappe.utils.cint(dry_run)
+
+	filters = {
+		"docstatus": 1,
+		"update_stock": 0,
+		"is_return": 0,
+		"is_opening": ["!=", "Yes"],
+		"company": ["in", list(COMPANY_STORE_WAREHOUSE)],
+	}
+	if name_like:
+		filters["name"] = ["like", name_like]
+
+	names = frappe.get_all(
+		"Sales Invoice",
+		filters=filters,
+		pluck="name",
+		order_by="posting_date asc, name asc",
+		limit_page_length=frappe.utils.cint(limit) or 0,
+	)
+
+	created, skipped, failed = [], [], []
+	for name in names:
+		if _linked_delivery_note(name):
+			skipped.append(name)
+			continue
+		if dry_run:
+			created.append(name)
+			continue
+		auto_create_delivery_note(frappe.get_doc("Sales Invoice", name))
+		note = _linked_delivery_note(name)
+		if note and frappe.db.get_value("Delivery Note", note, "docstatus") == 1:
+			created.append(name)
+		else:
+			failed.append({"sales_invoice": name, "draft_delivery_note": note})
+
+	return {"created": created, "skipped": skipped, "failed": failed, "dry_run": bool(dry_run)}
+
+
+def _linked_delivery_note(invoice):
+	return frappe.db.get_value(
+		"Delivery Note Item", {"against_sales_invoice": invoice, "docstatus": ["<", 2]}, "parent"
+	)
