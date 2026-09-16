@@ -310,6 +310,7 @@ after_migrate = [
     "chundakadan.install.ensure_item_fields_visible",
     "chundakadan.install.ensure_sick_leave_deduction_component",
     "chundakadan.dispatch.setup.ensure_dispatch_setup",
+    "chundakadan.doc_events.stock_control.ensure_update_stock_settings",
 ]
 
 # Uninstallation

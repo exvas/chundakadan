@@ -1,5 +1,7 @@
 import frappe
 
+from chundakadan.doc_events.stock_control import get_update_stock
+
 def validate_sales_invoice(doc, method):
 	if doc.is_return or doc.get("custom_ignore_overdue_restriction"):
 		return
@@ -107,8 +109,10 @@ def apply_stock_defaults(doc, method=None):
 	if not warehouse or not frappe.db.exists("Warehouse", warehouse):
 		return
 
-	# Update Stock is deliberately NOT forced: stock leaves through the
-	# Delivery Note created on submit (auto_create_delivery_note).
+	# Update Stock is not the user's choice: Chundakadan Settings decides it.
+	# With the setting off, stock leaves through the Delivery Note created on
+	# submit (auto_create_delivery_note).
+	doc.update_stock = get_update_stock("Sales Invoice")
 
 	def belongs_to_company(wh):
 		return wh and frappe.get_cached_value("Warehouse", wh, "company") == doc.company

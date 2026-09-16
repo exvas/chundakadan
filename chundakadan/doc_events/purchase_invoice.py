@@ -1,6 +1,7 @@
 import frappe
 
 from chundakadan.doc_events.sales_invoice import COMPANY_STORE_WAREHOUSE
+from chundakadan.doc_events.stock_control import get_update_stock
 
 
 def apply_stock_defaults(doc, method=None):
@@ -18,7 +19,7 @@ def apply_stock_defaults(doc, method=None):
 	if not warehouse or not frappe.db.exists("Warehouse", warehouse):
 		return
 
-	doc.update_stock = 1
+	doc.update_stock = get_update_stock("Purchase Invoice")
 
 	def belongs_to_company(wh):
 		return wh and frappe.get_cached_value("Warehouse", wh, "company") == doc.company
