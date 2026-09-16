@@ -70,6 +70,25 @@ class TestLeaveApprovalAfterSubmit(FrappeTestCase):
 			("Partially Approved", "Approved"),
 		)
 
+	def test_rejection_updates_the_chain_after_the_patch(self):
+		name = submitted_pending_leave()
+		chain_patch.execute()
+		leave_api.reject_leave(name, remarks="not enough cover")
+		row = frappe.db.get_value(CHILD, {"parent": name, "idx": 1}, ["status", "remarks"], as_dict=True)
+		self.assertEqual(row.status, "Rejected")
+		self.assertEqual(row.remarks, "not enough cover")
+		parent = frappe.db.get_value(
+			"Leave Application", name, ["custom_approval_status", "status"], as_dict=True
+		)
+		self.assertEqual(parent.custom_approval_status, "Rejected")
+		self.assertEqual(parent.status, "Rejected")
+
+	def test_rejection_is_blocked_without_the_patch(self):
+		name = submitted_pending_leave()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			leave_api.reject_leave(name, remarks="no")
+		self.assertIn("after submission", str(caught.exception))
+
 	def test_patch_is_idempotent(self):
 		chain_patch.execute()
 		chain_patch.execute()
