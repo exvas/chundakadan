@@ -312,6 +312,7 @@ after_migrate = [
     "chundakadan.dispatch.setup.ensure_dispatch_setup",
     "chundakadan.doc_events.stock_control.ensure_update_stock_settings",
     "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
+    "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
 ]
 
 # Uninstallation
