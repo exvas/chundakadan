@@ -82,24 +82,50 @@ frappe.ui.form.on('Leave Application', {
 });
 
 /**
+ * Approve / Reject act on the SAVED document: the server re-reads it by name.
+ * Any edit still open in the form (a changed Leave Type, for example) has to be
+ * saved first, otherwise it is silently dropped and reload_doc() brings the old
+ * value back. If the save fails, nothing is approved or rejected.
+ */
+function save_then(frm, action) {
+    if (!frm.is_dirty()) {
+        action();
+        return;
+    }
+    frm.save()
+        .then(function () {
+            action();
+        })
+        .catch(function () {
+            frappe.msgprint({
+                title: __('Changes not saved'),
+                indicator: 'red',
+                message: __('Your changes could not be saved, so nothing was approved or rejected. Fix the errors shown and try again.'),
+            });
+        });
+}
+
+/**
  * Calls backend approve_leave method, reloads document on success.
  */
 function approve_leave_application(frm) {
     frappe.confirm(
         __('Are you sure you want to approve this leave application?'),
         function () {
-            frappe.call({
-                method: 'chundakadan.chundakadan.api.leave.approve_leave',
-                args: {
-                    docname: frm.doc.name
-                },
-                freeze: true,
-                freeze_message: __('Processing approval...'),
-                callback: function (r) {
-                    if (r.message && r.message.success) {
-                        frm.reload_doc();
+            save_then(frm, function () {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.leave.approve_leave',
+                    args: {
+                        docname: frm.doc.name
+                    },
+                    freeze: true,
+                    freeze_message: __('Processing approval...'),
+                    callback: function (r) {
+                        if (r.message && r.message.success) {
+                            frm.reload_doc();
+                        }
                     }
-                }
+                });
             });
         }
     );
@@ -119,19 +145,21 @@ function reject_leave_application(frm) {
             }
         ],
         function (values) {
-            frappe.call({
-                method: 'chundakadan.chundakadan.api.leave.reject_leave',
-                args: {
-                    docname: frm.doc.name,
-                    remarks: values.remarks
-                },
-                freeze: true,
-                freeze_message: __('Processing rejection...'),
-                callback: function (r) {
-                    if (r.message && r.message.success) {
-                        frm.reload_doc();
+            save_then(frm, function () {
+                frappe.call({
+                    method: 'chundakadan.chundakadan.api.leave.reject_leave',
+                    args: {
+                        docname: frm.doc.name,
+                        remarks: values.remarks
+                    },
+                    freeze: true,
+                    freeze_message: __('Processing rejection...'),
+                    callback: function (r) {
+                        if (r.message && r.message.success) {
+                            frm.reload_doc();
+                        }
                     }
-                }
+                });
             });
         },
         __('Reject Leave Application'),
