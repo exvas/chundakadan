@@ -59,6 +59,10 @@ if (!window.chundakadan_sales_invoice_loaded) {
     });
   }, 500); frappe.ui.form.on('Sales Invoice', {
     refresh(frm) {
+      // Scan Barcode stays hidden even if its Property Setter is reset:
+      // saving Stock Settings with show_barcode_field on rewrites it to
+      // visible on every stock transaction.
+      frm.set_df_property('scan_barcode', 'hidden', 1);
       if (frm.fields_dict.items && frm.fields_dict.items.grid) {
         const item_code_field = frm.fields_dict.items.grid.get_field('item_code');
         if (item_code_field && item_code_field.$input) {
