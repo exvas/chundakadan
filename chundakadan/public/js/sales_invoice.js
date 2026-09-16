@@ -198,7 +198,6 @@ function apply_stock_defaults(frm) {
   if (frm.doc.is_opening === "Yes") return;
   const warehouse = COMPANY_STORE_WAREHOUSE[frm.doc.company];
   if (!warehouse) return;
-  if (!frm.doc.update_stock) frm.set_value("update_stock", 1);
   if (frm.doc.set_warehouse !== warehouse) frm.set_value("set_warehouse", warehouse);
 }
 

@@ -107,7 +107,8 @@ def apply_stock_defaults(doc, method=None):
 	if not warehouse or not frappe.db.exists("Warehouse", warehouse):
 		return
 
-	doc.update_stock = 1
+	# Update Stock is deliberately NOT forced: stock leaves through the
+	# Delivery Note created on submit (auto_create_delivery_note).
 
 	def belongs_to_company(wh):
 		return wh and frappe.get_cached_value("Warehouse", wh, "company") == doc.company
@@ -117,3 +118,42 @@ def apply_stock_defaults(doc, method=None):
 	for row in doc.get("items") or []:
 		if not belongs_to_company(row.get("warehouse")):
 			row.warehouse = doc.set_warehouse
+
+
+def auto_create_delivery_note(doc, method=None):
+	"""on_submit on Sales Invoice: move the stock through a Delivery Note.
+
+	Invoices no longer tick Update Stock, so the goods leave the warehouse on
+	this Delivery Note. Invoices that already updated stock themselves (older
+	or manually ticked ones) are skipped so stock is never reduced twice.
+	Failures never block the invoice: the note is left as a draft and logged.
+	"""
+	if doc.get("update_stock") or doc.get("is_return") or doc.get("is_opening") == "Yes":
+		return
+	if doc.company not in COMPANY_STORE_WAREHOUSE:
+		return
+	if frappe.db.exists("Delivery Note Item", {"against_sales_invoice": doc.name, "docstatus": ["<", 2]}):
+		return
+	if not any(
+		frappe.get_cached_value("Item", row.item_code, "is_stock_item") for row in doc.get("items") or []
+	):
+		return
+
+	from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_delivery_note
+
+	note = None
+	try:
+		note = make_delivery_note(doc.name)
+		note.posting_date = doc.posting_date
+		note.posting_time = doc.posting_time
+		note.set_posting_time = 1
+		note.flags.ignore_permissions = True
+		note.insert(ignore_permissions=True)
+		note.submit()
+	except Exception:
+		frappe.log_error(title=f"Auto Delivery Note failed for {doc.name}")
+		frappe.msgprint(
+			frappe._("Delivery Note could not be created for {0}. Please create it manually.").format(doc.name),
+			indicator="orange",
+			alert=True,
+		)

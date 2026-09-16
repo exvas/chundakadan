@@ -143,7 +143,10 @@ doc_events = {
             "chundakadan.doc_events.sales_invoice.enforce_b2b_billing",
         ],
         "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
-        "on_submit": "chundakadan.dispatch.events.create_dispatch_log",
+        "on_submit": [
+            "chundakadan.dispatch.events.create_dispatch_log",
+            "chundakadan.doc_events.sales_invoice.auto_create_delivery_note",
+        ],
         "on_cancel": "chundakadan.dispatch.events.mark_invoice_cancelled",
         # Auto-apply In-State GST template + tax_category when blank
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults"
