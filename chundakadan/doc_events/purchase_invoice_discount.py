@@ -27,6 +27,24 @@ PROPERTIES = {
 }
 
 
+# Per-piece prices such as 0.85 less 57% need more than the 2 decimals INR
+# gives: a rate of 0.3655 rounded to 0.37 turns 48,000 pcs from 17,544 into
+# 17,760. Only the rate fields get 4 decimals; amounts and totals stay at 2.
+RATE_PRECISION = "4"
+RATE_FIELDS = (
+	"price_list_rate",
+	"base_price_list_rate",
+	"rate_with_margin",
+	"base_rate_with_margin",
+	"discount_amount",
+	"rate",
+	"base_rate",
+	"net_rate",
+	"base_net_rate",
+	"stock_uom_rate",
+)
+
+
 def ensure_purchase_invoice_discount_columns(*args, **kwargs):
 	meta = frappe.get_meta(DOCTYPE)
 	for fieldname, properties in PROPERTIES.items():
@@ -34,4 +52,7 @@ def ensure_purchase_invoice_discount_columns(*args, **kwargs):
 			continue
 		for prop, (value, prop_type) in properties.items():
 			make_property_setter(DOCTYPE, fieldname, prop, value, prop_type, validate_fields_for_doctype=False)
+	for fieldname in RATE_FIELDS:
+		if meta.get_field(fieldname):
+			make_property_setter(DOCTYPE, fieldname, "precision", RATE_PRECISION, "Select", validate_fields_for_doctype=False)
 	frappe.clear_cache(doctype="Purchase Invoice")
