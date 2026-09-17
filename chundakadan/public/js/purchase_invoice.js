@@ -1,6 +1,7 @@
 frappe.ui.form.on('Purchase Invoice', {
     onload: function (frm) {
         if (frm.is_new()) apply_stock_defaults(frm);
+        keep_plain_list_price_label(frm);
     },
 
     company: function (frm) {
@@ -12,6 +13,7 @@ frappe.ui.form.on('Purchase Invoice', {
         // saving Stock Settings with show_barcode_field on rewrites it to
         // visible on every stock transaction.
         frm.set_df_property('scan_barcode', 'hidden', 1);
+        keep_plain_list_price_label(frm);
         if (frm.fields_dict.items && frm.fields_dict.items.grid) {
             const item_code_field = frm.fields_dict.items.grid.get_field('item_code');
             if (item_code_field && item_code_field.$input) {
@@ -320,4 +322,26 @@ function apply_stock_defaults(frm) {
     const warehouse = PI_COMPANY_STORE_WAREHOUSE[frm.doc.company];
     if (!warehouse) return;
     if (frm.doc.set_warehouse !== warehouse) frm.set_value("set_warehouse", warehouse);
+}
+
+// ERPNext's set_dynamic_labels appends the currency to item grid labels
+// ("List Price (INR)") on every refresh, currency or tax change. Wrap it once
+// per form and put the plain label back after it runs.
+function keep_plain_list_price_label(frm) {
+    const cscript = frm.cscript;
+    if (cscript && cscript.set_dynamic_labels && !cscript._plain_list_price_label) {
+        const original = cscript.set_dynamic_labels;
+        cscript.set_dynamic_labels = function (...args) {
+            const result = original.apply(this, args);
+            set_plain_list_price_label(frm);
+            return result;
+        };
+        cscript._plain_list_price_label = true;
+    }
+    set_plain_list_price_label(frm);
+}
+
+function set_plain_list_price_label(frm) {
+    const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+    if (grid) grid.update_docfield_property('price_list_rate', 'label', __('List Price'));
 }
