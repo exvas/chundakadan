@@ -27,10 +27,12 @@ PROPERTIES = {
 }
 
 
-# Per-piece prices such as 0.85 less 57% need more than the 2 decimals INR
-# gives: a rate of 0.3655 rounded to 0.37 turns 48,000 pcs from 17,544 into
-# 17,760. Only the rate fields get 4 decimals; amounts and totals stay at 2.
-RATE_PRECISION = "4"
+# Per-piece prices need more than the 2 decimals INR gives: 0.85 less 57% is
+# 0.3655, and 0.789 less 22% is 0.61542. Rounding the rate turns 10,200 pcs
+# from 6,277.28 into 6,277.08 at 4 decimals (17,760 vs 17,544 at 2). Five
+# decimals matches the purchase team's discount sheet (CAPRI DISCOUNT.xlsx).
+# Only rate fields change; amounts and totals stay at 2.
+RATE_PRECISION = "5"
 RATE_FIELDS = (
 	"price_list_rate",
 	"base_price_list_rate",

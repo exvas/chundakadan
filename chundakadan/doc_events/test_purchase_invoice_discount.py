@@ -51,31 +51,43 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		self.assertAlmostEqual(row.discount_amount, 96.90, places=2)
 		self.assertAlmostEqual(row.amount, 17544.00, places=2)
 
-	def _per_piece_invoice(self):
+	# qty (pcs), list price, discount %, discount amount, rate, amount — CAPRI DISCOUNT.xlsx
+	SHEET = [
+		(48000, 0.85, 57, 0.4845, 0.3655, 17544.00),
+		(31200, 1.64, 57, 0.9348, 0.7052, 22002.24),
+		(15600, 2.29, 57, 1.3053, 0.9847, 15361.32),
+		(108000, 1.78, 54, 0.9612, 0.8188, 88430.40),
+		(10200, 0.789, 22, 0.17358, 0.61542, 6277.28),
+		(8400, 0.948, 22, 0.20856, 0.73944, 6211.30),
+	]
+
+	def _sheet_invoice(self):
 		from erpnext.controllers.taxes_and_totals import calculate_taxes_and_totals
 
 		pi = frappe.new_doc("Purchase Invoice")
 		pi.company = frappe.db.get_value("Company", {}, "name")
 		pi.currency = frappe.get_cached_value("Company", pi.company, "default_currency")
 		pi.conversion_rate = 1
-		pi.append("items", {"item_code": "_x", "qty": 48000, "price_list_rate": 0.85, "discount_percentage": 57, "rate": 0, "conversion_factor": 1})
+		for qty, list_price, pct, *_ in self.SHEET:
+			pi.append("items", {"item_code": "_x", "qty": qty, "price_list_rate": list_price, "discount_percentage": pct, "rate": 0, "conversion_factor": 1})
 		calculate_taxes_and_totals(pi)
 		return pi
 
-	def test_per_piece_rate_keeps_four_decimals(self):
-		# 240 pkt x 200 pcs at 0.85 less 57% = 17,544 on the supplier bill
+	def test_matches_discount_sheet(self):
 		ensure_purchase_invoice_discount_columns()
 		frappe.clear_cache(doctype="Purchase Invoice")
-		row = self._per_piece_invoice().items[0]
-		self.assertAlmostEqual(row.rate, 0.3655, places=4)
-		self.assertAlmostEqual(row.discount_amount, 0.4845, places=4)
-		self.assertAlmostEqual(row.amount, 17544.00, places=2)
+		pi = self._sheet_invoice()
+		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET):
+			self.assertAlmostEqual(row.discount_amount, disc, places=5, msg=qty)
+			self.assertAlmostEqual(row.rate, rate, places=5, msg=qty)
+			self.assertAlmostEqual(row.amount, amount, places=2, msg=qty)
+		self.assertAlmostEqual(pi.total, 155826.54, places=2)
 
 	def test_amount_precision_unchanged(self):
 		ensure_purchase_invoice_discount_columns()
 		frappe.clear_cache(doctype="Purchase Invoice")
 		meta = frappe.get_meta(DOCTYPE)
-		self.assertEqual(meta.get_field("rate").precision, "4")
+		self.assertEqual(meta.get_field("rate").precision, "5")
 		self.assertFalse(meta.get_field("amount").precision)
 		self.assertFalse(meta.get_field("net_amount").precision)
 
