@@ -310,6 +310,7 @@ class DispatchBoard {
 			title: `${method === "mark_dispatched" ? __("Dispatch") : __("Edit Transport")} — ${row.sales_invoice}`,
 			fields: [
 				{ fieldtype: "Link", fieldname: "transporter", label: __("Transporter"), options: "Supplier", reqd: 1, default: row.transporter, get_query: () => ({ filters: { is_transporter: 1 } }) },
+				{ fieldtype: "Button", fieldname: "new_transporter", label: __("+ New Transporter"), click: () => this.new_transporter_dialog((name) => dialog.set_value("transporter", name)) },
 				{ fieldtype: "Data", fieldname: "vehicle_no", label: __("Vehicle No"), default: row.vehicle_no },
 				{ fieldtype: "Data", fieldname: "lr_no", label: __("LR No"), default: row.lr_no },
 				{ fieldtype: "Date", fieldname: "lr_date", label: __("LR Date"), default: row.lr_date },
@@ -323,6 +324,27 @@ class DispatchBoard {
 			primary_action: (values) => {
 				dialog.hide();
 				this.call(method, Object.assign({ log: row.name }, values), __("Dispatch updated"));
+			},
+		});
+		dialog.show();
+	}
+
+	new_transporter_dialog(on_created) {
+		const dialog = new frappe.ui.Dialog({
+			title: __("New Transporter"),
+			fields: [
+				{ fieldtype: "Data", fieldname: "transporter_name", label: __("Transporter Name"), reqd: 1 },
+				{ fieldtype: "Data", fieldname: "gst_transporter_id", label: __("GST Transporter ID"), description: __("Optional. 15 characters, needed to update the e-Waybill transporter") },
+			],
+			primary_action_label: __("Create"),
+			primary_action: (values) => {
+				frappe
+					.call({ method: `${DISPATCH_API}.create_transporter`, args: values, freeze: true })
+					.then((r) => {
+						dialog.hide();
+						frappe.show_alert({ message: __("Transporter {0} saved", [r.message.supplier_name]), indicator: "green" });
+						on_created(r.message.name);
+					});
 			},
 		});
 		dialog.show();

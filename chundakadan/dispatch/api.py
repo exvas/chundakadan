@@ -242,3 +242,54 @@ def retry_sync(log):
 	_require_status(doc, C.DISPATCHED)
 	sync_transport(doc)
 	return _result(doc)
+
+
+TRANSPORTER_GROUP = "Transporter"
+
+
+def _transporter_group():
+	if not frappe.db.exists("Supplier Group", TRANSPORTER_GROUP):
+		frappe.get_doc(
+			{
+				"doctype": "Supplier Group",
+				"supplier_group_name": TRANSPORTER_GROUP,
+				"parent_supplier_group": frappe.db.get_value("Supplier Group", {"is_group": 1, "parent_supplier_group": ["in", ["", None]]}, "name"),
+			}
+		).insert(ignore_permissions=True)
+	return TRANSPORTER_GROUP
+
+
+@frappe.whitelist()
+def create_transporter(transporter_name, gst_transporter_id=None):
+	"""Let a dispatcher add a transport partner without full Supplier rights.
+
+	Only creates (or flags) a Supplier with Is Transporter ticked; nothing else
+	about suppliers is exposed. An existing supplier with the same name is
+	reused and marked as a transporter instead of creating a duplicate.
+	"""
+	frappe.has_permission("Dispatch Log", "write", throw=True)
+	transporter_name = (transporter_name or "").strip()
+	if not transporter_name:
+		frappe.throw(_("Enter the transporter name."))
+	gst_transporter_id = (gst_transporter_id or "").strip().upper() or None
+
+	existing = frappe.db.get_value("Supplier", {"supplier_name": transporter_name}, "name")
+	if existing:
+		updates = {"is_transporter": 1}
+		if gst_transporter_id and not frappe.db.get_value("Supplier", existing, "gst_transporter_id"):
+			updates["gst_transporter_id"] = gst_transporter_id
+		doc = frappe.get_doc("Supplier", existing)
+		doc.update(updates)
+		doc.save(ignore_permissions=True)
+	else:
+		doc = frappe.get_doc(
+			{
+				"doctype": "Supplier",
+				"supplier_name": transporter_name,
+				"supplier_group": _transporter_group(),
+				"supplier_type": "Company",
+				"is_transporter": 1,
+				"gst_transporter_id": gst_transporter_id,
+			}
+		).insert(ignore_permissions=True)
+	return {"name": doc.name, "supplier_name": doc.supplier_name, "gst_transporter_id": doc.gst_transporter_id}

@@ -184,3 +184,47 @@ class TestDispatch(FrappeTestCase):
 			api.get_counts()
 		with self.assertRaises(frappe.PermissionError):
 			api.mark_customer_pickup(log.name)
+
+	# ---- transporter creation ----------------------------------------
+
+	def test_create_transporter_new_and_reuse(self):
+		name = f"Test Transporter {frappe.generate_hash(length=6)}"
+		first = api.create_transporter(name)
+		supplier = frappe.get_doc("Supplier", first["name"])
+		self.assertEqual(supplier.is_transporter, 1)
+		self.assertEqual(supplier.supplier_group, api.TRANSPORTER_GROUP)
+		again = api.create_transporter(f"  {name} ")
+		self.assertEqual(again["name"], first["name"])
+		self.assertEqual(frappe.db.count("Supplier", {"supplier_name": name}), 1)
+		frappe.db.rollback()
+
+	def test_create_transporter_flags_existing_supplier(self):
+		name = f"Test Plain Supplier {frappe.generate_hash(length=6)}"
+		plain = frappe.get_doc({"doctype": "Supplier", "supplier_name": name, "supplier_group": api._transporter_group()}).insert()
+		self.assertEqual(plain.is_transporter, 0)
+		result = api.create_transporter(name)
+		self.assertEqual(result["name"], plain.name)
+		self.assertEqual(frappe.db.get_value("Supplier", plain.name, "is_transporter"), 1)
+		frappe.db.rollback()
+
+	def test_create_transporter_validates(self):
+		with self.assertRaises(frappe.ValidationError):
+			api.create_transporter("   ")
+		frappe.set_user("Guest")
+		with self.assertRaises(frappe.PermissionError):
+			api.create_transporter("Nope Transport")
+
+	def test_dispatch_user_can_create_transporter(self):
+		user = frappe.db.get_value("Has Role", {"role": C.ROLE, "parenttype": "User"}, "parent")
+		if not user:
+			user = "dispatch.test@example.com"
+			if not frappe.db.exists("User", user):
+				frappe.get_doc({"doctype": "User", "email": user, "first_name": "Dispatch Test", "send_welcome_email": 0}).insert()
+			frappe.get_doc("User", user).add_roles(C.ROLE)
+		self.assertFalse(frappe.has_permission("Supplier", "create", user=user))
+		frappe.set_user(user)
+		result = api.create_transporter(f"DU Transport {frappe.generate_hash(length=6)}")
+		self.assertTrue(frappe.db.get_value("Supplier", result["name"], "is_transporter"))
+		frappe.set_user("Administrator")
+		frappe.db.rollback()
+
