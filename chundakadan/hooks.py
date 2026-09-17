@@ -310,6 +310,7 @@ after_migrate = [
     "chundakadan.install.ensure_item_fields_visible",
     "chundakadan.install.ensure_sick_leave_deduction_component",
     "chundakadan.dispatch.setup.ensure_dispatch_setup",
+    "chundakadan.dispatch.workspace.ensure_dispatch_number_cards",
     "chundakadan.doc_events.stock_control.ensure_update_stock_settings",
     "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
     "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",

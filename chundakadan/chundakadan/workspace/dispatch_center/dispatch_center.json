@@ -1,0 +1,145 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"dsp_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Dispatch</b></span>\", \"col\": 12}}, {\"id\": \"dsp_sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Dispatch Board\", \"col\": 3}}, {\"id\": \"dsp_sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Dispatch Log\", \"col\": 3}}, {\"id\": \"dsp_sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Invoice\", \"col\": 3}}, {\"id\": \"dsp_sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Transporters\", \"col\": 3}}, {\"id\": \"dsp_hdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\">Today at a glance</span>\", \"col\": 12}}, {\"id\": \"dsp_nc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Dispatch\", \"col\": 3}}, {\"id\": \"dsp_nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Over 2 Days\", \"col\": 3}}, {\"id\": \"dsp_nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Dispatch Value\", \"col\": 3}}, {\"id\": \"dsp_nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Delivery Follow-up Today\", \"col\": 3}}, {\"id\": \"dsp_nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"In Transit\", \"col\": 3}}, {\"id\": \"dsp_nc5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Dispatched Today\", \"col\": 3}}, {\"id\": \"dsp_nc6\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Delivered Today\", \"col\": 3}}, {\"id\": \"dsp_nc7\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Not Delivered\", \"col\": 3}}]",
+ "creation": "2026-09-17 10:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "move",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "Dispatch Center",
+ "links": [
+  {
+   "type": "Card Break",
+   "label": "Dispatch Center",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 3,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "Page",
+   "link_to": "dispatch",
+   "label": "Dispatch Board",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Dispatch Log",
+   "label": "Dispatch Log",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Supplier",
+   "label": "Transporters",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  }
+ ],
+ "modified": "2026-09-17 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Dispatch Center",
+ "number_cards": [
+  {
+   "label": "Pending Dispatch",
+   "number_card_name": "Pending Dispatch"
+  },
+  {
+   "label": "Pending Over 2 Days",
+   "number_card_name": "Pending Over 2 Days"
+  },
+  {
+   "label": "Pending Dispatch Value",
+   "number_card_name": "Pending Dispatch Value"
+  },
+  {
+   "label": "Delivery Follow-up Today",
+   "number_card_name": "Delivery Follow-up Today"
+  },
+  {
+   "label": "In Transit",
+   "number_card_name": "In Transit"
+  },
+  {
+   "label": "Dispatched Today",
+   "number_card_name": "Dispatched Today"
+  },
+  {
+   "label": "Delivered Today",
+   "number_card_name": "Delivered Today"
+  },
+  {
+   "label": "Not Delivered",
+   "number_card_name": "Not Delivered"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Dispatch User"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Sales Manager"
+  }
+ ],
+ "sequence_id": 2.0,
+ "shortcuts": [
+  {
+   "type": "Page",
+   "link_to": "dispatch",
+   "label": "Dispatch Board",
+   "color": "Blue",
+   "doc_view": ""
+  },
+  {
+   "type": "DocType",
+   "link_to": "Dispatch Log",
+   "label": "Dispatch Log",
+   "color": "Grey",
+   "doc_view": "List",
+   "stats_filter": "[[\"Dispatch Log\", \"dispatch_status\", \"=\", \"Pending\"], [\"Dispatch Log\", \"invoice_cancelled\", \"=\", 0]]"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Sales Invoice",
+   "label": "Sales Invoice",
+   "color": "Grey",
+   "doc_view": "List"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Supplier",
+   "label": "Transporters",
+   "color": "Grey",
+   "doc_view": "List",
+   "stats_filter": "[[\"Supplier\", \"is_transporter\", \"=\", 1]]"
+  }
+ ],
+ "title": "Dispatch Center"
+}
