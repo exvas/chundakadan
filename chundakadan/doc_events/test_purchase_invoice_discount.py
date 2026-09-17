@@ -19,6 +19,8 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		self.assertFalse(meta.get_field("discount_percentage").depends_on)
 		self.assertFalse(meta.get_field("discount_amount").depends_on)
 		self.assertEqual(meta.get_field("price_list_rate").label, "List Price")
+		self.assertEqual(meta.get_field("discount_percentage").label, "Disc %")
+		self.assertEqual(meta.get_field("discount_amount").label, "Disc Amnt")
 
 	def test_grid_columns_fit(self):
 		ensure_purchase_invoice_discount_columns()

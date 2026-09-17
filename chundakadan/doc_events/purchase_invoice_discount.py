@@ -20,8 +20,8 @@ PROPERTIES = {
 	"item_code": {"columns": (2, "Int")},
 	"qty": {"columns": (1, "Int")},
 	"price_list_rate": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "label": ("List Price", "Data")},
-	"discount_percentage": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Discount %", "Data")},
-	"discount_amount": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Discount Amount", "Data")},
+	"discount_percentage": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Disc %", "Data")},
+	"discount_amount": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Disc Amnt", "Data")},
 	"rate": {"columns": (2, "Int")},
 	"amount": {"columns": (2, "Int")},
 }
