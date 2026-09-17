@@ -315,6 +315,7 @@ after_migrate = [
     "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
     "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
     "chundakadan.patches.hide_invoice_fields.execute",
+    "chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
 ]
 
 # Uninstallation
