@@ -1,4 +1,12 @@
 frappe.ui.form.on('Item', {
+    refresh: function (frm) {
+        if (!frm.is_new() && frappe.boot.user.can_read.includes("Customer")) {
+            frm.add_custom_button(__("Customers Sold To"), () => {
+                frappe.set_route("query-report", "Item List Report", { item_code: frm.doc.name });
+            }, __("View"));
+        }
+    },
+
     custom_tax_template: function(frm) {
         if (frm.doc.custom_tax_template) {
             frappe.call({
