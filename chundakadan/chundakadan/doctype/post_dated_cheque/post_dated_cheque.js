@@ -18,6 +18,15 @@ frappe.ui.form.on("Post Dated Cheque", {
 		frm.set_query("bank_account", () => ({
 			filters: { party_type: "Customer", party: frm.doc.customer || "", disabled: 0 },
 		}));
+		// only this customer's open invoices
+		frm.set_query("sales_invoice", "references", () => ({
+			filters: {
+				customer: frm.doc.customer || "",
+				company: frm.doc.company || "",
+				docstatus: 1,
+				outstanding_amount: [">", 0],
+			},
+		}));
 	},
 
 	customer(frm) {
