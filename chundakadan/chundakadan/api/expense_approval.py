@@ -33,10 +33,13 @@ DOCTYPE_CONFIG = {
     "Expense Claim": {
         "amount_field": "total_claimed_amount",
         "submit_on_final": True,
+        # every claim is finalised by the GM, however small
+        "always_gm": True,
     },
     "Employee Advance": {
         "amount_field": "advance_amount",
         "submit_on_final": True,
+        "always_gm": True,
     },
     "Payment Request": {
         "amount_field": "grand_total",
@@ -55,7 +58,9 @@ ROLE_GM = "GM Leave Approver"
 
 # Bypass roles — these users can approve regardless of who they're
 # assigned to in the chain (also used for the perm gate).
-ADMIN_ROLES = ("Administrator", "System Manager", "HR Manager")
+# HR is deliberately NOT here: HR Manager could approve any step, which is
+# how expense claims were getting approved outside the Accounts → GM chain.
+ADMIN_ROLES = ("Administrator", "System Manager")
 
 
 # --- Helpers -----------------------------------------------------------
@@ -108,10 +113,15 @@ def _get_approver_by_role(role: str) -> str | None:
     return None
 
 
-def _build_chain(amount: float) -> list[str]:
-    """Decide which roles need to approve, in order."""
-    threshold = _get_threshold()
-    if amount > threshold:
+def _build_chain(amount: float, doctype: str | None = None) -> list[str]:
+    """Decide which roles need to approve, in order.
+
+    Doctypes flagged `always_gm` end with the GM whatever the amount;
+    the rest keep the threshold rule (Accounts alone below it).
+    """
+    if doctype and DOCTYPE_CONFIG.get(doctype, {}).get("always_gm"):
+        return [ROLE_ACCOUNTS, ROLE_GM]
+    if amount > _get_threshold():
         return [ROLE_ACCOUNTS, ROLE_GM]
     return [ROLE_ACCOUNTS]
 
@@ -193,7 +203,7 @@ def validate(doc, method=None):
         return
 
     amount = _get_amount(doc)
-    desired_roles = _build_chain(amount)
+    desired_roles = _build_chain(amount, doc.doctype)
 
     existing_flow = doc.get("approval_flow") or []
     existing_roles = [
