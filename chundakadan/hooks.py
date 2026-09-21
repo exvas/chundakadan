@@ -429,6 +429,12 @@ scheduler_events = {
 		],
 		# Daily at 01:00 — gates on Chundakadan Settings.annual_allocation_run_date,
 		# fires the annual leave allocation only on the configured day.
+		# Daily at 08:30 — remind the sales person and accounts about post
+		# dated cheques falling due (7/3/1 days before, on the day, and once
+		# when they go overdue).
+		"30 8 * * *": [
+			"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.send_due_reminders"
+		],
 		"0 1 * * *": [
 			"chundakadan.chundakadan.api.leave.maybe_auto_allocate"
 		],

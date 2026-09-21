@@ -1,0 +1,85 @@
+// Copyright (c) 2026, Chundakadan and contributors
+frappe.ui.form.on("Post Dated Cheque", {
+	refresh(frm) {
+		if (frm.doc.docstatus === 1 && frm.doc.status === "Pending") {
+			frm.add_custom_button(__("Cheque Collected"), () => collect_dialog(frm)).addClass("btn-primary");
+			frm.add_custom_button(__("Cheque Bounced"), () => bounce_dialog(frm));
+		}
+		if (frm.doc.payment_entry) {
+			frm.add_custom_button(__("Payment Entry"), () => frappe.set_route("Form", "Payment Entry", frm.doc.payment_entry), __("View"));
+		}
+		set_status_indicator(frm);
+	},
+
+	customer(frm) {
+		frm.clear_table("references");
+		frm.refresh_field("references");
+	},
+});
+
+frappe.ui.form.on("Post Dated Cheque Reference", {
+	sales_invoice(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.sales_invoice) return;
+		frappe.db.get_value("Sales Invoice", row.sales_invoice, "outstanding_amount").then((r) => {
+			frappe.model.set_value(cdt, cdn, "outstanding_amount", r.message.outstanding_amount);
+			if (!row.allocated_amount) frappe.model.set_value(cdt, cdn, "allocated_amount", r.message.outstanding_amount);
+		});
+	},
+});
+
+function set_status_indicator(frm) {
+	const colours = { Draft: "red", Pending: "orange", Collected: "green", Bounced: "red", Cancelled: "grey" };
+	if (frm.doc.docstatus === 1) frm.page.set_indicator(__(frm.doc.status), colours[frm.doc.status] || "blue");
+}
+
+function collect_dialog(frm) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Cheque Collected — {0}", [frm.doc.cheque_no]),
+		fields: [
+			{
+				fieldtype: "Link", fieldname: "bank_account", label: __("Deposited To (Bank Account)"), options: "Account", reqd: 1,
+				get_query: () => ({ filters: { company: frm.doc.company, account_type: ["in", ["Bank", "Cash"]], is_group: 0 } }),
+			},
+			{ fieldtype: "Date", fieldname: "posting_date", label: __("Payment Date"), reqd: 1, default: frm.doc.cheque_date },
+			{ fieldtype: "Column Break" },
+			{ fieldtype: "Link", fieldname: "mode_of_payment", label: __("Mode of Payment"), options: "Mode of Payment", default: "Cheque" },
+			{ fieldtype: "Data", fieldname: "reference_no", label: __("Reference No"), default: frm.doc.cheque_no, reqd: 1 },
+			{ fieldtype: "Date", fieldname: "reference_date", label: __("Reference Date"), default: frm.doc.cheque_date, reqd: 1 },
+			{ fieldtype: "Section Break" },
+			{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks") },
+		],
+		primary_action_label: __("Create Payment Entry"),
+		primary_action: (values) => {
+			dialog.hide();
+			frappe.call({
+				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.collect",
+				args: Object.assign({ cheque: frm.doc.name }, values),
+				freeze: true,
+				freeze_message: __("Creating Payment Entry..."),
+			}).then((r) => {
+				if (!r.message) return;
+				frappe.show_alert({ message: __("Payment Entry {0} created", [r.message.payment_entry]), indicator: "green" });
+				frm.reload_doc();
+			});
+		},
+	});
+	dialog.show();
+}
+
+function bounce_dialog(frm) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Cheque Bounced — {0}", [frm.doc.cheque_no]),
+		fields: [{ fieldtype: "Small Text", fieldname: "reason", label: __("Reason"), reqd: 1 }],
+		primary_action_label: __("Mark Bounced"),
+		primary_action: (values) => {
+			dialog.hide();
+			frappe.call({
+				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.mark_bounced",
+				args: { cheque: frm.doc.name, reason: values.reason },
+				freeze: true,
+			}).then(() => frm.reload_doc());
+		},
+	});
+	dialog.show();
+}
