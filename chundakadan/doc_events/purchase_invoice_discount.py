@@ -28,11 +28,13 @@ PROPERTIES = {
 
 
 # Per-piece prices need more than the 2 decimals INR gives: 0.85 less 57% is
-# 0.3655, and 0.789 less 22% is 0.61542. Rounding the rate turns 10,200 pcs
-# from 6,277.28 into 6,277.08 at 4 decimals (17,760 vs 17,544 at 2). Five
-# decimals matches the purchase team's discount sheet (CAPRI DISCOUNT.xlsx).
-# Only rate fields change; amounts and totals stay at 2.
-RATE_PRECISION = "5"
+# 0.3655, so at 2 decimals 48,000 pcs came to 17,760 instead of 17,544.
+#
+# FOUR decimals, not five: the supplier bills per packet at a 2-decimal rate
+# (78.90 less 22% = 61.54 for 102 PKT = 6,277.08), which per piece is 0.6154.
+# Five decimals (0.61542) gives 6,277.28 — the purchase team's own sheet, but
+# 20 paise off the bill they pay. Amounts and totals stay at 2.
+RATE_PRECISION = "4"
 RATE_FIELDS = (
 	"price_list_rate",
 	"base_price_list_rate",

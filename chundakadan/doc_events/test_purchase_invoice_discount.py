@@ -51,14 +51,15 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		self.assertAlmostEqual(row.discount_amount, 96.90, places=2)
 		self.assertAlmostEqual(row.amount, 17544.00, places=2)
 
-	# qty (pcs), list price, discount %, discount amount, rate, amount — CAPRI DISCOUNT.xlsx
+	# qty (pcs), list price, discount %, discount amount, rate, amount
+	# — the supplier bill for PI-CA-26-0003 (CAPRI), which bills per packet
 	SHEET = [
 		(48000, 0.85, 57, 0.4845, 0.3655, 17544.00),
 		(31200, 1.64, 57, 0.9348, 0.7052, 22002.24),
 		(15600, 2.29, 57, 1.3053, 0.9847, 15361.32),
 		(108000, 1.78, 54, 0.9612, 0.8188, 88430.40),
-		(10200, 0.789, 22, 0.17358, 0.61542, 6277.28),
-		(8400, 0.948, 22, 0.20856, 0.73944, 6211.30),
+		(10200, 0.789, 22, 0.1736, 0.6154, 6277.08),
+		(8400, 0.948, 22, 0.2086, 0.7394, 6210.96),
 	]
 
 	def _sheet_invoice(self):
@@ -78,16 +79,16 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		frappe.clear_cache(doctype="Purchase Invoice")
 		pi = self._sheet_invoice()
 		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET):
-			self.assertAlmostEqual(row.discount_amount, disc, places=5, msg=qty)
-			self.assertAlmostEqual(row.rate, rate, places=5, msg=qty)
+			self.assertAlmostEqual(row.discount_amount, disc, places=4, msg=qty)
+			self.assertAlmostEqual(row.rate, rate, places=4, msg=qty)
 			self.assertAlmostEqual(row.amount, amount, places=2, msg=qty)
-		self.assertAlmostEqual(pi.total, 155826.54, places=2)
+		self.assertAlmostEqual(pi.total, 155826.00, places=2)
 
 	def test_amount_precision_unchanged(self):
 		ensure_purchase_invoice_discount_columns()
 		frappe.clear_cache(doctype="Purchase Invoice")
 		meta = frappe.get_meta(DOCTYPE)
-		self.assertEqual(meta.get_field("rate").precision, "5")
+		self.assertEqual(meta.get_field("rate").precision, "4")
 		self.assertFalse(meta.get_field("amount").precision)
 		self.assertFalse(meta.get_field("net_amount").precision)
 
