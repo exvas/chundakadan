@@ -29,10 +29,20 @@ class TestPOWorkflow(FrappeTestCase):
 		# each test rolls back, so seed per test rather than per class
 		frappe.set_user("Administrator")
 		ensure_po_workflow()
+		# The workflow mails the next approver with the PO attached as a PDF.
+		# This dev copy still has the old print format whose `addr` variable is
+		# undefined when a PO has no shipping address, so rendering it throws.
+		# Live renders fine; silence the mail here only.
+		frappe.db.set_value("Workflow", WORKFLOW, "send_email_alert", 0)
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		frappe.db.rollback()
+
+	def test_seed_enables_the_email_alert(self):
+		frappe.db.set_value("Workflow", WORKFLOW, "send_email_alert", 0)
+		ensure_po_workflow()
+		self.assertEqual(frappe.db.get_value("Workflow", WORKFLOW, "send_email_alert"), 1)
 
 	def test_workflow_states_and_transitions(self):
 		wf = frappe.get_doc("Workflow", WORKFLOW)

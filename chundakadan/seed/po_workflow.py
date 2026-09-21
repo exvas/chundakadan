@@ -139,9 +139,8 @@ def ensure_permissions():
 def ensure_workflow():
 	if frappe.db.exists("Workflow", WORKFLOW):
 		existing = frappe.get_doc("Workflow", WORKFLOW)
-		if existing.send_email_alert:
-			# the alert mail renders the PO print format to PDF and fails on it
-			existing.db_set("send_email_alert", 0)
+		if not existing.send_email_alert:
+			existing.db_set("send_email_alert", 1)
 		return existing
 
 	workflow = frappe.get_doc(
@@ -151,7 +150,7 @@ def ensure_workflow():
 			"document_type": DOCTYPE,
 			"workflow_state_field": STATE_FIELD,
 			"is_active": 1,
-			"send_email_alert": 0,  # the workflow mail attaches a PDF; the print format breaks on it
+			"send_email_alert": 1,  # mails the next approver, with the PO attached as PDF
 			"states": [
 				{
 					"state": state,
