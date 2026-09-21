@@ -121,11 +121,18 @@ class PostDatedCheque(Document):
 
 
 @frappe.whitelist()
-def collect(cheque, bank_account, posting_date=None, mode_of_payment=None, reference_no=None, reference_date=None, remarks=None):
+def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, reference_no=None, reference_date=None, remarks=None):
 	"""One click: cheque cleared → Payment Entry against the customer."""
 	doc = frappe.get_doc("Post Dated Cheque", cheque)
 	doc.check_permission("write")
 	doc.require_pending()
+
+	mode_of_payment = mode_of_payment or "Cheque"
+	bank_account = bank_account or mode_of_payment_account(mode_of_payment, doc.company)
+	if not bank_account:
+		frappe.throw(
+			_("Mode of Payment {0} has no account for {1}. Set it in Mode of Payment.").format(mode_of_payment, doc.company)
+		)
 
 	posting_date = posting_date or doc.cheque_date or nowdate()
 	savepoint = "pdc_collect"
@@ -135,7 +142,7 @@ def collect(cheque, bank_account, posting_date=None, mode_of_payment=None, refer
 		payment.payment_type = "Receive"
 		payment.company = doc.company
 		payment.posting_date = posting_date
-		payment.mode_of_payment = mode_of_payment or "Cheque"
+		payment.mode_of_payment = mode_of_payment
 		payment.party_type = "Customer"
 		payment.party = doc.customer
 		payment.paid_from = frappe.get_cached_value("Company", doc.company, "default_receivable_account")
@@ -286,6 +293,21 @@ def customer_bank_accounts(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
+def allow_cheque_links_on_cancel(doc, method=None):
+	"""Let a Payment Entry be cancelled although cheque records point at it.
+
+	Frappe blocks cancelling a document that submitted documents link to.
+	The cheque and its bounce entry are records *about* this payment, not
+	downstream accounting, so they should not stand in the way — Cheque
+	Bounce cancels the payment on purpose. It has to run in before_cancel:
+	the check (check_no_back_links_exist) happens before on_cancel.
+	"""
+	doc.ignore_linked_doctypes = tuple(doc.get("ignore_linked_doctypes") or ()) + (
+		"Post Dated Cheque",
+		"Cheque Bounce",
+	)
+
+
 def on_cheque_bounce_submit(doc, method=None):
 	"""A collected cheque that bounced: Cheque Bounce owns the accounting.
 
@@ -311,3 +333,11 @@ def on_cheque_bounce_cancel(doc, method=None):
 	cheque = frappe.db.get_value("Post Dated Cheque", {"cheque_bounce": doc.name}, "name")
 	if cheque:
 		frappe.db.set_value("Post Dated Cheque", cheque, "cheque_bounce", None)
+
+
+@frappe.whitelist()
+def mode_of_payment_account(mode_of_payment, company):
+	"""The account a mode of payment lands in for this company."""
+	return frappe.db.get_value(
+		"Mode of Payment Account", {"parent": mode_of_payment, "company": company}, "default_account"
+	)

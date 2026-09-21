@@ -9,6 +9,7 @@ from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import 
 	create_customer_bank_account,
 	customer_bank_accounts,
 	mark_bounced,
+	mode_of_payment_account,
 	reminder_recipients,
 	send_due_reminders,
 )
@@ -371,3 +372,33 @@ class TestPostDatedCheque(FrappeTestCase):
 		mine.reload()
 		self.assertEqual(mine.status, "Collected")
 		self.assertFalse(mine.cheque_bounce)
+
+	# ---- deposit account from the mode of payment ---------------------
+
+	def _mode_with_account(self):
+		mode = frappe.db.get_value("Mode of Payment Account", {"company": COMPANY, "default_account": ["is", "set"]}, "parent")
+		if not mode:
+			self.skipTest("no mode of payment has an account for this company")
+		return mode
+
+	def test_mode_of_payment_account_lookup(self):
+		mode = self._mode_with_account()
+		account = mode_of_payment_account(mode, COMPANY)
+		self.assertEqual(account, frappe.db.get_value("Mode of Payment Account", {"parent": mode, "company": COMPANY}, "default_account"))
+
+	def test_collect_uses_the_mode_of_payment_account(self):
+		mode = self._mode_with_account()
+		account = mode_of_payment_account(mode, COMPANY)
+		doc = self._cheque()
+		result = collect(doc.name, posting_date=nowdate(), mode_of_payment=mode)
+		payment = frappe.get_doc("Payment Entry", result["payment_entry"])
+		self.assertEqual(payment.paid_to, account)
+		self.assertEqual(payment.mode_of_payment, mode)
+
+	def test_collect_without_an_account_for_the_mode(self):
+		mode = frappe.get_doc({"doctype": "Mode of Payment", "mode_of_payment": f"No Account {frappe.generate_hash(length=4)}", "type": "Bank"}).insert().name
+		doc = self._cheque()
+		with self.assertRaises(frappe.ValidationError):
+			collect(doc.name, mode_of_payment=mode)
+		doc.reload()
+		self.assertEqual(doc.status, "Pending")
