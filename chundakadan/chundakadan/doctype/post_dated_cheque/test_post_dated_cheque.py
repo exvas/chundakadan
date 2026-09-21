@@ -246,10 +246,12 @@ class TestPostDatedCheque(FrappeTestCase):
 
 	# ---- customer bank account ----------------------------------------
 
-	def test_bank_account_is_mandatory(self):
-		self.assertEqual(frappe.get_meta("Post Dated Cheque").get_field("bank_account").reqd, 1)
-		with self.assertRaises(frappe.exceptions.MandatoryError):
-			self._cheque(submit=False, bank_account=None)
+	def test_bank_account_is_optional(self):
+		# the PDC import from the customer's own list has no bank details
+		self.assertFalse(frappe.get_meta("Post Dated Cheque").get_field("bank_account").reqd)
+		doc = self._cheque(bank_account=None)
+		self.assertEqual(doc.status, "Pending")
+		self.assertFalse(doc.bank_name)
 
 	def test_create_customer_bank_account_links_the_customer(self):
 		result = create_customer_bank_account(self.invoice.customer, "Test Bank 2", account_name="Test A/C", bank_account_no="222333", ifsc="sbin0001234", branch="Calicut")

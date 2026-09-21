@@ -112,8 +112,8 @@
    "fieldtype": "Link",
    "label": "Customer's Bank Account",
    "options": "Bank Account",
-   "reqd": 1,
-   "description": "The customer's bank account this cheque is drawn on"
+   "reqd": 0,
+   "description": "The customer's bank account this cheque is drawn on (optional)"
   },
   {
    "fetch_from": "bank_account.bank",
