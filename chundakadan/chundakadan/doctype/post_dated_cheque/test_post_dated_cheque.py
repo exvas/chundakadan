@@ -420,3 +420,41 @@ class TestPostDatedCheque(FrappeTestCase):
 		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
 		found = {row["doctype"]: row for row in counts["count"]["internal_links_found"]}
 		self.assertEqual(found["Cheque Bounce"]["names"], [bounce.name])
+
+	# ---- email to whoever entered the cheque --------------------------
+
+	def _reminder_with_mail(self, cheque_date):
+		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
+		doc = self._cheque(cheque_date=cheque_date)
+		# Administrator is skipped on purpose, so pose as a real user
+		owner = frappe.db.get_value("User", {"enabled": 1, "user_type": "System User", "name": ["not in", ["Administrator", "Guest"]]}, "name")
+		if not owner:
+			self.skipTest("no ordinary user on this site")
+		frappe.db.set_value("Post Dated Cheque", doc.name, "owner", owner, update_modified=False)
+		doc.owner = owner
+		with patch("frappe.sendmail") as mail, patch("chundakadan.utils.push.send_to_users"):
+			send_due_reminders()
+		return doc, mail
+
+    
+	def test_creator_is_emailed_the_day_before_and_on_the_day(self):
+		for days in (1, 0):
+			frappe.db.rollback()
+			ensure_doctypes()
+			doc, mail = self._reminder_with_mail(add_days(nowdate(), days))
+			sent = [c for c in mail.call_args_list if c.kwargs.get("reference_name") == doc.name]
+			self.assertEqual(len(sent), 1, f"{days} days")
+			kwargs = sent[0].kwargs
+			self.assertEqual(kwargs["recipients"], [frappe.db.get_value("User", doc.owner, "email") or doc.owner])
+			self.assertIn(doc.cheque_no, kwargs["subject"])
+			self.assertIn("today" if days == 0 else "tomorrow", kwargs["subject"])
+			self.assertIn(doc.cheque_no, kwargs["message"])
+			self.assertIn(doc.name, kwargs["message"])
+
+	def test_no_email_on_the_other_reminder_days(self):
+		for days in (7, 3, 5):
+			frappe.db.rollback()
+			ensure_doctypes()
+			doc, mail = self._reminder_with_mail(add_days(nowdate(), days))
+			sent = [c for c in mail.call_args_list if c.kwargs.get("reference_name") == doc.name]
+			self.assertEqual(sent, [], f"{days} days")

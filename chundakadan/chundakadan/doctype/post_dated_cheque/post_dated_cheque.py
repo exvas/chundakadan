@@ -180,6 +180,7 @@ def mark_bounced(cheque, reason=None):
 
 
 REMINDER_DAYS = (7, 3, 1, 0)
+EMAIL_DAYS = (1, 0)  # the creator is emailed the day before and on the day
 
 
 def send_due_reminders():
@@ -194,13 +195,15 @@ def send_due_reminders():
 	cheques = frappe.get_all(
 		"Post Dated Cheque",
 		filters={"docstatus": 1, "status": PENDING},
-		fields=["name", "cheque_no", "cheque_date", "customer_name", "amount", "sales_person", "company", "owner"],
+		fields=["name", "cheque_no", "cheque_date", "customer", "customer_name", "amount", "sales_person", "bank_name", "company", "owner"],
 	)
 	sent = 0
 	for cheque in cheques:
 		days = date_diff(cheque.cheque_date, today)
 		if days not in REMINDER_DAYS and days != -1:
 			continue
+		if days in EMAIL_DAYS:
+			email_creator(cheque, days)
 		users = reminder_recipients(cheque)
 		if not users:
 			continue
@@ -213,6 +216,40 @@ def send_due_reminders():
 		)
 		sent += 1
 	return {"reminded": sent, "checked": len(cheques)}
+
+
+def email_creator(cheque, days):
+	"""Mail whoever entered the cheque, the day before and on the day."""
+	owner = cheque.get("owner")
+	if not owner or owner == "Administrator" or not frappe.db.get_value("User", owner, "enabled"):
+		return
+	recipient = frappe.db.get_value("User", owner, "email") or owner
+	when = _("today") if days == 0 else _("tomorrow")
+	amount = frappe.format_value(cheque.amount, {"fieldtype": "Currency"})
+	subject = _("Cheque due {0}: {1} — {2}").format(when, cheque.customer_name or cheque.customer, cheque.cheque_no)
+	rows = [
+		(_("Customer"), cheque.customer_name or cheque.customer),
+		(_("Cheque No"), cheque.cheque_no),
+		(_("Cheque Date"), frappe.format_value(cheque.cheque_date, {"fieldtype": "Date"})),
+		(_("Amount"), amount),
+		(_("Bank"), cheque.get("bank_name") or ""),
+		(_("Sales Person"), cheque.get("sales_person") or ""),
+	]
+	body = "".join(
+		f"<tr><td style='padding:4px 12px 4px 0;color:#6b7280'>{label}</td><td style='padding:4px 0'><b>{value}</b></td></tr>"
+		for label, value in rows
+		if value
+	)
+	frappe.sendmail(
+		recipients=[recipient],
+		subject=subject,
+		message=_("Cheque {0} falls due {1}.").format(cheque.cheque_no, when)
+		+ f"<table style='margin-top:10px'>{body}</table>"
+		+ f"<p style='margin-top:12px'><a href='{frappe.utils.get_url_to_form('Post Dated Cheque', cheque.name)}'>{cheque.name}</a></p>",
+		reference_doctype="Post Dated Cheque",
+		reference_name=cheque.name,
+		now=False,
+	)
 
 
 def reminder_recipients(cheque):
