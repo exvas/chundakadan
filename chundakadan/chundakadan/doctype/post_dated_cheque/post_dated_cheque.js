@@ -18,6 +18,9 @@ frappe.ui.form.on("Post Dated Cheque", {
 		frm.set_query("bank_account", () => ({
 			filters: { party_type: "Customer", party: frm.doc.customer || "", disabled: 0 },
 		}));
+		// no "Create a new Bank Account" jump from the dropdown — everything
+		// is entered in the dialog on this form
+		if (frm.fields_dict.bank_account) frm.fields_dict.bank_account.df.only_select = 1;
 		// only this customer's open invoices
 		frm.set_query("sales_invoice", "references", () => ({
 			filters: {
@@ -115,7 +118,7 @@ function new_bank_account_dialog(frm) {
 	const dialog = new frappe.ui.Dialog({
 		title: __("New Bank Account — {0}", [frm.doc.customer_name || frm.doc.customer]),
 		fields: [
-			{ fieldtype: "Link", fieldname: "bank", label: __("Bank"), options: "Bank", reqd: 1 },
+			{ fieldtype: "Autocomplete", fieldname: "bank", label: __("Bank"), reqd: 1, options: [], description: __("Type the bank name; a new one is created if it does not exist") },
 			{ fieldtype: "Data", fieldname: "account_name", label: __("Account Name"), default: frm.doc.customer_name || frm.doc.customer },
 			{ fieldtype: "Column Break" },
 			{ fieldtype: "Data", fieldname: "bank_account_no", label: __("Account No") },
@@ -140,4 +143,8 @@ function new_bank_account_dialog(frm) {
 		},
 	});
 	dialog.show();
+	// suggest the banks already on file, without leaving this form
+	frappe.db.get_list("Bank", { fields: ["name"], limit: 200, order_by: "name asc" }).then((banks) => {
+		dialog.set_df_property("bank", "options", (banks || []).map((b) => b.name));
+	});
 }
