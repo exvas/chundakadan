@@ -31,13 +31,28 @@ class PostDatedCheque(Document):
 			self.status = "Draft"
 
 	def set_sales_person(self):
-		"""From the referenced invoice, else the customer's sales team."""
+		"""Mandatory, but filled in for the user wherever we can.
+
+		A referenced invoice first, then the customer's latest submitted
+		invoice (no customer here carries a Sales Team), then the team.
+		"""
 		if self.sales_person:
 			return
 		for row in self.references:
 			person = frappe.db.get_value("Sales Invoice", row.sales_invoice, "custom_sales_person")
 			if person:
 				self.sales_person = person
+				return
+		if self.customer:
+			latest = frappe.get_all(
+				"Sales Invoice",
+				filters={"customer": self.customer, "docstatus": 1, "custom_sales_person": ["is", "set"]},
+				fields=["custom_sales_person"],
+				order_by="posting_date desc, creation desc",
+				limit=1,
+			)
+			if latest:
+				self.sales_person = latest[0].custom_sales_person
 				return
 		self.sales_person = frappe.db.get_value("Sales Team", {"parent": self.customer, "parenttype": "Customer"}, "sales_person")
 

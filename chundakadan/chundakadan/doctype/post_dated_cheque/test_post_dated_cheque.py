@@ -161,10 +161,27 @@ class TestPostDatedCheque(FrappeTestCase):
 		doc = self._cheque(references=[{"sales_invoice": self.invoice.name}])
 		self.assertEqual(doc.sales_person, person)
 
-	def test_sales_person_falls_back_to_the_customer_team(self):
-		person = frappe.db.get_value("Sales Team", {"parent": self.invoice.customer, "parenttype": "Customer"}, "sales_person")
+	def test_sales_person_falls_back_to_the_customers_latest_invoice(self):
+		latest = frappe.get_all(
+			"Sales Invoice",
+			filters={"customer": self.invoice.customer, "docstatus": 1, "custom_sales_person": ["is", "set"]},
+			fields=["custom_sales_person"],
+			order_by="posting_date desc, creation desc",
+			limit=1,
+		)
+		if not latest:
+			self.skipTest("customer has no invoice with a sales person")
 		doc = self._cheque()
-		self.assertEqual(doc.sales_person, person)
+		self.assertEqual(doc.sales_person, latest[0].custom_sales_person)
+
+	def test_sales_person_is_mandatory(self):
+		self.assertEqual(frappe.get_meta("Post Dated Cheque").get_field("sales_person").reqd, 1)
+		invoiced = frappe.get_all("Sales Invoice", filters={"docstatus": 1}, pluck="customer") or [""]
+		customer = frappe.db.get_value("Customer", {"name": ["not in", invoiced]}, "name")
+		if not customer:
+			self.skipTest("every customer has invoices")
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			self._cheque(submit=False, customer=customer)
 
 	def test_sales_person_kept_when_set(self):
 		person = frappe.db.get_value("Sales Person", {"enabled": 1}, "name")

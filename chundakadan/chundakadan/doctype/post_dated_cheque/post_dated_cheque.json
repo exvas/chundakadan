@@ -119,7 +119,8 @@
    "options": "Sales Person",
    "in_standard_filter": 1,
    "search_index": 1,
-   "description": "Who follows this cheque up; filled from the invoice or the customer"
+   "description": "Who follows this cheque up; filled from the customer's invoices when possible",
+   "reqd": 1
   },
   {
    "fieldname": "reference_section",
