@@ -86,14 +86,10 @@ function collect_dialog(frm) {
 		fields: [
 			{
 				fieldtype: "Link", fieldname: "mode_of_payment", label: __("Mode of Payment"), options: "Mode of Payment", reqd: 1, default: "Cheque",
-				onchange: () => set_deposit_account(dialog, frm),
+				description: __("The Payment Entry banks it into this mode's account"),
 			},
-			{
-				fieldtype: "Link", fieldname: "bank_account", label: __("Deposited To (Bank Account)"), options: "Account", reqd: 1, read_only: 1,
-				description: __("From the Mode of Payment's account for this company"),
-			},
-			{ fieldtype: "Column Break" },
 			{ fieldtype: "Date", fieldname: "posting_date", label: __("Payment Date"), reqd: 1, default: frm.doc.cheque_date },
+			{ fieldtype: "Column Break" },
 			{ fieldtype: "Data", fieldname: "reference_no", label: __("Reference No"), default: frm.doc.cheque_no, reqd: 1 },
 			{ fieldtype: "Date", fieldname: "reference_date", label: __("Reference Date"), default: frm.doc.cheque_date, reqd: 1 },
 			{ fieldtype: "Section Break" },
@@ -115,28 +111,6 @@ function collect_dialog(frm) {
 		},
 	});
 	dialog.show();
-	set_deposit_account(dialog, frm);
-}
-
-// The account money lands in comes from the Mode of Payment's row for this
-// company, so the user picks the mode, not the ledger.
-function set_deposit_account(dialog, frm) {
-	const mode = dialog.get_value("mode_of_payment");
-	if (!mode) {
-		dialog.set_value("bank_account", "");
-		return;
-	}
-	frappe.db
-		.get_value("Mode of Payment Account", { parent: mode, company: frm.doc.company }, "default_account")
-		.then((r) => {
-			const account = r.message && r.message.default_account;
-			dialog.set_value("bank_account", account || "");
-			if (!account) {
-				frappe.msgprint(
-					__("Mode of Payment {0} has no account for {1}. Set it in Mode of Payment.", [mode, frm.doc.company])
-				);
-			}
-		});
 }
 
 function bounce_dialog(frm) {
