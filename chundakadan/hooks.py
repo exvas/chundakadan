@@ -228,6 +228,11 @@ doc_events = {
     # Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
     # when blank (the Sales Invoice equivalent lives in the single merged
     # "Sales Invoice" block above — do NOT re-add a duplicate key here).
+    # a collected cheque that bounced: mirror Cheque Bounce onto the cheque
+    "Cheque Bounce": {
+        "on_submit": "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_cheque_bounce_submit",
+        "on_cancel": "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_cheque_bounce_cancel",
+    },
     "Purchase Order": {
         "before_insert": "chundakadan.seed.po_workflow.set_default_workflow_state",
     },

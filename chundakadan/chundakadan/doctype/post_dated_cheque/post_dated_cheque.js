@@ -1,6 +1,24 @@
 // Copyright (c) 2026, Chundakadan and contributors
 frappe.ui.form.on("Post Dated Cheque", {
 	refresh(frm) {
+		if (frm.doc.docstatus === 1 && frm.doc.status === "Collected" && frm.doc.payment_entry) {
+			// a collected cheque that bounced needs the accounting reversal,
+			// which Cheque Bounce does against the Payment Entry
+			frm.add_custom_button(__("Cheque Bounced"), () => {
+				frappe.new_doc("Cheque Bounce", {
+					payment_entry: frm.doc.payment_entry,
+					customer: frm.doc.customer,
+					cheque_no: frm.doc.cheque_no,
+					cheque_date: frm.doc.cheque_date,
+					original_amount: frm.doc.amount,
+					bounce_date: frappe.datetime.get_today(),
+					mode_of_payment: "Cheque",
+				});
+			});
+		}
+		if (frm.doc.cheque_bounce) {
+			frm.add_custom_button(__("Cheque Bounce"), () => frappe.set_route("Form", "Cheque Bounce", frm.doc.cheque_bounce), __("View"));
+		}
 		if (frm.doc.docstatus === 1 && frm.doc.status === "Pending") {
 			frm.add_custom_button(__("Cheque Collected"), () => collect_dialog(frm)).addClass("btn-primary");
 			frm.add_custom_button(__("Cheque Bounced"), () => bounce_dialog(frm));

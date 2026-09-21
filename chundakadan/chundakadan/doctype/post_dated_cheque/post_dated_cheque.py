@@ -284,3 +284,30 @@ def customer_bank_accounts(doctype, txt, searchfield, start, page_len, filters):
 		""",
 		{"customer": customer, "like": like, "start": start or 0, "page_len": page_len or 20},
 	)
+
+
+def on_cheque_bounce_submit(doc, method=None):
+	"""A collected cheque that bounced: Cheque Bounce owns the accounting.
+
+	It cancels the Payment Entry and books the bank charge; here we only
+	mirror the outcome onto the cheque this Payment Entry came from.
+	"""
+	cheque = frappe.db.get_value("Post Dated Cheque", {"payment_entry": doc.payment_entry, "docstatus": 1}, "name")
+	if not cheque:
+		return
+	frappe.db.set_value("Post Dated Cheque", cheque, {
+		"status": BOUNCED,
+		"bounce_reason": doc.get("bounce_reason"),
+		"cheque_bounce": doc.name,
+	})
+
+
+def on_cheque_bounce_cancel(doc, method=None):
+	"""Cancelling the bounce entry only unlinks it.
+
+	The Payment Entry it cancelled is not restored by Cheque Bounce either,
+	so the cheque stays Bounced until someone re-enters it.
+	"""
+	cheque = frappe.db.get_value("Post Dated Cheque", {"cheque_bounce": doc.name}, "name")
+	if cheque:
+		frappe.db.set_value("Post Dated Cheque", cheque, "cheque_bounce", None)

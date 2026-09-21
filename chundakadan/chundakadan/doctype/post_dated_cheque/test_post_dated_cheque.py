@@ -321,3 +321,53 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertIn(orphan, names)
 		if theirs:
 			self.assertNotIn(theirs, names)
+
+	# ---- collected cheque that bounced --------------------------------
+
+	def _cheque_bounce_doc(self, pdc, charge=0):
+		company = COMPANY
+		return frappe.get_doc({
+			"doctype": "Cheque Bounce",
+			"payment_entry": pdc.payment_entry,
+			"customer": pdc.customer,
+			"bounce_date": nowdate(),
+			"cheque_no": pdc.cheque_no,
+			"cheque_date": pdc.cheque_date,
+			"original_amount": pdc.amount,
+			"mode_of_payment": "Cheque",
+			"bounce_reason": "Insufficient Funds",
+			"bounce_charge_amount": charge,
+			"charge_to_customer": 0,
+			"bank_account": self.bank,
+			"bank_charges_account": frappe.db.get_value("Account", {"company": company, "account_name": ["like", "%Bank Charges%"], "is_group": 0}, "name") or self.bank,
+		})
+
+	def test_cheque_bounce_marks_the_cheque_bounced(self):
+		if not frappe.db.exists("DocType", "Cheque Bounce"):
+			self.skipTest("field_sales Cheque Bounce not installed")
+		doc = self._cheque()
+		collect(doc.name, bank_account=self.bank)
+		doc.reload()
+		self.assertEqual(doc.status, "Collected")
+		bounce = self._cheque_bounce_doc(doc)
+		bounce.insert()
+		bounce.submit()
+		doc.reload()
+		self.assertEqual(doc.status, "Bounced")
+		self.assertEqual(doc.cheque_bounce, bounce.name)
+		self.assertEqual(doc.bounce_reason, "Insufficient Funds")
+		self.assertEqual(frappe.db.get_value("Payment Entry", doc.payment_entry, "docstatus"), 2)
+
+	def test_bounce_entry_for_another_cheque_leaves_this_one_alone(self):
+		if not frappe.db.exists("DocType", "Cheque Bounce"):
+			self.skipTest("field_sales Cheque Bounce not installed")
+		mine = self._cheque()
+		collect(mine.name, bank_account=self.bank)
+		other = self._cheque()
+		collect(other.name, bank_account=self.bank)
+		bounce = self._cheque_bounce_doc(frappe.get_doc("Post Dated Cheque", other.name))
+		bounce.insert()
+		bounce.submit()
+		mine.reload()
+		self.assertEqual(mine.status, "Collected")
+		self.assertFalse(mine.cheque_bounce)
