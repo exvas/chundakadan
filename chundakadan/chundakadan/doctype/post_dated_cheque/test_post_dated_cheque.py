@@ -4,7 +4,13 @@ from frappe.utils import add_days, flt, nowdate
 
 from unittest.mock import patch
 
-from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import collect, mark_bounced, reminder_recipients, send_due_reminders
+from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import (
+	collect,
+	create_customer_bank_account,
+	mark_bounced,
+	reminder_recipients,
+	send_due_reminders,
+)
 from chundakadan.chundakadan.report.post_dated_cheque_report.post_dated_cheque_report import execute
 
 COMPANY = "Chundakadan Agencies"
@@ -38,6 +44,7 @@ class TestPostDatedCheque(FrappeTestCase):
 			self.skipTest("no outstanding Sales Invoice on this site")
 		self.invoice = self.invoice[0]
 		self.bank = frappe.db.get_value("Account", {"company": COMPANY, "account_type": "Bank", "is_group": 0}, "name")
+		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
 
 	def tearDown(self):
 		frappe.db.rollback()
@@ -51,7 +58,7 @@ class TestPostDatedCheque(FrappeTestCase):
 			"cheque_no": frappe.generate_hash(length=8),
 			"cheque_date": add_days(nowdate(), 30),
 			"amount": amount or flt(self.invoice.outstanding_amount),
-			"bank_name": "SBI",
+			"bank_account": self.bank_account,
 			**values,
 		})
 		doc.insert()
@@ -82,6 +89,20 @@ class TestPostDatedCheque(FrappeTestCase):
 		doc = self._cheque()
 		with self.assertRaises(frappe.ValidationError):
 			self._cheque(cheque_no=doc.cheque_no)
+
+	def test_duplicate_blocked_across_customers_too(self):
+		other = frappe.db.get_value("Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name")
+		if not other:
+			self.skipTest("only one customer")
+		doc = self._cheque()
+		with self.assertRaises(frappe.ValidationError):
+			self._cheque(cheque_no=doc.cheque_no, customer=other, sales_person=doc.sales_person)
+
+	def test_number_reusable_after_cancel(self):
+		doc = self._cheque()
+		doc.cancel()
+		again = self._cheque(cheque_no=doc.cheque_no)
+		self.assertEqual(again.cheque_no, doc.cheque_no)
 
 	def test_collect_creates_payment_entry_and_settles_invoice(self):
 		outstanding_before = flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"))
@@ -180,8 +201,9 @@ class TestPostDatedCheque(FrappeTestCase):
 		customer = frappe.db.get_value("Customer", {"name": ["not in", invoiced]}, "name")
 		if not customer:
 			self.skipTest("every customer has invoices")
+		account = create_customer_bank_account(customer, "Test Bank 5", bank_account_no="5555")["name"]
 		with self.assertRaises(frappe.exceptions.MandatoryError):
-			self._cheque(submit=False, customer=customer)
+			self._cheque(submit=False, customer=customer, bank_account=account)
 
 	def test_sales_person_kept_when_set(self):
 		person = frappe.db.get_value("Sales Person", {"enabled": 1}, "name")
@@ -189,6 +211,8 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertEqual(doc.sales_person, person)
 
 	def _reminder_run(self, cheque_date):
+		# the caller rolls back between runs, so the bank account is gone too
+		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
 		self._cheque(cheque_date=cheque_date)
 		with patch("chundakadan.utils.push.send_to_users") as push:
 			result = send_due_reminders()
@@ -219,3 +243,49 @@ class TestPostDatedCheque(FrappeTestCase):
 			self.skipTest("sales person has no user")
 		doc = self._cheque(sales_person=person)
 		self.assertIn(user, reminder_recipients(frappe._dict(doc.as_dict())))
+
+	# ---- customer bank account ----------------------------------------
+
+	def test_bank_account_is_mandatory(self):
+		self.assertEqual(frappe.get_meta("Post Dated Cheque").get_field("bank_account").reqd, 1)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			self._cheque(submit=False, bank_account=None)
+
+	def test_create_customer_bank_account_links_the_customer(self):
+		result = create_customer_bank_account(self.invoice.customer, "Test Bank 2", account_name="Test A/C", bank_account_no="222333", ifsc="sbin0001234", branch="Calicut")
+		account = frappe.get_doc("Bank Account", result["name"])
+		self.assertTrue(result["created"])
+		self.assertEqual((account.party_type, account.party, account.bank), ("Customer", self.invoice.customer, "Test Bank 2"))
+		self.assertEqual((account.bank_account_no, account.custom_ifsc, account.custom_branch), ("222333", "SBIN0001234", "Calicut"))
+		self.assertEqual(account.is_company_account, 0)
+		self.assertTrue(frappe.db.exists("Bank", "Test Bank 2"))
+
+	def test_create_customer_bank_account_reuses_the_same_account(self):
+		first = create_customer_bank_account(self.invoice.customer, "Test Bank 3", bank_account_no="9999")
+		again = create_customer_bank_account(self.invoice.customer, "Test Bank 3", bank_account_no="9999")
+		self.assertEqual(first["name"], again["name"])
+		self.assertFalse(again["created"])
+
+	def test_bank_account_of_another_customer_blocked(self):
+		other = frappe.db.get_value("Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name")
+		if not other:
+			self.skipTest("only one customer")
+		theirs = create_customer_bank_account(other, "Test Bank 4", bank_account_no="4444")["name"]
+		with self.assertRaises(frappe.ValidationError):
+			self._cheque(submit=False, bank_account=theirs)
+
+	def test_bank_name_fetched_from_the_account(self):
+		doc = self._cheque()
+		self.assertEqual(doc.bank_name, "Test Bank")
+
+	def test_invoice_references_are_optional(self):
+		self.assertFalse(frappe.get_meta("Post Dated Cheque").get_field("references").reqd)
+		doc = self._cheque()
+		self.assertEqual(doc.references, [])
+		self.assertEqual(doc.status, "Pending")
+
+	def test_permissions_are_accounts_roles(self):
+		roles = {p.role for p in frappe.get_meta("Post Dated Cheque").permissions}
+		self.assertTrue({"Accounts User", "Accounts Manager"}.issubset(roles))
+		report_roles = {r.role for r in frappe.get_doc("Report", "Post Dated Cheque Report").roles}
+		self.assertTrue({"Accounts User", "Accounts Manager"}.issubset(report_roles))

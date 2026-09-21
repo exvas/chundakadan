@@ -23,6 +23,7 @@
   "cheque_no",
   "cheque_date",
   "amount",
+  "bank_account",
   "bank_name",
   "sales_person",
   "reference_section",
@@ -107,10 +108,19 @@
    "options": "Company:company:default_currency"
   },
   {
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "label": "Customer's Bank Account",
+   "options": "Bank Account",
+   "reqd": 1,
+   "description": "The customer's bank account this cheque is drawn on"
+  },
+  {
+   "fetch_from": "bank_account.bank",
    "fieldname": "bank_name",
    "fieldtype": "Data",
-   "label": "Customer's Bank",
-   "description": "Bank the cheque is drawn on"
+   "label": "Bank",
+   "read_only": 1
   },
   {
    "fieldname": "sales_person",

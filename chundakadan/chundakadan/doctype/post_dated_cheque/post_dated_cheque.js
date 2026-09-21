@@ -8,12 +8,26 @@ frappe.ui.form.on("Post Dated Cheque", {
 		if (frm.doc.payment_entry) {
 			frm.add_custom_button(__("Payment Entry"), () => frappe.set_route("Form", "Payment Entry", frm.doc.payment_entry), __("View"));
 		}
+		if (frm.doc.docstatus === 0) {
+			frm.add_custom_button(__("New Customer Bank Account"), () => new_bank_account_dialog(frm));
+		}
 		set_status_indicator(frm);
+	},
+
+	setup(frm) {
+		frm.set_query("bank_account", () => ({
+			filters: { party_type: "Customer", party: frm.doc.customer || "", disabled: 0 },
+		}));
 	},
 
 	customer(frm) {
 		frm.clear_table("references");
 		frm.refresh_field("references");
+		if (frm.doc.bank_account) frm.set_value("bank_account", null);
+	},
+
+	bank_account_button(frm) {
+		new_bank_account_dialog(frm);
 	},
 });
 
@@ -79,6 +93,41 @@ function bounce_dialog(frm) {
 				args: { cheque: frm.doc.name, reason: values.reason },
 				freeze: true,
 			}).then(() => frm.reload_doc());
+		},
+	});
+	dialog.show();
+}
+
+function new_bank_account_dialog(frm) {
+	if (!frm.doc.customer) {
+		frappe.msgprint(__("Pick the customer first."));
+		return;
+	}
+	const dialog = new frappe.ui.Dialog({
+		title: __("New Bank Account — {0}", [frm.doc.customer_name || frm.doc.customer]),
+		fields: [
+			{ fieldtype: "Link", fieldname: "bank", label: __("Bank"), options: "Bank", reqd: 1 },
+			{ fieldtype: "Data", fieldname: "account_name", label: __("Account Name"), default: frm.doc.customer_name || frm.doc.customer },
+			{ fieldtype: "Column Break" },
+			{ fieldtype: "Data", fieldname: "bank_account_no", label: __("Account No") },
+			{ fieldtype: "Data", fieldname: "ifsc", label: __("IFSC") },
+			{ fieldtype: "Data", fieldname: "branch", label: __("Branch") },
+		],
+		primary_action_label: __("Create"),
+		primary_action: (values) => {
+			frappe.call({
+				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.create_customer_bank_account",
+				args: Object.assign({ customer: frm.doc.customer }, values),
+				freeze: true,
+			}).then((r) => {
+				if (!r.message) return;
+				dialog.hide();
+				frm.set_value("bank_account", r.message.name);
+				frappe.show_alert({
+					message: r.message.created ? __("Bank Account {0} created", [r.message.name]) : __("Using existing Bank Account {0}", [r.message.name]),
+					indicator: "green",
+				});
+			});
 		},
 	});
 	dialog.show();

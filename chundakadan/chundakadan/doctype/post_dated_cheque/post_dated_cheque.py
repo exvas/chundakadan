@@ -25,6 +25,7 @@ class PostDatedCheque(Document):
 			frappe.throw(_("Amount must be greater than zero."))
 		if self.cheque_date and self.posting_date and getdate(self.cheque_date) < getdate(self.posting_date):
 			frappe.msgprint(_("Cheque Date {0} is before the Posting Date; this cheque is not post dated.").format(self.cheque_date), indicator="orange", alert=True)
+		self.validate_bank_account()
 		self.validate_duplicate()
 		self.validate_references()
 		if self.docstatus == 0:
@@ -56,13 +57,30 @@ class PostDatedCheque(Document):
 				return
 		self.sales_person = frappe.db.get_value("Sales Team", {"parent": self.customer, "parenttype": "Customer"}, "sales_person")
 
+	def validate_bank_account(self):
+		if not self.bank_account:
+			return
+		account = frappe.db.get_value("Bank Account", self.bank_account, ["party_type", "party", "bank"], as_dict=True)
+		if not account:
+			frappe.throw(_("Bank Account {0} does not exist.").format(self.bank_account))
+		if account.party_type == "Customer" and account.party and account.party != self.customer:
+			frappe.throw(_("Bank Account {0} belongs to {1}.").format(self.bank_account, account.party))
+		self.bank_name = account.bank
+
 	def validate_duplicate(self):
-		existing = frappe.db.exists(
+		"""Cheque number is unique across all cheques, not just per customer.
+
+		Cancelled cheques are ignored, so a number can be entered again after
+		its entry is cancelled.
+		"""
+		existing = frappe.db.get_value(
 			"Post Dated Cheque",
-			{"cheque_no": self.cheque_no, "customer": self.customer, "docstatus": ["<", 2], "name": ["!=", self.name]},
+			{"cheque_no": self.cheque_no, "docstatus": ["<", 2], "name": ["!=", self.name]},
+			["name", "customer_name"],
+			as_dict=True,
 		)
 		if existing:
-			frappe.throw(_("Cheque {0} for this customer is already entered in {1}.").format(self.cheque_no, existing))
+			frappe.throw(_("Cheque No {0} is already entered in {1} ({2}).").format(self.cheque_no, existing.name, existing.customer_name or ""))
 
 	def validate_references(self):
 		total = 0
@@ -196,3 +214,45 @@ def reminder_recipients(cheque):
 		users.add(cheque.owner)
 	users.discard("Administrator")
 	return users
+
+
+@frappe.whitelist()
+def create_customer_bank_account(customer, bank, account_name=None, bank_account_no=None, ifsc=None, branch=None):
+	"""Add the customer's bank account without leaving the cheque form.
+
+	It is a normal Bank Account linked to the customer, so it shows on the
+	customer and can be picked anywhere else. An account with the same
+	number for that customer is reused instead of duplicated.
+	"""
+	frappe.has_permission("Post Dated Cheque", "write", throw=True)
+	if not frappe.db.exists("Customer", customer):
+		frappe.throw(_("Customer {0} does not exist.").format(customer))
+	bank = (bank or "").strip()
+	if not bank:
+		frappe.throw(_("Enter the bank."))
+	if not frappe.db.exists("Bank", bank):
+		frappe.get_doc({"doctype": "Bank", "bank_name": bank}).insert(ignore_permissions=True)
+
+	account_name = (account_name or frappe.db.get_value("Customer", customer, "customer_name") or customer).strip()
+	bank_account_no = (bank_account_no or "").strip() or None
+
+	existing = frappe.db.get_value(
+		"Bank Account",
+		{"party_type": "Customer", "party": customer, "bank": bank, "bank_account_no": bank_account_no},
+		"name",
+	)
+	if existing:
+		return {"name": existing, "bank": bank, "created": False}
+
+	doc = frappe.get_doc({
+		"doctype": "Bank Account",
+		"account_name": account_name,
+		"bank": bank,
+		"party_type": "Customer",
+		"party": customer,
+		"is_company_account": 0,
+		"bank_account_no": bank_account_no,
+		"custom_ifsc": (ifsc or "").strip().upper() or None,
+		"custom_branch": (branch or "").strip() or None,
+	}).insert(ignore_permissions=True)
+	return {"name": doc.name, "bank": bank, "created": True}
