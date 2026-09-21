@@ -228,6 +228,9 @@ doc_events = {
     # Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
     # when blank (the Sales Invoice equivalent lives in the single merged
     # "Sales Invoice" block above — do NOT re-add a duplicate key here).
+    "Purchase Order": {
+        "before_insert": "chundakadan.seed.po_workflow.set_default_workflow_state",
+    },
     "Purchase Invoice": {
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
         "before_validate": "chundakadan.doc_events.purchase_invoice.apply_stock_defaults",
@@ -317,6 +320,7 @@ after_migrate = [
     "chundakadan.patches.hide_invoice_fields.execute",
     "chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
     "chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",
+    "chundakadan.seed.po_workflow.ensure_po_workflow",
 ]
 
 # Uninstallation
