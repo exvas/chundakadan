@@ -7,6 +7,7 @@ from unittest.mock import patch
 from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import (
 	collect,
 	create_customer_bank_account,
+	customer_bank_accounts,
 	mark_bounced,
 	reminder_recipients,
 	send_due_reminders,
@@ -293,3 +294,30 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertEqual((sales.read, sales.write, sales.create, sales.submit), (1, 0, 0, 0))
 		report_roles = {r.role for r in frappe.get_doc("Report", "Post Dated Cheque Report").roles}
 		self.assertTrue({"Accounts User", "Accounts Manager", "Sales User"}.issubset(report_roles))
+
+	def _orphan_account(self, name="Orphan Bank"):
+		if not frappe.db.exists("Bank", name):
+			frappe.get_doc({"doctype": "Bank", "bank_name": name}).insert()
+		return frappe.get_doc({"doctype": "Bank Account", "account_name": f"Orphan {frappe.generate_hash(length=5)}", "bank": name}).insert().name
+
+	def test_unowned_bank_account_is_adopted(self):
+		# made through the link field's own create dialog, so it has no party
+		account = self._orphan_account()
+		self.assertFalse(frappe.db.get_value("Bank Account", account, "party"))
+		doc = self._cheque(bank_account=account)
+		self.assertEqual(
+			frappe.db.get_value("Bank Account", account, ["party_type", "party"], as_dict=True),
+			frappe._dict({"party_type": "Customer", "party": self.invoice.customer}),
+		)
+		self.assertEqual(doc.bank_name, "Orphan Bank")
+
+	def test_query_lists_own_and_unowned_accounts(self):
+		mine = self.bank_account
+		orphan = self._orphan_account()
+		other = frappe.db.get_value("Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name")
+		theirs = create_customer_bank_account(other, "Someone Elses Bank", bank_account_no="7777")["name"] if other else None
+		names = [row[0] for row in customer_bank_accounts("Bank Account", "", "name", 0, 50, {"customer": self.invoice.customer})]
+		self.assertIn(mine, names)
+		self.assertIn(orphan, names)
+		if theirs:
+			self.assertNotIn(theirs, names)

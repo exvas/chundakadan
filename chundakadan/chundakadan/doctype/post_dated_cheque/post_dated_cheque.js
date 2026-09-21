@@ -15,8 +15,11 @@ frappe.ui.form.on("Post Dated Cheque", {
 	},
 
 	setup(frm) {
+		// this customer's accounts first, plus any not yet owned by anyone —
+		// picking one of those ties it to this customer on save
 		frm.set_query("bank_account", () => ({
-			filters: { party_type: "Customer", party: frm.doc.customer || "", disabled: 0 },
+			query: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.customer_bank_accounts",
+			filters: { customer: frm.doc.customer || "" },
 		}));
 		// no "Create a new Bank Account" jump from the dropdown — everything
 		// is entered in the dialog on this form

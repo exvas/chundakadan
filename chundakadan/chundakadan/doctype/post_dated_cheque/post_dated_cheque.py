@@ -58,14 +58,22 @@ class PostDatedCheque(Document):
 		self.sales_person = frappe.db.get_value("Sales Team", {"parent": self.customer, "parenttype": "Customer"}, "sales_person")
 
 	def validate_bank_account(self):
+		"""Keep the account tied to this customer, linking it if nobody owns it.
+
+		A Bank Account made through the link field's own create dialog has no
+		party, so it would never show up again. Using it here adopts it.
+		"""
 		if not self.bank_account:
 			return
 		account = frappe.db.get_value("Bank Account", self.bank_account, ["party_type", "party", "bank"], as_dict=True)
 		if not account:
 			frappe.throw(_("Bank Account {0} does not exist.").format(self.bank_account))
-		if account.party_type == "Customer" and account.party and account.party != self.customer:
+		if account.party and not (account.party_type == "Customer" and account.party == self.customer):
 			frappe.throw(_("Bank Account {0} belongs to {1}.").format(self.bank_account, account.party))
+		if not account.party:
+			frappe.db.set_value("Bank Account", self.bank_account, {"party_type": "Customer", "party": self.customer})
 		self.bank_name = account.bank
+
 
 	def validate_duplicate(self):
 		"""Cheque number is unique across all cheques, not just per customer.
@@ -256,3 +264,23 @@ def create_customer_bank_account(customer, bank, account_name=None, bank_account
 		"custom_branch": (branch or "").strip() or None,
 	}).insert(ignore_permissions=True)
 	return {"name": doc.name, "bank": bank, "created": True}
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def customer_bank_accounts(doctype, txt, searchfield, start, page_len, filters):
+	"""This customer's bank accounts, plus any that nobody owns yet."""
+	customer = (filters or {}).get("customer")
+	like = f"%{txt or ''}%"
+	return frappe.db.sql(
+		"""
+		select name, concat_ws(' - ', bank, bank_account_no)
+		from `tabBank Account`
+		where disabled = 0 and ifnull(is_company_account, 0) = 0
+			and (party = %(customer)s or ifnull(party, '') = '')
+			and (name like %(like)s or ifnull(bank, '') like %(like)s or ifnull(account_name, '') like %(like)s)
+		order by (party = %(customer)s) desc, name asc
+		limit %(start)s, %(page_len)s
+		""",
+		{"customer": customer, "like": like, "start": start or 0, "page_len": page_len or 20},
+	)
