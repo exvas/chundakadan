@@ -402,3 +402,21 @@ class TestPostDatedCheque(FrappeTestCase):
 			collect(doc.name, mode_of_payment=mode)
 		doc.reload()
 		self.assertEqual(doc.status, "Pending")
+
+	def test_connections_panel_loads(self):
+		from frappe.desk.notifications import get_open_count
+
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
+		found = {row["doctype"]: row for row in counts["count"]["internal_links_found"]}
+		self.assertEqual(found["Payment Entry"]["count"], 1)
+		self.assertEqual(found["Payment Entry"]["names"], [frappe.db.get_value("Post Dated Cheque", doc.name, "payment_entry")])
+		self.assertEqual(found.get("Cheque Bounce", {}).get("count", 0), 0)
+
+		bounce = self._cheque_bounce_doc(frappe.get_doc("Post Dated Cheque", doc.name))
+		bounce.insert()
+		bounce.submit()
+		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
+		found = {row["doctype"]: row for row in counts["count"]["internal_links_found"]}
+		self.assertEqual(found["Cheque Bounce"]["names"], [bounce.name])
