@@ -286,6 +286,8 @@ class TestPostDatedCheque(FrappeTestCase):
 
 	def test_permissions_are_accounts_roles(self):
 		roles = {p.role for p in frappe.get_meta("Post Dated Cheque").permissions}
-		self.assertTrue({"Accounts User", "Accounts Manager"}.issubset(roles))
+		self.assertTrue({"Accounts User", "Accounts Manager", "Sales User"}.issubset(roles))
+		sales = next(p for p in frappe.get_meta("Post Dated Cheque").permissions if p.role == "Sales User")
+		self.assertEqual((sales.read, sales.write, sales.create, sales.submit), (1, 0, 0, 0))
 		report_roles = {r.role for r in frappe.get_doc("Report", "Post Dated Cheque Report").roles}
-		self.assertTrue({"Accounts User", "Accounts Manager"}.issubset(report_roles))
+		self.assertTrue({"Accounts User", "Accounts Manager", "Sales User"}.issubset(report_roles))
