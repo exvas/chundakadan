@@ -144,51 +144,19 @@ WORKSPACE = {
    }
   },
   {
-   "id": "ap_sc0",
-   "type": "shortcut",
+   "id": "ap_card1",
+   "type": "card",
    "data": {
-    "shortcut_name": "Leave Applications",
-    "col": 3
+    "card_name": "Approvals",
+    "col": 4
    }
   },
   {
-   "id": "ap_sc1",
-   "type": "shortcut",
+   "id": "ap_card2",
+   "type": "card",
    "data": {
-    "shortcut_name": "Expense Claims",
-    "col": 3
-   }
-  },
-  {
-   "id": "ap_sc2",
-   "type": "shortcut",
-   "data": {
-    "shortcut_name": "Employee Advances",
-    "col": 3
-   }
-  },
-  {
-   "id": "ap_sc3",
-   "type": "shortcut",
-   "data": {
-    "shortcut_name": "Purchase Orders",
-    "col": 3
-   }
-  },
-  {
-   "id": "ap_sc4",
-   "type": "shortcut",
-   "data": {
-    "shortcut_name": "Post Dated Cheques",
-    "col": 3
-   }
-  },
-  {
-   "id": "ap_sc5",
-   "type": "shortcut",
-   "data": {
-    "shortcut_name": "Follow-ups",
-    "col": 3
+    "card_name": "Collection",
+    "col": 4
    }
   }
  ],
@@ -202,54 +170,7 @@ WORKSPACE = {
   "Cheques To Collect",
   "Follow-ups Due"
  ],
- "shortcuts": [
-  {
-   "type": "DocType",
-   "link_to": "Leave Application",
-   "label": "Leave Applications",
-   "color": "Yellow",
-   "doc_view": "List",
-   "stats_filter": "[[\"Leave Application\", \"custom_approval_status\", \"=\", \"Pending\"]]"
-  },
-  {
-   "type": "DocType",
-   "link_to": "Expense Claim",
-   "label": "Expense Claims",
-   "color": "Red",
-   "doc_view": "List",
-   "stats_filter": "[[\"Expense Claim\", \"custom_approval_status\", \"=\", \"Pending\"]]"
-  },
-  {
-   "type": "DocType",
-   "link_to": "Employee Advance",
-   "label": "Employee Advances",
-   "color": "Grey",
-   "doc_view": "List"
-  },
-  {
-   "type": "DocType",
-   "link_to": "Purchase Order",
-   "label": "Purchase Orders",
-   "color": "Blue",
-   "doc_view": "List"
-  },
-  {
-   "type": "DocType",
-   "link_to": "Post Dated Cheque",
-   "label": "Post Dated Cheques",
-   "color": "Green",
-   "doc_view": "List",
-   "stats_filter": "[[\"Post Dated Cheque\", \"status\", \"=\", \"Pending\"]]"
-  },
-  {
-   "type": "DocType",
-   "link_to": "Customer Follow Up",
-   "label": "Follow-ups",
-   "color": "Red",
-   "doc_view": "List",
-   "stats_filter": "[[\"Customer Follow Up\", \"status\", \"=\", \"Open\"]]"
-  }
- ],
+ "shortcuts": [],
  "links": [
   {
    "type": "Card Break",

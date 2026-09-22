@@ -63,12 +63,18 @@ class TestApprovalsWorkspace(FrappeTestCase):
 		self.assertEqual(WORKSPACE["sequence_id"], 0.0)
 		labels = {c[0] for c in CARDS}
 		self.assertEqual(set(WORKSPACE["cards"]), labels)
-		shortcut_names = {s["label"] for s in WORKSPACE["shortcuts"]}
+		card_breaks = {l["label"] for l in WORKSPACE["links"] if l["type"] == "Card Break"}
 		for block in WORKSPACE["content"]:
 			if block["type"] == "number_card":
 				self.assertIn(block["data"]["number_card_name"], labels)
-			if block["type"] == "shortcut":
-				self.assertIn(block["data"]["shortcut_name"], shortcut_names)
+			if block["type"] == "card":
+				self.assertIn(block["data"]["card_name"], card_breaks)
+
+	def test_lists_are_links_not_shortcuts(self):
+		# a DocType shortcut always shows a global count badge, which
+		# contradicts the per-user cards; links carry no count
+		self.assertEqual(WORKSPACE["shortcuts"], [])
+		self.assertTrue([l for l in WORKSPACE["links"] if l["type"] == "Link"])
 
 	def test_workspace_is_created_once_and_never_overwritten(self):
 		frappe.db.delete("Workspace", {"name": "Approvals"})
