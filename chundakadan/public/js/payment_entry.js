@@ -1,4 +1,13 @@
 frappe.ui.form.on("Payment Entry", {
+    setup(frm) {
+        // Cancelling a payment must never cancel the cheque behind it: the
+        // server puts the cheque back a step instead (Collected -> Pending).
+        // Listing it here keeps it out of the "Cancel All Documents" prompt.
+        frm.ignore_doctypes_on_cancel_all = (frm.ignore_doctypes_on_cancel_all || []).concat([
+            "Post Dated Cheque",
+        ]);
+    },
+
     onload_post_render(frm) {
         setTimeout(() => {
             set_sales_person(frm);
