@@ -88,3 +88,26 @@ class TestBrandWiseSalesReport(FrappeTestCase):
 			execute({"company": COMPANY, "from_date": getdate("2026-09-10"), "to_date": getdate("2026-09-01")})
 		with self.assertRaises(frappe.ValidationError):
 			execute({"company": COMPANY})
+
+	def test_accounts_user_and_sales_user_can_open_it(self):
+		import os
+
+		from frappe.modules.import_file import import_file_by_path
+
+		import_file_by_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "brand_wise_sales_report.json"), force=True)
+		report = frappe.get_doc("Report", "Brand Wise Sales Report")
+		self.assertTrue({"Accounts User", "Sales User"}.issubset({r.role for r in report.roles}))
+
+		for role in ("Accounts User", "Sales User"):
+			email = f"bwsr.{frappe.scrub(role)}@example.com"
+			if not frappe.db.exists("User", email):
+				frappe.get_doc({"doctype": "User", "email": email, "first_name": role, "send_welcome_email": 0, "user_type": "System User"}).insert()
+			frappe.get_doc("User", email).add_roles(role)
+			frappe.set_user(email)
+			try:
+				# query_report needs the report role AND report permission on ref_doctype
+				self.assertTrue(report.is_permitted(), role)
+				self.assertTrue(frappe.has_permission(report.ref_doctype, "report"), role)
+			finally:
+				frappe.set_user("Administrator")
+		frappe.db.rollback()
