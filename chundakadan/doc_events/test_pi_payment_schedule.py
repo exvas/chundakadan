@@ -41,25 +41,23 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 		doc.insert(ignore_permissions=True)
 		return doc
 
-	def test_due_date_follows_the_supplier_invoice_date(self):
+	def test_due_date_counts_from_the_posting_date(self):
 		doc = self._invoice(bill_date=add_days(nowdate(), -8))
-		expected = add_days(doc.bill_date, self.credit_days)
+		expected = add_days(doc.posting_date, self.credit_days)
 		self.assertEqual(getdate(doc.payment_schedule[0].due_date), getdate(expected))
 		self.assertEqual(getdate(doc.due_date), getdate(expected))
 
-	def test_changing_the_supplier_invoice_date_moves_the_due_date(self):
+	def test_supplier_invoice_date_does_not_move_the_due_date(self):
 		doc = self._invoice(bill_date=add_days(nowdate(), -8))
-		old_due = getdate(doc.due_date)
-		doc.bill_date = nowdate()
+		expected = getdate(add_days(doc.posting_date, self.credit_days))
+		doc.bill_date = add_days(nowdate(), -20)
 		doc.save()
 		doc.reload()
-		expected = getdate(add_days(nowdate(), self.credit_days))
-		self.assertNotEqual(getdate(doc.payment_schedule[0].due_date), old_due)
 		self.assertEqual(getdate(doc.payment_schedule[0].due_date), expected)
 		self.assertEqual(getdate(doc.due_date), expected)
 
-	def test_changing_the_posting_date_moves_the_due_date_when_no_bill_date(self):
-		doc = self._invoice()
+	def test_changing_the_posting_date_moves_the_due_date(self):
+		doc = self._invoice(bill_date=add_days(nowdate(), -8))
 		doc.posting_date = add_days(nowdate(), 3)
 		doc.save()
 		doc.reload()
@@ -71,7 +69,7 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 		doc = self._invoice(bill_date=add_days(nowdate(), -8))
 		doc.docstatus = 1
 		before = doc.payment_schedule[0].due_date
-		doc.bill_date = nowdate()
+		doc.posting_date = add_days(nowdate(), 5)
 		refresh_payment_schedule(doc)
 		self.assertEqual(doc.payment_schedule[0].due_date, before)
 

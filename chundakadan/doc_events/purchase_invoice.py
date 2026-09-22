@@ -36,13 +36,15 @@ def refresh_payment_schedule(doc, method=None):
 	"""Keep the Payment Schedule (and Due Date) in step with the invoice dates.
 
 	ERPNext builds the schedule only when it is empty, so once a row exists,
-	changing the Supplier Invoice Date or Posting Date leaves the old due
-	date behind. Re-derive each row's date from its own payment term, then
-	let the due date follow the schedule.
+	changing the Posting Date or the terms template leaves the old due date
+	behind. Re-derive each row's date from its own payment term — counting
+	from the **posting date**, not the supplier's bill date — and let the
+	due date follow the schedule.
 	"""
 	if doc.docstatus != 0 or not doc.get("payment_schedule"):
 		return
-	base_date = doc.get("bill_date") or doc.get("posting_date")
+	# credit days run from the posting date here, not the supplier's bill date
+	base_date = doc.get("posting_date")
 	if not base_date:
 		return
 
@@ -62,7 +64,6 @@ def refresh_payment_schedule(doc, method=None):
 					doc.posting_date,
 					doc.get("grand_total"),
 					doc.get("base_grand_total"),
-					doc.get("bill_date"),
 				),
 			)
 			doc.set_due_date()
@@ -73,11 +74,11 @@ def refresh_payment_schedule(doc, method=None):
 		if not row.payment_term:
 			continue
 		term = frappe.get_cached_doc("Payment Term", row.payment_term)
-		due_date = get_due_date(term, bill_date=base_date)
+		due_date = get_due_date(term, posting_date=base_date)
 		if due_date and getdate(row.due_date) != getdate(due_date):
 			row.due_date = due_date
 			changed = True
-		discount_date = get_discount_date(term, bill_date=base_date)
+		discount_date = get_discount_date(term, posting_date=base_date)
 		if discount_date:
 			row.discount_date = discount_date
 	if changed:

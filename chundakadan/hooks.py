@@ -240,9 +240,12 @@ doc_events = {
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
         "before_validate": [
             "chundakadan.doc_events.purchase_invoice.apply_stock_defaults",
-            # rebuild before ERPNext validates the due date against the template
+            # rows the user already had: re-date them before ERPNext checks
+            # the due date against the (possibly new) template
             "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
         ],
+        # rows ERPNext has just built from the bill date: re-date them too
+        "validate": "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
     },
     "Journal Entry": {
         # When a JV's account row references an OEV (deferred-payment
@@ -399,6 +402,7 @@ override_doctype_class = {
 	"Leave Application":
     "chundakadan.overrides.leave_application.CustomLeaveApplication",
     "Employee Checkin": "chundakadan.overrides.employee_checkin.CustomEmployeeCheckin",
+    "Purchase Invoice": "chundakadan.overrides.purchase_invoice.CustomPurchaseInvoice",
 }
 
 
