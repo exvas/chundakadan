@@ -131,7 +131,11 @@ doc_events = {
         # cancelled, sync the voucher's status (legacy path — keep in
         # case real PEs ever reference an OEV).
         "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
-        "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
+        "on_cancel": [
+            "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+            # a cancelled payment sends the cheque back a step; it never cancels it
+            "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_payment_entry_cancel",
+        ],
     },
     "Sales Order": {
         "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"

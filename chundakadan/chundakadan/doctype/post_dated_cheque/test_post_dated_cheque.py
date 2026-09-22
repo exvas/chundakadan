@@ -12,6 +12,7 @@ from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import 
 	customer_bank_accounts,
 	mark_bounced,
 	mode_of_payment_account,
+	mark_returned,
 	outstanding_invoices,
 	reminder_recipients,
 	send_due_reminders,
@@ -518,3 +519,125 @@ class TestPostDatedCheque(FrappeTestCase):
 		doc = self._cheque()
 		with self.assertRaises(frappe.ValidationError):
 			collect(doc.name, references=json.dumps([{"sales_invoice": other[0], "allocated_amount": 10}]))
+
+	# ---- banked, then returned by the bank ----------------------------
+
+	def test_return_keeps_both_entries(self):
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		original = doc.payment_entry
+		balance_after_collection = self._customer_balance(doc.customer)
+
+		result = mark_returned(doc.name, return_date=nowdate(), reason="Insufficient funds")
+		doc.reload()
+
+		self.assertEqual(doc.status, "Returned")
+		self.assertEqual(doc.bounce_reason, "Insufficient funds")
+		self.assertEqual(str(doc.returned_on), nowdate())
+		# the money-in entry is untouched
+		self.assertEqual(frappe.db.get_value("Payment Entry", original, "docstatus"), 1)
+		# and a second entry takes it back out
+		reversal = frappe.get_doc("Payment Entry", result["return_payment_entry"])
+		self.assertEqual(reversal.docstatus, 1)
+		self.assertEqual(reversal.payment_type, "Pay")
+		self.assertEqual(reversal.party, doc.customer)
+		self.assertAlmostEqual(flt(reversal.paid_amount), flt(doc.amount), places=2)
+		self.assertEqual(reversal.reference_no, doc.cheque_no)
+		# the customer owes the money again
+		self.assertAlmostEqual(
+			self._customer_balance(doc.customer), balance_after_collection + flt(doc.amount), places=2
+		)
+
+	def _customer_balance(self, customer):
+		rows = frappe.db.sql(
+			"""select sum(debit) - sum(credit) as balance from `tabGL Entry`
+			where party_type = 'Customer' and party = %s and is_cancelled = 0""",
+			customer, as_dict=True,
+		)
+		return flt(rows[0].balance)
+
+	def test_return_posts_the_bank_charge(self):
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		account = frappe.db.get_value("Account", {"company": COMPANY, "account_name": ["like", "%Bank Charges%"], "is_group": 0}, "name")
+		if not account:
+			self.skipTest("no bank charges account")
+		result = mark_returned(doc.name, reason="Returned", bank_charge=50, bank_charges_account=account)
+		self.assertTrue(result["bank_charge_entry"])
+		entry = frappe.get_doc("Journal Entry", result["bank_charge_entry"])
+		self.assertEqual(entry.docstatus, 1)
+		self.assertAlmostEqual(flt(entry.total_debit), 50, places=2)
+		self.assertIn(account, [row.account for row in entry.accounts])
+
+	def test_only_a_collected_cheque_can_be_returned(self):
+		doc = self._cheque()
+		with self.assertRaises(frappe.ValidationError):
+			mark_returned(doc.name, reason="nope")
+		collect(doc.name, posting_date=nowdate())
+		mark_returned(doc.name, reason="first time")
+		with self.assertRaises(frappe.ValidationError):
+			mark_returned(doc.name, reason="twice")
+
+	def test_returned_is_a_status_option(self):
+		options = frappe.get_meta("Post Dated Cheque").get_field("status").options.split("\n")
+		self.assertIn("Returned", options)
+
+	def test_return_makes_the_allocated_invoice_outstanding_again(self):
+		outstanding = flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"))
+		part = round(min(outstanding, 100), 2)
+		doc = self._cheque(amount=max(part, 100))
+		collect(
+			doc.name,
+			posting_date=nowdate(),
+			references=json.dumps([{"sales_invoice": self.invoice.name, "allocated_amount": part}]),
+		)
+		self.assertAlmostEqual(
+			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")), outstanding - part, places=2
+		)
+
+		doc.reload()
+		mark_returned(doc.name, reason="Returned by bank")
+		self.assertAlmostEqual(
+			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")), outstanding, places=2
+		)
+		self.assertEqual(frappe.db.get_value("Payment Entry", doc.payment_entry, "docstatus"), 1)
+
+	# ---- cancelling the payment, not the cheque -----------------------
+
+	def test_cancelling_the_collection_returns_the_cheque_to_pending(self):
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		payment = doc.payment_entry
+		frappe.get_doc("Payment Entry", payment).cancel()
+		doc.reload()
+		self.assertEqual(doc.docstatus, 1)  # the cheque is NOT cancelled
+		self.assertEqual(doc.status, "Pending")
+		self.assertFalse(doc.payment_entry)
+		self.assertFalse(doc.collected_on)
+		self.assertEqual(frappe.db.get_value("Payment Entry", payment, "docstatus"), 2)
+
+	def test_the_cheque_can_be_collected_again_after_that(self):
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		frappe.get_doc("Payment Entry", doc.payment_entry).cancel()
+		doc.reload()
+		result = collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		self.assertEqual(doc.status, "Collected")
+		self.assertEqual(doc.payment_entry, result["payment_entry"])
+
+	def test_cancelling_the_return_puts_it_back_to_collected(self):
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		result = mark_returned(doc.name, reason="Returned")
+		doc.reload()
+		self.assertEqual(doc.status, "Returned")
+		frappe.get_doc("Payment Entry", result["return_payment_entry"]).cancel()
+		doc.reload()
+		self.assertEqual(doc.status, "Collected")
+		self.assertFalse(doc.return_payment_entry)
+		self.assertFalse(doc.returned_on)

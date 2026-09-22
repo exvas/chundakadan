@@ -14,6 +14,7 @@ from frappe.utils import date_diff, flt, getdate, nowdate
 
 PENDING = "Pending"
 COLLECTED = "Collected"
+RETURNED = "Returned"
 BOUNCED = "Bounced"
 CANCELLED = "Cancelled"
 
@@ -410,11 +411,16 @@ def on_cheque_bounce_submit(doc, method=None):
 	"""
 	cheque = frappe.db.get_value("Post Dated Cheque", {"payment_entry": doc.payment_entry, "docstatus": 1}, "name")
 	if not cheque:
+		# the payment was just cancelled by this bounce, so the link is gone
+		reset = frappe.flags.get("pdc_reset_by_payment_cancel") or []
+		cheque = reset[0] if reset else None
+	if not cheque:
 		return
 	frappe.db.set_value("Post Dated Cheque", cheque, {
 		"status": BOUNCED,
 		"bounce_reason": doc.get("bounce_reason"),
 		"cheque_bounce": doc.name,
+		"payment_entry": doc.payment_entry,
 	})
 
 
@@ -435,3 +441,149 @@ def mode_of_payment_account(mode_of_payment, company):
 	return frappe.db.get_value(
 		"Mode of Payment Account", {"parent": mode_of_payment, "company": company}, "default_account"
 	)
+
+
+@frappe.whitelist()
+def mark_returned(cheque, return_date=None, reason=None, bank_charge=0, bank_charges_account=None, remarks=None):
+	"""The bank returned a cheque we had already banked.
+
+	Both records are kept: the Payment Entry that brought the money in
+	stays as it is, and a second one takes it back out, so the bank
+	statement and the customer's ledger both read the way they happened.
+	A bank charge, if any, is posted as its own Journal Entry.
+	"""
+	doc = frappe.get_doc("Post Dated Cheque", cheque)
+	doc.check_permission("write")
+	if doc.docstatus != 1 or doc.status != COLLECTED:
+		frappe.throw(_("Only a Collected cheque can be returned; {0} is {1}.").format(doc.name, doc.status))
+	if not doc.payment_entry or frappe.db.get_value("Payment Entry", doc.payment_entry, "docstatus") != 1:
+		frappe.throw(_("The Payment Entry for this cheque is not submitted."))
+
+	return_date = return_date or nowdate()
+	original = frappe.get_doc("Payment Entry", doc.payment_entry)
+	savepoint = "pdc_return"
+	frappe.db.savepoint(savepoint)
+	try:
+		# the invoices this cheque had settled are owed again
+		_unreconcile(original)
+		reversal = frappe.new_doc("Payment Entry")
+		reversal.payment_type = "Pay"
+		reversal.company = doc.company
+		reversal.posting_date = return_date
+		reversal.mode_of_payment = original.mode_of_payment
+		reversal.party_type = "Customer"
+		reversal.party = doc.customer
+		# money leaves the bank it came into, and the customer owes again
+		reversal.paid_from = original.paid_to
+		reversal.paid_to = original.paid_from
+		reversal.paid_amount = reversal.received_amount = flt(doc.amount)
+		reversal.reference_no = doc.cheque_no
+		reversal.reference_date = return_date
+		reversal.remarks = remarks or _("Cheque {0} returned by the bank").format(doc.cheque_no)
+		reversal.setup_party_account_field()
+		reversal.set_missing_values()
+		reversal.set_exchange_rate()
+		reversal.insert()
+		reversal.submit()
+
+		charge_entry = None
+		if flt(bank_charge):
+			charge_entry = _post_bank_charge(doc, original, return_date, flt(bank_charge), bank_charges_account)
+	except Exception:
+		frappe.db.rollback(save_point=savepoint)
+		raise
+
+	doc.db_set({
+		"status": RETURNED,
+		"return_payment_entry": reversal.name,
+		"returned_on": return_date,
+		"bounce_reason": reason,
+	})
+	return {"status": RETURNED, "return_payment_entry": reversal.name, "bank_charge_entry": charge_entry}
+
+
+def _unreconcile(payment):
+	"""Detach the payment from the invoices it settled.
+
+	Without this the invoice would still read as paid while the customer's
+	balance went back up, so the receivable would be right in total but
+	wrong invoice by invoice.
+	"""
+	if not payment.references:
+		return
+
+	from erpnext.accounts.doctype.unreconcile_payment.unreconcile_payment import (
+		create_unreconcile_doc_for_selection,
+	)
+
+	selections = [
+		{
+			"company": payment.company,
+			"voucher_type": payment.doctype,
+			"voucher_no": payment.name,
+			"against_voucher_type": row.reference_doctype,
+			"against_voucher_no": row.reference_name,
+		}
+		for row in payment.references
+	]
+	create_unreconcile_doc_for_selection(selections=frappe.as_json(selections))
+
+
+def _post_bank_charge(doc, original, return_date, amount, account=None):
+	"""Dr Bank Charges, Cr the bank the cheque was banked into."""
+	account = account or frappe.db.get_value(
+		"Account", {"company": doc.company, "account_name": ["like", "%Bank Charges%"], "is_group": 0}, "name"
+	)
+	if not account:
+		frappe.throw(_("Set the Bank Charges account to post a return charge."))
+
+	entry = frappe.new_doc("Journal Entry")
+	entry.voucher_type = "Bank Entry"
+	entry.company = doc.company
+	entry.posting_date = return_date
+	entry.user_remark = _("Return charge for cheque {0} ({1})").format(doc.cheque_no, doc.name)
+	# a Bank Entry needs a reference — the returned cheque is the reference
+	entry.cheque_no = doc.cheque_no
+	entry.cheque_date = return_date
+	entry.append("accounts", {"account": account, "debit_in_account_currency": amount})
+	entry.append("accounts", {"account": original.paid_to, "credit_in_account_currency": amount})
+	entry.insert(ignore_permissions=True)
+	entry.submit()
+	return entry.name
+
+
+def on_payment_entry_cancel(doc, method=None):
+	"""Cancelling a payment must not drag the cheque down with it.
+
+	Frappe would otherwise offer "Cancel All Documents" and cancel the
+	cheque, losing the record. Instead the cheque goes back to the step
+	before: a cancelled collection returns it to Pending, and a cancelled
+	return puts it back to Collected. Clearing the link here also stops
+	the cancel being blocked, because this runs before Frappe checks for
+	back-links.
+	"""
+	reset = frappe.get_all(
+		"Post Dated Cheque", filters={"payment_entry": doc.name, "docstatus": 1}, pluck="name"
+	)
+	# Cheque Bounce cancels the payment as part of its own flow and then
+	# marks the cheque Bounced; leave it the names it can no longer find
+	frappe.flags.pdc_reset_by_payment_cancel = reset
+	for cheque in reset:
+		frappe.db.set_value(
+			"Post Dated Cheque", cheque, {"status": PENDING, "payment_entry": None, "collected_on": None}
+		)
+		frappe.get_doc("Post Dated Cheque", cheque).add_comment(
+			"Comment", _("Back to Pending: Payment Entry {0} was cancelled.").format(doc.name)
+		)
+
+	for cheque in frappe.get_all(
+		"Post Dated Cheque", filters={"return_payment_entry": doc.name, "docstatus": 1}, pluck="name"
+	):
+		frappe.db.set_value(
+			"Post Dated Cheque",
+			cheque,
+			{"status": COLLECTED, "return_payment_entry": None, "returned_on": None, "bounce_reason": None},
+		)
+		frappe.get_doc("Post Dated Cheque", cheque).add_comment(
+			"Comment", _("Back to Collected: the return entry {0} was cancelled.").format(doc.name)
+		)

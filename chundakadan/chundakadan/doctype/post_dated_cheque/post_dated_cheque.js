@@ -2,19 +2,11 @@
 frappe.ui.form.on("Post Dated Cheque", {
 	refresh(frm) {
 		if (frm.doc.docstatus === 1 && frm.doc.status === "Collected" && frm.doc.payment_entry) {
-			// a collected cheque that bounced needs the accounting reversal,
-			// which Cheque Bounce does against the Payment Entry
-			frm.add_custom_button(__("Cheque Bounced"), () => {
-				frappe.new_doc("Cheque Bounce", {
-					payment_entry: frm.doc.payment_entry,
-					customer: frm.doc.customer,
-					cheque_no: frm.doc.cheque_no,
-					cheque_date: frm.doc.cheque_date,
-					original_amount: frm.doc.amount,
-					bounce_date: frappe.datetime.get_today(),
-					mode_of_payment: "Cheque",
-				});
-			});
+			// the bank sent it back: keep both records, money in and money out
+			frm.add_custom_button(__("Cheque Returned"), () => return_dialog(frm)).addClass("btn-danger");
+		}
+		if (frm.doc.return_payment_entry) {
+			frm.add_custom_button(__("Return Entry"), () => frappe.set_route("Form", "Payment Entry", frm.doc.return_payment_entry), __("View"));
 		}
 		if (frm.doc.cheque_bounce) {
 			frm.add_custom_button(__("Cheque Bounce"), () => frappe.set_route("Form", "Cheque Bounce", frm.doc.cheque_bounce), __("View"));
@@ -76,7 +68,7 @@ frappe.ui.form.on("Post Dated Cheque Reference", {
 });
 
 function set_status_indicator(frm) {
-	const colours = { Draft: "red", Pending: "orange", Collected: "green", Bounced: "red", Cancelled: "grey" };
+	const colours = { Draft: "red", Pending: "orange", Collected: "green", Returned: "red", Bounced: "red", Cancelled: "grey" };
 	if (frm.doc.docstatus === 1) frm.page.set_indicator(__(frm.doc.status), colours[frm.doc.status] || "blue");
 }
 
@@ -161,6 +153,45 @@ function load_outstanding_invoices(dialog, frm) {
 			dialog.fields_dict.references.grid.df.data = dialog.invoice_rows;
 			dialog.fields_dict.references.grid.refresh();
 		});
+}
+
+function return_dialog(frm) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Cheque Returned — {0}", [frm.doc.cheque_no]),
+		fields: [
+			{ fieldtype: "Date", fieldname: "return_date", label: __("Return Date"), reqd: 1, default: frappe.datetime.get_today() },
+			{ fieldtype: "Currency", fieldname: "bank_charge", label: __("Bank Charge"), default: 0 },
+			{ fieldtype: "Column Break" },
+			{
+				fieldtype: "Link", fieldname: "bank_charges_account", label: __("Bank Charges Account"), options: "Account",
+				depends_on: "eval:doc.bank_charge > 0",
+				get_query: () => ({ filters: { company: frm.doc.company, is_group: 0 } }),
+			},
+			{ fieldtype: "Section Break" },
+			{ fieldtype: "Small Text", fieldname: "reason", label: __("Reason"), reqd: 1 },
+			{
+				fieldtype: "HTML", fieldname: "help",
+				options: `<p class="text-muted small">${__(
+					"The original Payment Entry stays as it is; a second entry takes the money back out and the customer owes it again."
+				)}</p>`,
+			},
+		],
+		primary_action_label: __("Record Return"),
+		primary_action: (values) => {
+			dialog.hide();
+			frappe.call({
+				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.mark_returned",
+				args: Object.assign({ cheque: frm.doc.name }, values),
+				freeze: true,
+				freeze_message: __("Recording the return..."),
+			}).then((r) => {
+				if (!r.message) return;
+				frappe.show_alert({ message: __("Return entry {0} created", [r.message.return_payment_entry]), indicator: "orange" });
+				frm.reload_doc();
+			});
+		},
+	});
+	dialog.show();
 }
 
 function bounce_dialog(frm) {
