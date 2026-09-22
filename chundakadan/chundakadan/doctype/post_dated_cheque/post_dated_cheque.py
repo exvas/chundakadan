@@ -121,7 +121,7 @@ class PostDatedCheque(Document):
 
 
 @frappe.whitelist()
-def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, reference_no=None, reference_date=None, remarks=None):
+def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, reference_no=None, reference_date=None, remarks=None, references=None):
 	"""One click: cheque cleared → Payment Entry against the customer."""
 	doc = frappe.get_doc("Post Dated Cheque", cheque)
 	doc.check_permission("write")
@@ -151,11 +151,11 @@ def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, 
 		payment.reference_no = reference_no or doc.cheque_no
 		payment.reference_date = reference_date or doc.cheque_date
 		payment.remarks = remarks or _("Post Dated Cheque {0}").format(doc.name)
-		for row in doc.references:
+		for row in _allocations(doc, references):
 			payment.append("references", {
 				"reference_doctype": "Sales Invoice",
-				"reference_name": row.sales_invoice,
-				"allocated_amount": flt(row.allocated_amount),
+				"reference_name": row["sales_invoice"],
+				"allocated_amount": flt(row["allocated_amount"]),
 			})
 		payment.setup_party_account_field()
 		payment.set_missing_values()
@@ -168,6 +168,63 @@ def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, 
 
 	doc.db_set({"status": COLLECTED, "payment_entry": payment.name, "collected_on": posting_date})
 	return {"payment_entry": payment.name, "status": COLLECTED}
+
+
+def _allocations(doc, references):
+	"""What the Payment Entry settles.
+
+	The collect dialog may send invoice allocations; otherwise the cheque's
+	own reference rows are used. Allocating nothing is fine — the payment
+	then sits against the customer and can be reconciled later.
+	"""
+	rows = frappe.parse_json(references) if isinstance(references, str) else references
+	if rows is None:
+		return [
+			{"sales_invoice": row.sales_invoice, "allocated_amount": flt(row.allocated_amount)}
+			for row in doc.references
+		]
+
+	allocations = []
+	total = 0
+	for row in rows:
+		invoice = row.get("sales_invoice")
+		amount = flt(row.get("allocated_amount"))
+		if not invoice or amount <= 0:
+			continue
+		details = frappe.db.get_value(
+			"Sales Invoice", invoice, ["customer", "docstatus", "outstanding_amount"], as_dict=True
+		)
+		if not details or details.docstatus != 1:
+			frappe.throw(_("Sales Invoice {0} is not submitted.").format(invoice))
+		if details.customer != doc.customer:
+			frappe.throw(_("Sales Invoice {0} belongs to {1}.").format(invoice, details.customer))
+		if amount > flt(details.outstanding_amount) + 0.01:
+			frappe.throw(
+				_("Allocated {0} on {1} is more than its outstanding {2}.").format(
+					amount, invoice, details.outstanding_amount
+				)
+			)
+		total += amount
+		allocations.append({"sales_invoice": invoice, "allocated_amount": amount})
+
+	if flt(total, 2) > flt(doc.amount, 2):
+		frappe.throw(_("Allocated {0} is more than the cheque amount {1}.").format(total, doc.amount))
+	return allocations
+
+
+@frappe.whitelist()
+def outstanding_invoices(customer, company=None):
+	"""The customer's open invoices, oldest first — shown when collecting."""
+	filters = {"customer": customer, "docstatus": 1, "outstanding_amount": [">", 0]}
+	if company:
+		filters["company"] = company
+	return frappe.get_all(
+		"Sales Invoice",
+		filters=filters,
+		fields=["name as sales_invoice", "posting_date", "due_date", "grand_total", "outstanding_amount"],
+		order_by="posting_date asc, name asc",
+		limit=100,
+	)
 
 
 @frappe.whitelist()

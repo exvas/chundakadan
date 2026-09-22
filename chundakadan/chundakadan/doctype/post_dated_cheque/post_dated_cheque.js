@@ -92,15 +92,34 @@ function collect_dialog(frm) {
 			{ fieldtype: "Column Break" },
 			{ fieldtype: "Data", fieldname: "reference_no", label: __("Reference No"), default: frm.doc.cheque_no, reqd: 1 },
 			{ fieldtype: "Date", fieldname: "reference_date", label: __("Reference Date"), default: frm.doc.cheque_date, reqd: 1 },
+			{ fieldtype: "Section Break", label: __("Invoices") },
+			{
+				fieldtype: "HTML", fieldname: "allocation_help",
+				options: `<p class="text-muted small">${__("Allocate against invoices now, or leave it and reconcile later.")}</p>`,
+			},
+			{
+				fieldtype: "Table", fieldname: "references", label: __("Outstanding Invoices"),
+				cannot_add_rows: true, in_place_edit: true, data: [],
+				get_data: () => dialog.invoice_rows || [],
+				fields: [
+					{ fieldtype: "Data", fieldname: "sales_invoice", label: __("Invoice"), read_only: 1, in_list_view: 1, columns: 3 },
+					{ fieldtype: "Date", fieldname: "posting_date", label: __("Date"), read_only: 1, in_list_view: 1, columns: 2 },
+					{ fieldtype: "Currency", fieldname: "outstanding_amount", label: __("Outstanding"), read_only: 1, in_list_view: 1, columns: 3 },
+					{ fieldtype: "Currency", fieldname: "allocated_amount", label: __("Allocate"), in_list_view: 1, columns: 3 },
+				],
+			},
 			{ fieldtype: "Section Break" },
 			{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks") },
 		],
 		primary_action_label: __("Create Payment Entry"),
 		primary_action: (values) => {
+			const references = (values.references || [])
+				.filter((row) => flt(row.allocated_amount) > 0)
+				.map((row) => ({ sales_invoice: row.sales_invoice, allocated_amount: flt(row.allocated_amount) }));
 			dialog.hide();
 			frappe.call({
 				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.collect",
-				args: Object.assign({ cheque: frm.doc.name }, values),
+				args: Object.assign({ cheque: frm.doc.name }, values, { references: JSON.stringify(references) }),
 				freeze: true,
 				freeze_message: __("Creating Payment Entry..."),
 			}).then((r) => {
@@ -111,6 +130,37 @@ function collect_dialog(frm) {
 		},
 	});
 	dialog.show();
+	load_outstanding_invoices(dialog, frm);
+}
+
+// The customer's open invoices, with this cheque spread over the oldest
+// first — the user can change or clear any of it.
+function load_outstanding_invoices(dialog, frm) {
+	frappe
+		.xcall("chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.outstanding_invoices", {
+			customer: frm.doc.customer,
+			company: frm.doc.company,
+		})
+		.then((invoices) => {
+			const already = {};
+			(frm.doc.references || []).forEach((row) => {
+				already[row.sales_invoice] = flt(row.allocated_amount);
+			});
+			let left = flt(frm.doc.amount);
+			dialog.invoice_rows = (invoices || []).map((invoice) => {
+				const preset = already[invoice.sales_invoice];
+				const allocate = preset !== undefined ? preset : Math.min(left, flt(invoice.outstanding_amount));
+				left = Math.max(0, left - allocate);
+				return {
+					sales_invoice: invoice.sales_invoice,
+					posting_date: invoice.posting_date,
+					outstanding_amount: invoice.outstanding_amount,
+					allocated_amount: allocate,
+				};
+			});
+			dialog.fields_dict.references.grid.df.data = dialog.invoice_rows;
+			dialog.fields_dict.references.grid.refresh();
+		});
 }
 
 function bounce_dialog(frm) {

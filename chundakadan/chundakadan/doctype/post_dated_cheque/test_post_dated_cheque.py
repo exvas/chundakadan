@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, nowdate
@@ -10,6 +12,7 @@ from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import 
 	customer_bank_accounts,
 	mark_bounced,
 	mode_of_payment_account,
+	outstanding_invoices,
 	reminder_recipients,
 	send_due_reminders,
 )
@@ -458,3 +461,60 @@ class TestPostDatedCheque(FrappeTestCase):
 			doc, mail = self._reminder_with_mail(add_days(nowdate(), days))
 			sent = [c for c in mail.call_args_list if c.kwargs.get("reference_name") == doc.name]
 			self.assertEqual(sent, [], f"{days} days")
+
+	# ---- allocating invoices while collecting -------------------------
+
+	def test_outstanding_invoices_lists_open_ones_oldest_first(self):
+		rows = outstanding_invoices(self.invoice.customer, COMPANY)
+		self.assertTrue(rows)
+		self.assertIn(self.invoice.name, [r.sales_invoice for r in rows])
+		for row in rows:
+			self.assertGreater(flt(row.outstanding_amount), 0)
+		dates = [str(r.posting_date) for r in rows]
+		self.assertEqual(dates, sorted(dates))
+
+	def test_collect_allocates_what_the_dialog_sends(self):
+		outstanding = flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"))
+		part = round(min(outstanding, 100), 2)
+		doc = self._cheque(amount=max(part, 100))
+		result = collect(
+			doc.name,
+			posting_date=nowdate(),
+			references=json.dumps([{"sales_invoice": self.invoice.name, "allocated_amount": part}]),
+		)
+		payment = frappe.get_doc("Payment Entry", result["payment_entry"])
+		self.assertEqual([r.reference_name for r in payment.references], [self.invoice.name])
+		self.assertAlmostEqual(flt(payment.references[0].allocated_amount), part, places=2)
+		after = flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"))
+		self.assertAlmostEqual(after, outstanding - part, places=2)
+
+	def test_collect_without_allocation_leaves_it_for_reconciliation(self):
+		outstanding = flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"))
+		doc = self._cheque()
+		result = collect(doc.name, posting_date=nowdate(), references="[]")
+		payment = frappe.get_doc("Payment Entry", result["payment_entry"])
+		self.assertEqual(payment.references, [])
+		self.assertAlmostEqual(flt(payment.unallocated_amount), flt(doc.amount), places=2)
+		self.assertAlmostEqual(
+			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")), outstanding, places=2
+		)
+
+	def test_allocation_over_the_cheque_amount_is_refused(self):
+		doc = self._cheque(amount=100)
+		with self.assertRaises(frappe.ValidationError):
+			collect(doc.name, references=json.dumps([{"sales_invoice": self.invoice.name, "allocated_amount": 500}]))
+		doc.reload()
+		self.assertEqual(doc.status, "Pending")
+
+	def test_another_customers_invoice_is_refused(self):
+		other = frappe.get_all(
+			"Sales Invoice",
+			filters={"docstatus": 1, "customer": ["!=", self.invoice.customer], "outstanding_amount": [">", 0]},
+			pluck="name",
+			limit=1,
+		)
+		if not other:
+			self.skipTest("no other customer's invoice")
+		doc = self._cheque()
+		with self.assertRaises(frappe.ValidationError):
+			collect(doc.name, references=json.dumps([{"sales_invoice": other[0], "allocated_amount": 10}]))
