@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"fvReuWIc12\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Chundakadan</span>\",\"col\":12}},{\"id\":\"3-tKtfX9fd\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Orderrssss\",\"col\":12}}]",
+ "content": "[{\"id\": \"fvReuWIc12\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Sales Order Queue</span>\", \"col\": 12}}, {\"id\": \"3-tKtfX9fd\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Sales Orderrssss\", \"col\": 12}}]",
  "creation": "2025-08-07 15:31:02.978311",
  "custom_blocks": [
   {
@@ -16,12 +16,12 @@
  "idx": 0,
  "indicator_color": "blue",
  "is_hidden": 0,
- "label": "Chundakadan",
+ "label": "Sales Order Queue",
  "links": [],
  "modified": "2025-08-07 15:56:11.515261",
  "modified_by": "Administrator",
  "module": "Chundakadan",
- "name": "Chundakadan",
+ "name": "Sales Order Queue",
  "number_cards": [],
  "owner": "Administrator",
  "parent_page": "",
@@ -30,5 +30,5 @@
  "roles": [],
  "sequence_id": 1.0,
  "shortcuts": [],
- "title": "Chundakadan"
+ "title": "Sales Order Queue"
 }
