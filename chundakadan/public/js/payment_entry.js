@@ -1,11 +1,12 @@
 frappe.ui.form.on("Payment Entry", {
     setup(frm) {
-        // Cancelling a payment must never cancel the cheque behind it: the
-        // server puts the cheque back a step instead (Collected -> Pending).
-        // Listing it here keeps it out of the "Cancel All Documents" prompt.
-        const ignored = frm.ignore_doctypes_on_cancel_all || [];
-        if (!ignored.includes("Post Dated Cheque")) ignored.push("Post Dated Cheque");
-        frm.ignore_doctypes_on_cancel_all = ignored;
+        keep_cheque_out_of_cancel_all(frm);
+    },
+
+    refresh(frm) {
+        // ERPNext assigns this list in its own onload, which runs after our
+        // setup and would wipe ours — so add it again on every refresh.
+        keep_cheque_out_of_cancel_all(frm);
     },
 
     onload_post_render(frm) {
@@ -41,4 +42,13 @@ function set_sales_person(frm) {
             );
         }
     });
+}
+
+// Cancelling a payment must never cancel the cheque behind it: the server
+// puts the cheque back a step instead (Collected -> Pending). Listing it
+// here keeps it out of the "Cancel All Documents" prompt.
+function keep_cheque_out_of_cancel_all(frm) {
+    const ignored = frm.ignore_doctypes_on_cancel_all || [];
+    if (!ignored.includes("Post Dated Cheque")) ignored.push("Post Dated Cheque");
+    frm.ignore_doctypes_on_cancel_all = ignored;
 }
