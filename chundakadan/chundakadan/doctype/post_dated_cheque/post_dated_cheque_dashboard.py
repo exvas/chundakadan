@@ -2,16 +2,19 @@ from frappe import _
 
 
 def get_data():
-	"""Connections: the Payment Entry this cheque became, and its bounce entry."""
+	"""Connections: the payments this cheque became, and its bounce entry.
+
+	Payment Entries point back with custom_post_dated_cheque, so both the
+	collection and the return show up; an internal link could only follow
+	one field.
+	"""
 	return {
-		"fieldname": "name",
-		# a plain fieldname on this document — a list means [child table, field]
+		"fieldname": "custom_post_dated_cheque",
 		"internal_links": {
-			"Payment Entry": "payment_entry",
 			"Cheque Bounce": "cheque_bounce",
 		},
 		"transactions": [
-			{"label": _("Collection"), "items": ["Payment Entry"]},
+			{"label": _("Payments"), "items": ["Payment Entry"]},
 			{"label": _("Bounce"), "items": ["Cheque Bounce"]},
 		],
 	}

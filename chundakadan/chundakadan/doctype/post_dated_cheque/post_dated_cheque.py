@@ -12,6 +12,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import date_diff, flt, getdate, nowdate
 
+PE_FIELD = "custom_post_dated_cheque"
+
 PENDING = "Pending"
 COLLECTED = "Collected"
 RETURNED = "Returned"
@@ -161,6 +163,7 @@ def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, 
 		payment.setup_party_account_field()
 		payment.set_missing_values()
 		payment.set_exchange_rate()
+		payment.set(PE_FIELD, doc.name)
 		payment.insert()
 		payment.submit()
 	except Exception:
@@ -483,6 +486,7 @@ def mark_returned(cheque, return_date=None, reason=None, bank_charge=0, bank_cha
 		reversal.setup_party_account_field()
 		reversal.set_missing_values()
 		reversal.set_exchange_rate()
+		reversal.set(PE_FIELD, doc.name)
 		reversal.insert()
 		reversal.submit()
 
@@ -629,3 +633,32 @@ def on_payment_entry_cancel(doc, method=None):
 		frappe.get_doc("Post Dated Cheque", cheque).add_comment(
 			"Comment", _("Back to Collected: the return entry {0} was cancelled.").format(doc.name)
 		)
+
+
+def ensure_payment_entry_field(*args, **kwargs):
+	"""A link back from Payment Entry, so both entries show in Connections.
+
+	The cheque links its collection entry, and the return entry links
+	nothing — a dashboard can only follow one field per doctype, so the
+	Payment Entries point at the cheque instead.
+	"""
+	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
+	create_custom_fields(
+		{
+			"Payment Entry": [
+				{
+					"fieldname": PE_FIELD,
+					"label": "Post Dated Cheque",
+					"fieldtype": "Link",
+					"options": "Post Dated Cheque",
+					"insert_after": "reference_date",
+					"read_only": 1,
+					"no_copy": 1,
+					"print_hide": 1,
+					"module": "Chundakadan",
+				}
+			]
+		},
+		update=True,
+	)

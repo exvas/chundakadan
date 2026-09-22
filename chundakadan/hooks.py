@@ -339,6 +339,7 @@ after_migrate = [
     "chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",
     "chundakadan.seed.po_workflow.ensure_po_workflow",
     "chundakadan.seed.approvals.ensure_approvals_workspace",
+    "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.ensure_payment_entry_field",
 ]
 
 # Uninstallation

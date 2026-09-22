@@ -11,6 +11,7 @@ from chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque import 
 	create_customer_bank_account,
 	customer_bank_accounts,
 	mark_bounced,
+	ensure_payment_entry_field,
 	mode_of_payment_account,
 	mark_returned,
 	outstanding_invoices,
@@ -39,6 +40,7 @@ class TestPostDatedCheque(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		ensure_doctypes()
+		ensure_payment_entry_field()
 		self.invoice = frappe.get_all(
 			"Sales Invoice",
 			filters={"docstatus": 1, "is_return": 0, "company": COMPANY, "outstanding_amount": [">", 0]},
@@ -407,25 +409,26 @@ class TestPostDatedCheque(FrappeTestCase):
 		doc.reload()
 		self.assertEqual(doc.status, "Pending")
 
-	def test_connections_panel_loads(self):
+	def test_connections_panel_shows_both_payments(self):
 		from frappe.desk.notifications import get_open_count
 
 		doc = self._cheque()
 		collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		self.assertEqual(frappe.db.get_value("Payment Entry", doc.payment_entry, "custom_post_dated_cheque"), doc.name)
+
 		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
-		found = {row["doctype"]: row for row in counts["count"]["internal_links_found"]}
+		found = {row["doctype"]: row for row in counts["count"]["external_links_found"]}
 		self.assertEqual(found["Payment Entry"]["count"], 1)
-		self.assertEqual(found["Payment Entry"]["names"], [frappe.db.get_value("Post Dated Cheque", doc.name, "payment_entry")])
-		self.assertEqual(found.get("Cheque Bounce", {}).get("count", 0), 0)
 
-		bounce = self._cheque_bounce_doc(frappe.get_doc("Post Dated Cheque", doc.name))
-		bounce.insert()
-		bounce.submit()
+		result = mark_returned(doc.name, reason="Returned by bank")
+		self.assertEqual(
+			frappe.db.get_value("Payment Entry", result["return_payment_entry"], "custom_post_dated_cheque"), doc.name
+		)
 		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
-		found = {row["doctype"]: row for row in counts["count"]["internal_links_found"]}
-		self.assertEqual(found["Cheque Bounce"]["names"], [bounce.name])
+		found = {row["doctype"]: row for row in counts["count"]["external_links_found"]}
+		self.assertEqual(found["Payment Entry"]["count"], 2)
 
-	# ---- email to whoever entered the cheque --------------------------
 
 	def _reminder_with_mail(self, cheque_date):
 		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
