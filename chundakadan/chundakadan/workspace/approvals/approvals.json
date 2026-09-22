@@ -1,0 +1,197 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"ap_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Waiting on you</b></span>\", \"col\": 12}}, {\"id\": \"ap_nc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Leave Approvals Pending\", \"col\": 3}}, {\"id\": \"ap_nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Expense Claims Pending\", \"col\": 3}}, {\"id\": \"ap_nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Employee Advances Pending\", \"col\": 3}}, {\"id\": \"ap_nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Payment Requests Pending\", \"col\": 3}}, {\"id\": \"ap_nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Office Expense Vouchers Pending\", \"col\": 3}}, {\"id\": \"ap_nc5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Purchase Orders Awaiting Approval\", \"col\": 3}}, {\"id\": \"ap_nc6\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Cheques To Collect\", \"col\": 3}}, {\"id\": \"ap_nc7\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Follow-ups Due\", \"col\": 3}}, {\"id\": \"ap_hdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\">Open the lists</span>\", \"col\": 12}}, {\"id\": \"ap_sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Leave Applications\", \"col\": 3}}, {\"id\": \"ap_sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Expense Claims\", \"col\": 3}}, {\"id\": \"ap_sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee Advances\", \"col\": 3}}, {\"id\": \"ap_sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Orders\", \"col\": 3}}, {\"id\": \"ap_sc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Post Dated Cheques\", \"col\": 3}}, {\"id\": \"ap_sc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Follow-ups\", \"col\": 3}}]",
+ "creation": "2026-09-22 12:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "check-circle-fill",
+ "idx": 0,
+ "indicator_color": "orange",
+ "is_hidden": 0,
+ "label": "Approvals",
+ "links": [
+  {
+   "type": "Card Break",
+   "label": "Approvals",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 4,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Leave Application",
+   "label": "Leave Application",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Expense Claim",
+   "label": "Expense Claim",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Employee Advance",
+   "label": "Employee Advance",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Purchase Order",
+   "label": "Purchase Order",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Card Break",
+   "label": "Collection",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 3,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Post Dated Cheque",
+   "label": "Post Dated Cheque",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Customer Follow Up",
+   "label": "Customer Follow Up",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "Report",
+   "link_to": "Post Dated Cheque Report",
+   "label": "Post Dated Cheque Report",
+   "hidden": 0,
+   "is_query_report": 1,
+   "link_count": 0,
+   "onboard": 0,
+   "report_ref_doctype": "Post Dated Cheque"
+  }
+ ],
+ "modified": "2026-09-22 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Chundakadan",
+ "name": "Approvals",
+ "number_cards": [
+  {
+   "label": "Leave Approvals Pending",
+   "number_card_name": "Leave Approvals Pending"
+  },
+  {
+   "label": "Expense Claims Pending",
+   "number_card_name": "Expense Claims Pending"
+  },
+  {
+   "label": "Employee Advances Pending",
+   "number_card_name": "Employee Advances Pending"
+  },
+  {
+   "label": "Payment Requests Pending",
+   "number_card_name": "Payment Requests Pending"
+  },
+  {
+   "label": "Office Expense Vouchers Pending",
+   "number_card_name": "Office Expense Vouchers Pending"
+  },
+  {
+   "label": "Purchase Orders Awaiting Approval",
+   "number_card_name": "Purchase Orders Awaiting Approval"
+  },
+  {
+   "label": "Cheques To Collect",
+   "number_card_name": "Cheques To Collect"
+  },
+  {
+   "label": "Follow-ups Due",
+   "number_card_name": "Follow-ups Due"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "type": "DocType",
+   "link_to": "Leave Application",
+   "label": "Leave Applications",
+   "color": "Yellow",
+   "doc_view": "List",
+   "stats_filter": "[[\"Leave Application\", \"custom_approval_status\", \"=\", \"Pending\"]]"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Expense Claim",
+   "label": "Expense Claims",
+   "color": "Red",
+   "doc_view": "List",
+   "stats_filter": "[[\"Expense Claim\", \"custom_approval_status\", \"=\", \"Pending\"]]"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Employee Advance",
+   "label": "Employee Advances",
+   "color": "Grey",
+   "doc_view": "List"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Purchase Order",
+   "label": "Purchase Orders",
+   "color": "Blue",
+   "doc_view": "List"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Post Dated Cheque",
+   "label": "Post Dated Cheques",
+   "color": "Green",
+   "doc_view": "List",
+   "stats_filter": "[[\"Post Dated Cheque\", \"status\", \"=\", \"Pending\"]]"
+  },
+  {
+   "type": "DocType",
+   "link_to": "Customer Follow Up",
+   "label": "Follow-ups",
+   "color": "Red",
+   "doc_view": "List",
+   "stats_filter": "[[\"Customer Follow Up\", \"status\", \"=\", \"Open\"]]"
+  }
+ ],
+ "title": "Approvals"
+}

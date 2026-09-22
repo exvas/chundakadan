@@ -333,6 +333,7 @@ after_migrate = [
     "chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
     "chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",
     "chundakadan.seed.po_workflow.ensure_po_workflow",
+    "chundakadan.seed.approvals.ensure_approval_number_cards",
 ]
 
 # Uninstallation
