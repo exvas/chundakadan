@@ -486,6 +486,9 @@ def mark_returned(cheque, return_date=None, reason=None, bank_charge=0, bank_cha
 		reversal.insert()
 		reversal.submit()
 
+		# knock the return off the receipt so neither is left open
+		_reconcile_against(doc, original.name, reversal.name)
+
 		charge_entry = None
 		if flt(bank_charge):
 			charge_entry = _post_bank_charge(doc, original, return_date, flt(bank_charge), bank_charges_account)
@@ -527,6 +530,45 @@ def _unreconcile(payment):
 		for row in payment.references
 	]
 	create_unreconcile_doc_for_selection(selections=frappe.as_json(selections))
+
+
+def _reconcile_against(doc, receipt, reversal):
+	"""Settle the return against the receipt it reverses.
+
+	Both sit on the customer otherwise — a credit for the money in and a
+	debit for the money out — and the accounts team would have to match
+	them by hand in Payment Reconciliation.
+	"""
+	try:
+		reconciliation = frappe.new_doc("Payment Reconciliation")
+		reconciliation.company = doc.company
+		reconciliation.party_type = "Customer"
+		reconciliation.party = doc.customer
+		reconciliation.receivable_payable_account = frappe.get_cached_value(
+			"Company", doc.company, "default_receivable_account"
+		)
+		reconciliation.get_unreconciled_entries()
+
+		payment = next((row for row in reconciliation.payments if row.reference_name == receipt), None)
+		invoice = next((row for row in reconciliation.invoices if row.invoice_number == reversal), None)
+		if not (payment and invoice):
+			return None
+
+		reconciliation.append("allocation", {
+			"reference_type": payment.reference_type,
+			"reference_name": payment.reference_name,
+			"invoice_type": invoice.invoice_type,
+			"invoice_number": invoice.invoice_number,
+			"allocated_amount": min(flt(payment.amount), flt(invoice.outstanding_amount)),
+			"amount": payment.amount,
+			"unreconciled_amount": payment.amount,
+		})
+		reconciliation.reconcile()
+		return True
+	except Exception:
+		# the return itself must stand even if the match fails
+		frappe.log_error(frappe.get_traceback(), "Post Dated Cheque: return not reconciled")
+		return None
 
 
 def _post_bank_charge(doc, original, return_date, amount, account=None):

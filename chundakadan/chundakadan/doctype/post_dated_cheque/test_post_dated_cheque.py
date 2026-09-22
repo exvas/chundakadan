@@ -641,3 +641,23 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertEqual(doc.status, "Collected")
 		self.assertFalse(doc.return_payment_entry)
 		self.assertFalse(doc.returned_on)
+
+	def test_return_is_knocked_off_against_the_receipt(self):
+		doc = self._cheque()
+		collect(doc.name, posting_date=nowdate())
+		doc.reload()
+		receipt = doc.payment_entry
+		result = mark_returned(doc.name, reason="Returned by bank")
+		reversal = result["return_payment_entry"]
+
+		# neither entry should be left waiting in the reconciliation tool
+		reconciliation = frappe.new_doc("Payment Reconciliation")
+		reconciliation.company = COMPANY
+		reconciliation.party_type = "Customer"
+		reconciliation.party = doc.customer
+		reconciliation.receivable_payable_account = frappe.get_cached_value(
+			"Company", COMPANY, "default_receivable_account"
+		)
+		reconciliation.get_unreconciled_entries()
+		self.assertNotIn(receipt, [row.reference_name for row in reconciliation.payments])
+		self.assertNotIn(reversal, [row.invoice_number for row in reconciliation.invoices])
