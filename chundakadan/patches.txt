@@ -20,3 +20,4 @@ chundakadan.patches.hide_invoice_fields
 chundakadan.patches.backfill_dispatch_logs
 chundakadan.patches.apply_cdn_gm_full_access
 chundakadan.patches.allow_leave_chain_updates
+chundakadan.patches.sync_cdn_gm_modules
