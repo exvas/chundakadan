@@ -6,8 +6,9 @@ Stock Ledger, so it matches Stock Balance. In Qty and Out Qty show what
 moved between the From Date and the To Date, which is what the date range
 is for -- the balance itself is always "as on To Date".
 
-One row per item per warehouse. Rows that never moved and hold nothing are
-left out.
+Group By decides the shape: "Item and Warehouse" gives a row per item per
+warehouse, "Item" collapses the warehouses into one row per item. Rows that
+never moved and hold nothing are left out.
 """
 
 import frappe
@@ -22,16 +23,27 @@ def execute(filters=None):
 		frappe.throw(_("Select From Date and To Date"))
 	if filters.from_date > filters.to_date:
 		frappe.throw(_("From Date cannot be after To Date"))
-	return get_columns(), get_data(filters)
+	return get_columns(filters), get_data(filters)
 
 
-def get_columns():
+def group_by_warehouse(filters):
+	"""Warehouse-wise rows unless the user asked for a plain item list."""
+	return filters.get("group_by") != "Item"
+
+
+def get_columns(filters=None):
+	filters = frappe._dict(filters or {})
+	warehouse_column = (
+		[{"label": _("Warehouse"), "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150}]
+		if group_by_warehouse(filters)
+		else []
+	)
 	return [
 		{"label": _("Item Code"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 110},
 		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 260},
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 120},
 		{"label": _("Item Group"), "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 140},
-		{"label": _("Warehouse"), "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
+		*warehouse_column,
 		{"label": _("Balance Qty"), "fieldname": "balance_qty", "fieldtype": "Float", "width": 110},
 		{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 70},
 		{"label": _("Stock Value"), "fieldname": "stock_value", "fieldtype": "Currency", "width": 130},
@@ -56,6 +68,10 @@ def get_data(filters):
 	if filters.get("item_group"):
 		conditions.append("item.item_group = %(item_group)s")
 
+	by_warehouse = group_by_warehouse(filters)
+	warehouse_select = "sle.warehouse," if by_warehouse else ""
+	warehouse_group = ", sle.warehouse" if by_warehouse else ""
+
 	rows = frappe.db.sql(
 		f"""
 		select
@@ -63,7 +79,7 @@ def get_data(filters):
 			item.item_name,
 			item.brand,
 			item.item_group,
-			sle.warehouse,
+			{warehouse_select}
 			sum(sle.actual_qty) as balance_qty,
 			item.stock_uom as uom,
 			sum(sle.stock_value_difference) as stock_value,
@@ -75,9 +91,9 @@ def get_data(filters):
 		from `tabStock Ledger Entry` sle
 		join `tabItem` item on item.name = sle.item_code
 		where {" and ".join(conditions)}
-		group by sle.item_code, sle.warehouse
+		group by sle.item_code{warehouse_group}
 		having balance_qty <> 0 or in_qty <> 0 or out_qty <> 0
-		order by item.item_name, sle.warehouse
+		order by item.item_name{warehouse_group}
 		""",
 		filters,
 		as_dict=True,

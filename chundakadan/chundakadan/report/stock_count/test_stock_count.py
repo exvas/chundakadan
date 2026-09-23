@@ -58,11 +58,13 @@ class TestStockCount(FrappeTestCase):
 
 	def test_balance_ignores_the_from_date(self):
 		_c, wide = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
-		_c, narrow = execute({
-			"company": COMPANY, "from_date": self.to_date, "to_date": self.to_date,
-			"item_code": self.sample.item_code, "hide_zero_balance": 0,
-		})
-		balances = lambda rows: {(r.item_code, r.warehouse): flt(r.balance_qty) for r in rows}
+		_c, narrow = self._run(
+			from_date=self.to_date, item_code=self.sample.item_code, hide_zero_balance=0
+		)
+
+		def balances(rows):
+			return {(r.item_code, r.get("warehouse")): flt(r.balance_qty) for r in rows}
+
 		self.assertEqual(balances(wide), balances(narrow))
 
 	def test_in_and_out_cover_only_the_date_range(self):
@@ -164,3 +166,71 @@ class TestStockCount(FrappeTestCase):
 		finally:
 			frappe.set_user("Administrator")
 		frappe.db.rollback()
+
+
+class TestStockCountGroupByItem(TestStockCount):
+	"""Group By = Item collapses the warehouses into one row per item."""
+
+	def _run(self, **extra):
+		filters = {
+			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date,
+			"group_by": "Item",
+		}
+		filters.update(extra)
+		return execute(filters)
+
+	def test_columns(self):
+		columns, _data = self._run()
+		names = [c["fieldname"] for c in columns]
+		self.assertNotIn("warehouse", names)
+		for field in ("item_code", "item_name", "brand", "item_group", "balance_qty", "uom", "stock_value"):
+			self.assertIn(field, names)
+
+	def test_one_row_per_item_and_warehouse(self):
+		_columns, data = self._run(hide_zero_balance=0)
+		codes = [r.item_code for r in data]
+		self.assertEqual(len(codes), len(set(codes)))
+
+	def test_warehouse_filter(self):
+		_columns, data = self._run(warehouse=self.sample.warehouse, hide_zero_balance=0)
+		self.assertTrue(data)
+		self.assertNotIn("warehouse", data[0])
+
+	def test_balance_is_the_closing_stock_as_on_to_date(self):
+		expected = self._ledger(
+			"""select sum(actual_qty) as qty, sum(stock_value_difference) as value
+			from `tabStock Ledger Entry`
+			where is_cancelled = 0 and company = %(company)s and item_code = %(item)s
+			  and posting_date <= %(to_date)s""",
+			{"company": COMPANY, "item": self.sample.item_code, "to_date": self.to_date},
+		)
+		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
+		self.assertEqual(len(data), 1)
+		self.assertAlmostEqual(flt(data[0].balance_qty), flt(expected.qty), places=3)
+		self.assertAlmostEqual(flt(data[0].stock_value), flt(expected.value), places=2)
+
+	def test_in_and_out_cover_only_the_date_range(self):
+		expected = self._ledger(
+			"""select sum(case when actual_qty > 0 then actual_qty else 0 end) as in_qty,
+				-sum(case when actual_qty < 0 then actual_qty else 0 end) as out_qty
+			from `tabStock Ledger Entry`
+			where is_cancelled = 0 and company = %(company)s and item_code = %(item)s
+			  and posting_date between %(from_date)s and %(to_date)s""",
+			{"company": COMPANY, "item": self.sample.item_code, "from_date": self.from_date, "to_date": self.to_date},
+		)
+		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
+		self.assertAlmostEqual(flt(data[0].in_qty), flt(expected.in_qty), places=3)
+		self.assertAlmostEqual(flt(data[0].out_qty), flt(expected.out_qty), places=3)
+
+	def test_it_is_the_warehouse_rows_added_up(self):
+		"""Item rows must total exactly what the warehouse-wise rows total."""
+		_columns, per_warehouse = execute({
+			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date, "hide_zero_balance": 0,
+		})
+		_columns, per_item = self._run(hide_zero_balance=0)
+		wanted = {}
+		for row in per_warehouse:
+			wanted[row.item_code] = wanted.get(row.item_code, 0) + flt(row.balance_qty)
+		self.assertEqual(len(per_item), len({r.item_code for r in per_warehouse}))
+		for row in per_item:
+			self.assertAlmostEqual(flt(row.balance_qty), wanted[row.item_code], places=3, msg=row.item_code)
