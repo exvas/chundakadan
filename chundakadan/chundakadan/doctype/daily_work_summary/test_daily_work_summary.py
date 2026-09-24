@@ -367,3 +367,293 @@ class TestHodResolution(WorkSummaryCase):
 	def test_the_chain_always_ends_at_the_gm(self):
 		doc = self._summary()
 		self.assertEqual(ws.chain_roles(doc)[-1], GM_ROLE)
+
+
+class TestRemindersAndStatus(WorkSummaryCase):
+	"""Phase 3 — who has not sent today's summary."""
+
+	def _settings(self, enabled, time_value="18:00:00"):
+		frappe.db.set_single_value("Chundakadan Settings", {
+			"enable_work_summary_reminder": 1 if enabled else 0,
+			"work_summary_reminder_time": time_value,
+		})
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		if not frappe.get_meta("Chundakadan Settings").has_field("enable_work_summary_reminder"):
+			import_file_by_path(
+				frappe.get_app_path(
+					"field_sales", "field_sales", "doctype",
+					"chundakadan_settings", "chundakadan_settings.json",
+				),
+				force=True,
+			)
+			frappe.clear_cache(doctype="Chundakadan Settings")
+
+	def test_an_employee_with_no_summary_is_listed(self):
+		missing = [e.name for e in ws.not_submitted(today())]
+		self.assertIn(self.employee, missing)
+
+	def test_a_draft_still_counts_as_not_submitted(self):
+		self._summary()
+		missing = [e.name for e in ws.not_submitted(today())]
+		self.assertIn(self.employee, missing, "a draft nobody sent is still missing")
+
+	def test_sending_takes_them_off_the_list(self):
+		self._send(self._summary())
+		missing = [e.name for e in ws.not_submitted(today())]
+		self.assertNotIn(self.employee, missing)
+
+	def test_a_returned_summary_counts_as_not_submitted_again(self):
+		doc = self._send(self._summary())
+		frappe.set_user(self.hod)
+		ws.return_for_correction(doc.name, "redo it")
+		frappe.set_user("Administrator")
+		self.assertIn(self.employee, [e.name for e in ws.not_submitted(today())])
+
+	def test_a_holiday_is_not_a_missing_summary(self):
+		holiday_list = frappe.db.get_value("Employee", self.employee, "holiday_list") or \
+			frappe.db.get_value("Company", self.company, "default_holiday_list")
+		if not holiday_list:
+			self.skipTest("no holiday list on this site")
+		day = add_days(today(), -400)
+		# other tests commit, so a row left by an earlier run survives
+		frappe.db.delete("Holiday", {"parent": holiday_list, "holiday_date": day})
+		frappe.get_doc("Holiday List", holiday_list).append(
+			"holidays", {"holiday_date": day, "description": "DWS test holiday"}
+		).db_insert()
+		self.assertNotIn(self.employee, [e.name for e in ws.not_submitted(day)])
+
+	def test_approved_leave_is_not_a_missing_summary(self):
+		day = add_days(today(), -401)
+		frappe.db.delete("Leave Application", {"employee": self.employee, "from_date": day})
+		self.assertIn(self.employee, [e.name for e in ws.not_submitted(day)])
+		leave_type = frappe.db.get_value("Leave Type", {}, "name")
+		if not leave_type:
+			self.skipTest("no leave type on this site")
+		frappe.get_doc({
+			"doctype": "Leave Application", "employee": self.employee,
+			"leave_type": leave_type, "from_date": day, "to_date": day,
+			"company": self.company, "status": "Approved", "docstatus": 1,
+			"posting_date": day,
+		}).db_insert()
+		self.assertNotIn(self.employee, [e.name for e in ws.not_submitted(day)])
+
+	def test_the_department_filter_narrows_it(self):
+		department = frappe.db.get_value("Employee", self.employee, "department")
+		names = [e.name for e in ws.not_submitted(today(), department=department)]
+		self.assertIn(self.employee, names)
+		other = frappe.db.get_value("Department", {"name": ["!=", department]}, "name")
+		if other:
+			self.assertNotIn(self.employee, [e.name for e in ws.not_submitted(today(), department=other)])
+
+	def test_the_reminder_stays_quiet_while_it_is_switched_off(self):
+		self._settings(False)
+		self.assertIsNone(ws.send_submission_reminders())
+
+	def test_the_reminder_only_fires_in_its_own_hour(self):
+		from frappe.utils import now_datetime
+
+		this_hour = now_datetime().hour
+		other_hour = (this_hour + 1) % 24
+		self._settings(True, f"{other_hour:02d}:00:00")
+		before = frappe.db.count("Notification Log")
+		ws.send_submission_reminders()
+		self.assertEqual(frappe.db.count("Notification Log"), before)
+
+	def test_the_reminder_reaches_whoever_has_not_sent(self):
+		from frappe.utils import now_datetime
+
+		self._settings(True, f"{now_datetime().hour:02d}:00:00")
+		ws.send_submission_reminders()
+		logs = frappe.get_all(
+			"Notification Log", filters={"for_user": EMP_USER}, pluck="subject"
+		)
+		self.assertTrue(any("work summary" in (s or "").lower() for s in logs), logs)
+
+	def test_the_reminder_skips_whoever_already_sent(self):
+		from frappe.utils import now_datetime
+
+		self._send(self._summary())
+		frappe.db.delete("Notification Log", {"for_user": EMP_USER})
+		self._settings(True, f"{now_datetime().hour:02d}:00:00")
+		ws.send_submission_reminders()
+		self.assertFalse(frappe.get_all("Notification Log", filters={"for_user": EMP_USER}))
+
+
+class TestStatusReport(WorkSummaryCase):
+	def _run(self, **extra):
+		from chundakadan.chundakadan.report.daily_work_summary_status.daily_work_summary_status import execute
+
+		filters = {"from_date": today(), "to_date": today(), "employee": self.employee}
+		filters.update(extra)
+		return execute(filters)
+
+	def test_columns(self):
+		columns, _data = self._run()
+		names = [c["fieldname"] for c in columns]
+		for field in ("work_date", "employee", "status", "summary", "task_count"):
+			self.assertIn(field, names)
+
+	def test_a_missing_day_reads_not_submitted(self):
+		_columns, data = self._run()
+		self.assertEqual(len(data), 1)
+		self.assertEqual(data[0]["status"], "Not Submitted")
+		self.assertIsNone(data[0]["summary"])
+
+	def test_a_sent_summary_shows_its_status_and_task_count(self):
+		doc = self._send(self._summary())
+		_columns, data = self._run()
+		self.assertEqual(data[0]["summary"], doc.name)
+		self.assertEqual(data[0]["status"], ws.STATUS_PENDING)
+		self.assertEqual(data[0]["task_count"], 2)
+		self.assertEqual(data[0]["current_approver"], self.hod)
+
+	def test_only_missing_hides_the_ones_that_went_out(self):
+		self._send(self._summary())
+		_columns, data = self._run(only_missing=1)
+		self.assertEqual(data, [])
+
+	def test_a_range_gives_a_row_per_day(self):
+		_columns, data = self._run(from_date=add_days(today(), -2))
+		self.assertEqual(len(data), 3)
+
+	def test_a_reversed_or_huge_range_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self._run(from_date=today(), to_date=add_days(today(), -1))
+		with self.assertRaises(frappe.ValidationError):
+			self._run(from_date=add_days(today(), -400))
+
+
+class TestMobileEndpoints(WorkSummaryCase):
+	def _call(self, fn, **kwargs):
+		frappe.local.response = frappe._dict()
+		fn(**kwargs)
+		return frappe.local.response
+
+	def _with_args(self, args):
+		frappe.local.request = frappe._dict(args=frappe._dict(args))
+
+	def test_saving_creates_the_day_s_summary(self):
+		from field_sales.Api.auth import save_work_summary
+
+		frappe.set_user(EMP_USER)
+		res = self._call(save_work_summary, tasks=[{"task": "Visit", "work_description": "3 shops"}])
+		frappe.set_user("Administrator")
+		self.assertTrue(res["success"], res)
+		self.assertEqual(res["data"]["custom_approval_status"], ws.STATUS_DRAFT)
+		self.assertEqual(len(res["data"]["tasks"]), 1)
+
+	def test_saving_again_the_same_day_updates_it(self):
+		from field_sales.Api.auth import save_work_summary
+
+		frappe.set_user(EMP_USER)
+		first = self._call(save_work_summary, tasks=[{"task": "Visit", "work_description": "3 shops"}])
+		second = self._call(save_work_summary, tasks=[
+			{"task": "Visit", "work_description": "3 shops"},
+			{"task": "Collection", "work_description": "2 cheques"},
+		])
+		frappe.set_user("Administrator")
+		self.assertEqual(first["data"]["name"], second["data"]["name"])
+		self.assertEqual(len(second["data"]["tasks"]), 2)
+
+	def test_saving_with_send_puts_it_in_front_of_the_hod(self):
+		from field_sales.Api.auth import save_work_summary
+
+		frappe.set_user(EMP_USER)
+		res = self._call(save_work_summary, tasks=[{"task": "Visit", "work_description": "3 shops"}], send=1)
+		frappe.set_user("Administrator")
+		name = res["data"]["name"]
+		self.assertEqual(
+			frappe.db.get_value("Daily Work Summary", name, "custom_approval_status"), ws.STATUS_PENDING
+		)
+
+	def test_a_summary_with_no_tasks_is_refused(self):
+		from field_sales.Api.auth import save_work_summary
+
+		frappe.set_user(EMP_USER)
+		res = self._call(save_work_summary, tasks=[{"task": "   ", "work_description": "x"}])
+		frappe.set_user("Administrator")
+		self.assertFalse(res["success"])
+
+	def test_a_sent_summary_cannot_be_edited_from_the_app(self):
+		from field_sales.Api.auth import save_work_summary
+
+		self._send(self._summary())
+		frappe.set_user(EMP_USER)
+		res = self._call(save_work_summary, tasks=[{"task": "Sneaky", "work_description": "edit"}])
+		frappe.set_user("Administrator")
+		self.assertEqual(res["http_status_code"], 403)
+
+	def test_my_summaries_lists_the_caller_s_own(self):
+		from field_sales.Api.auth import get_my_work_summaries
+
+		doc = self._summary()
+		self._with_args({})
+		frappe.set_user(EMP_USER)
+		res = self._call(get_my_work_summaries)
+		frappe.set_user("Administrator")
+		self.assertIn(doc.name, [s["name"] for s in res["data"]["summaries"]])
+
+	def test_the_team_list_is_what_is_waiting_on_the_approver(self):
+		from field_sales.Api.auth import get_team_work_summaries
+
+		doc = self._send(self._summary())
+		frappe.set_user(self.hod)
+		res = self._call(get_team_work_summaries)
+		frappe.set_user("Administrator")
+		names = [s["name"] for s in res["data"]["summaries"]]
+		self.assertIn(doc.name, names)
+		self.assertEqual(res["data"]["summaries"][0]["tasks"][0]["task"], "Customer visit")
+
+	def test_the_team_list_is_empty_for_everybody_else(self):
+		from field_sales.Api.auth import get_team_work_summaries
+
+		self._send(self._summary())
+		frappe.set_user(OTHER_USER)
+		res = self._call(get_team_work_summaries)
+		frappe.set_user("Administrator")
+		self.assertEqual(res["data"]["summaries"], [])
+
+	def test_remarks_from_the_app_move_it_along(self):
+		from field_sales.Api.auth import work_summary_add_remarks
+
+		doc = self._send(self._summary())
+		frappe.set_user(self.hod)
+		res = self._call(work_summary_add_remarks, docname=doc.name, remarks="Seen")
+		frappe.set_user("Administrator")
+		self.assertEqual(res["data"]["status"], ws.STATUS_PARTIAL)
+		self.assertEqual(frappe.db.get_value("Daily Work Summary", doc.name, "hod_remarks"), "Seen")
+
+	def test_returning_from_the_app(self):
+		from field_sales.Api.auth import work_summary_return
+
+		doc = self._send(self._summary())
+		frappe.set_user(self.hod)
+		res = self._call(work_summary_return, docname=doc.name, reason="Add Kannur")
+		frappe.set_user("Administrator")
+		self.assertEqual(res["data"]["status"], ws.STATUS_RETURNED)
+
+	def test_an_outsider_is_refused_with_403(self):
+		from field_sales.Api.auth import work_summary_add_remarks, work_summary_return
+
+		doc = self._send(self._summary())
+		frappe.set_user(OTHER_USER)
+		self.assertEqual(self._call(work_summary_add_remarks, docname=doc.name, remarks="x")["http_status_code"], 403)
+		self.assertEqual(self._call(work_summary_return, docname=doc.name, reason="x")["http_status_code"], 403)
+		frappe.set_user("Administrator")
+
+	def test_access_tells_the_app_what_to_show(self):
+		from field_sales.Api.auth import work_summary_access
+
+		self._send(self._summary())
+		frappe.set_user(EMP_USER)
+		mine = self._call(work_summary_access)["data"]
+		frappe.set_user(self.hod)
+		theirs = self._call(work_summary_access)["data"]
+		frappe.set_user("Administrator")
+		self.assertTrue(mine["can_submit"])
+		self.assertFalse(mine["is_approver"])
+		self.assertTrue(theirs["is_approver"])
+		self.assertGreaterEqual(theirs["pending_count"], 1)

@@ -453,7 +453,10 @@ scheduler_events = {
 		# even a worker that somehow resumes sessions unpatched heals within the
 		# hour because the corrupt redis entry is swept away.
 		"0 * * * *": [
-			"chundakadan.overrides.session_healing.clean_corrupt_sessions"
+			"chundakadan.overrides.session_healing.clean_corrupt_sessions",
+			# fires only in the hour Chundakadan Settings names, so the
+			# reminder time stays configurable without a new cron entry
+			"chundakadan.chundakadan.api.work_summary.send_submission_reminders",
 		],
 		"0 */6 * * *": [
 			"chundakadan.chundakadan.doctype.crosschex_settings.crosschex_settings.check_and_refresh_token"

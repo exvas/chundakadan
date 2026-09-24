@@ -418,3 +418,118 @@ def has_permission(doc, ptype=None, user=None):
 	if can_act_now(doc, user):
 		return True
 	return any(row.approver == user for row in (doc.get("approval_flow") or []))
+
+
+# --------------------------------------------------------------------------
+# who has not sent today's summary
+# --------------------------------------------------------------------------
+
+
+def _setting(fieldname):
+	"""Read a Chundakadan Settings field without blowing up on a site where
+	field_sales has not migrated. Same guard as the Item approval feature."""
+	try:
+		meta = frappe.get_meta("Chundakadan Settings")
+	except Exception:
+		return None
+	if not meta.has_field(fieldname):
+		return None
+	return frappe.db.get_single_value("Chundakadan Settings", fieldname)
+
+
+def _is_holiday(employee: str, day) -> bool:
+	"""A day off is not a missing summary."""
+	from frappe.utils import getdate
+
+	holiday_list = frappe.db.get_value("Employee", employee, "holiday_list")
+	if not holiday_list:
+		company = frappe.db.get_value("Employee", employee, "company")
+		holiday_list = frappe.db.get_value("Company", company, "default_holiday_list")
+	if not holiday_list:
+		return False
+	return bool(
+		frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": getdate(day)})
+	)
+
+
+def _on_leave(employee: str, day) -> bool:
+	return bool(
+		frappe.db.exists(
+			"Leave Application",
+			{
+				"employee": employee,
+				"docstatus": 1,
+				"status": "Approved",
+				"from_date": ["<=", day],
+				"to_date": [">=", day],
+			},
+		)
+	)
+
+
+def not_submitted(day=None, department: str | None = None, company: str | None = None):
+	"""Active employees with no summary sent for `day`.
+
+	A draft nobody sent counts as not submitted -- the point is whether the
+	HOD received it. People on a holiday or on approved leave are left out.
+	"""
+	from frappe.utils import today
+
+	day = day or today()
+	filters = {"status": "Active"}
+	if department:
+		filters["department"] = department
+	if company:
+		filters["company"] = company
+	employees = frappe.get_all(
+		"Employee", filters=filters, fields=["name", "employee_name", "department", "user_id", "company"]
+	)
+	sent = set(
+		frappe.get_all(
+			"Daily Work Summary",
+			filters={
+				"work_date": day,
+				"docstatus": ["<", 2],
+				"custom_approval_status": ["not in", [STATUS_DRAFT, STATUS_RETURNED]],
+			},
+			pluck="employee",
+		)
+	)
+	missing = []
+	for employee in employees:
+		if employee.name in sent:
+			continue
+		if _is_holiday(employee.name, day) or _on_leave(employee.name, day):
+			continue
+		missing.append(employee)
+	return missing
+
+
+def send_submission_reminders():
+	"""Hourly cron. Pushes once, in the hour the configured time falls in,
+	to everyone who has not sent the day's summary."""
+	from frappe.utils import now_datetime, today
+
+	if not _setting("enable_work_summary_reminder"):
+		return
+	target = _setting("work_summary_reminder_time")
+	if not target:
+		return
+	hour = int(str(target).split(":")[0])
+	if now_datetime().hour != hour:
+		return
+
+	users = [e.user_id for e in not_submitted(today()) if e.user_id]
+	if not users:
+		return
+	try:
+		from chundakadan.utils import push
+
+		push.send_to_users(
+			users,
+			_("Daily work summary"),
+			_("Please send today's work summary."),
+			{"route": "/work_summary"},
+		)
+	except Exception:
+		frappe.log_error("chundakadan.work_summary.reminders", frappe.get_traceback())
