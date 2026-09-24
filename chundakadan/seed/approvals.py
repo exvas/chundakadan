@@ -48,6 +48,8 @@ CARDS = [
 	 [["Purchase Order", "workflow_state", "in", PO_STATES_FOR_MY_ROLE]], "#3B82F6"),
 	("Cheques To Collect", "Post Dated Cheque",
 	 [["Post Dated Cheque", "status", "=", "Pending"], ["Post Dated Cheque", "docstatus", "=", 1]], None, "#22C55E"),
+	("Items Awaiting Approval", "Item",
+	 [["Item", "custom_approval_status", "=", "Pending"]], None, "#14B8A6"),
 	("Follow-ups Due", "Customer Follow Up",
 	 [["Customer Follow Up", "status", "=", "Open"]],
 	 [["Customer Follow Up", "next_follow_up_date", "<=", TODAY_JS]], "#DC2626"),

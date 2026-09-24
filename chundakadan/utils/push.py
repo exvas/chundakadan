@@ -132,6 +132,7 @@ def _log_notification(user, title, body, data):
     doctype_map = {
         "/hr_policy": "HR Policy",
         "/newsletter": "Newsletter",
+        "/item_approvals": "Item",
     }
     doctype = doctype_map.get(route, "")
     try:

@@ -24,3 +24,4 @@ chundakadan.patches.apply_cdn_gm_full_access
 chundakadan.patches.allow_leave_chain_updates
 chundakadan.patches.sync_cdn_gm_modules
 chundakadan.patches.backfill_pdc_payment_links
+chundakadan.patches.mark_existing_items_approved
