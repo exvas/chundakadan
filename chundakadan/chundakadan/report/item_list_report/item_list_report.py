@@ -16,18 +16,31 @@ def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	if filters.from_date and filters.to_date and filters.from_date > filters.to_date:
 		frappe.throw(_("From Date cannot be after To Date"))
-	return get_columns(), get_data(filters)
+	return get_columns(filters), get_data(filters)
 
 
-def get_columns():
+def group_by_customer(filters):
+	"""Customer-wise rows unless the user asked for one row per item."""
+	return filters.get("group_by") != "Item"
+
+
+def get_columns(filters=None):
+	filters = frappe._dict(filters or {})
+	customer_columns = (
+		[
+			{"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 110},
+			{"label": _("Customer Name"), "fieldname": "customer_name", "fieldtype": "Data", "width": 240},
+		]
+		if group_by_customer(filters)
+		else []
+	)
 	return [
 		{"label": _("Item Code"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 110},
 		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 240},
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 110},
 		{"label": _("Item Group"), "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 140},
 		{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 70},
-		{"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 110},
-		{"label": _("Customer Name"), "fieldname": "customer_name", "fieldtype": "Data", "width": 240},
+		*customer_columns,
 		{"label": _("Qty Sold"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
 		{"label": _("Amount"), "fieldname": "amount", "fieldtype": "Currency", "width": 120},
 		{"label": _("Invoices"), "fieldname": "invoices", "fieldtype": "Int", "width": 80},
@@ -49,6 +62,10 @@ def get_data(filters):
 		conditions.append("item.item_group in (select name from `tabItem Group` where lft >= %(ig_lft)s and rgt <= %(ig_rgt)s)")
 		filters.ig_lft, filters.ig_rgt = lft, rgt
 
+	by_customer = group_by_customer(filters)
+	customer_select = "si.customer,\n\t\t\tsi.customer_name," if by_customer else ""
+	customer_group = ", si.customer" if by_customer else ""
+
 	return frappe.db.sql(
 		f"""
 		select
@@ -57,8 +74,7 @@ def get_data(filters):
 			item.brand,
 			item.item_group,
 			item.stock_uom as uom,
-			si.customer,
-			si.customer_name,
+			{customer_select}
 			sum(sii.stock_qty) as qty,
 			sum(sii.base_net_amount) as amount,
 			count(distinct si.name) as invoices,
@@ -67,7 +83,7 @@ def get_data(filters):
 		join `tabSales Invoice` si on si.name = sii.parent
 		join `tabItem` item on item.name = sii.item_code
 		where {" and ".join(conditions)}
-		group by sii.item_code, si.customer
+		group by sii.item_code{customer_group}
 		order by sii.item_code, qty desc
 		""",
 		filters,

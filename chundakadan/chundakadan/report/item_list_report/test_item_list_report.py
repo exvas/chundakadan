@@ -98,3 +98,68 @@ class TestItemListReport(FrappeTestCase):
 				frappe.set_user("Administrator")
 		frappe.db.rollback()
 
+
+
+class TestGroupByItem(TestItemListReport):
+	"""Group By = Item answers "how many invoices was this item billed on",
+	which is the number the users' old software called Count of Qty."""
+
+	def _item_run(self, **extra):
+		return self._run(group_by="Item", **extra)
+
+	def test_the_customer_columns_drop_out(self):
+		columns, _data = self._item_run()
+		names = [c["fieldname"] for c in columns]
+		self.assertNotIn("customer", names)
+		self.assertNotIn("customer_name", names)
+		for field in ("item_code", "item_name", "brand", "item_group", "uom", "qty", "amount", "invoices"):
+			self.assertIn(field, names)
+
+	def test_one_row_per_item(self):
+		_columns, data = self._item_run()
+		codes = [r.item_code for r in data]
+		self.assertEqual(len(codes), len(set(codes)))
+
+	def test_the_invoice_count_is_every_invoice_that_item_was_billed_on(self):
+		expected = frappe.db.sql(
+			"""select count(distinct si.name) n, sum(sii.stock_qty) qty
+			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
+			where si.docstatus = 1 and si.company = %s and si.posting_date = %s and sii.item_code = %s""",
+			(self.sample.company, self.sample.posting_date, self.sample.item_code),
+			as_dict=True,
+		)[0]
+		_columns, data = self._item_run(item_code=self.sample.item_code)
+		self.assertEqual(len(data), 1)
+		self.assertEqual(data[0].invoices, expected.n)
+		self.assertAlmostEqual(float(data[0].qty), float(expected.qty), places=3)
+
+	def test_it_is_the_customer_rows_added_up(self):
+		_columns, per_customer = self._run(item_code=self.sample.item_code)
+		_columns, per_item = self._item_run(item_code=self.sample.item_code)
+		self.assertAlmostEqual(
+			float(per_item[0].qty),
+			sum(float(r.qty) for r in per_customer),
+			places=3,
+		)
+		self.assertAlmostEqual(
+			float(per_item[0].amount),
+			sum(float(r.amount) for r in per_customer),
+			places=2,
+		)
+
+	def test_an_item_billed_to_two_customers_on_one_invoice_counts_once(self):
+		"""count(distinct invoice) — not a count of rows."""
+		_columns, data = self._item_run(item_code=self.sample.item_code)
+		lines = frappe.db.sql(
+			"""select count(*) from `tabSales Invoice Item` sii
+			join `tabSales Invoice` si on si.name = sii.parent
+			where si.docstatus = 1 and si.company = %s and si.posting_date = %s and sii.item_code = %s""",
+			(self.sample.company, self.sample.posting_date, self.sample.item_code),
+		)[0][0]
+		self.assertLessEqual(data[0].invoices, lines)
+
+	def test_the_default_still_groups_by_customer(self):
+		columns, _data = self._run()
+		self.assertIn("customer", [c["fieldname"] for c in columns])
+		columns, _data = self._run(group_by="Item and Customer")
+		self.assertIn("customer", [c["fieldname"] for c in columns])

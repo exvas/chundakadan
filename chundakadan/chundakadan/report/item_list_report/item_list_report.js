@@ -24,6 +24,10 @@ frappe.query_reports["Item List Report"] = {
 			default: frappe.datetime.get_today(),
 			reqd: 1,
 		},
+		{
+			fieldname: "group_by", label: __("Group By"), fieldtype: "Select",
+			options: ["Item and Customer", "Item"], default: "Item and Customer",
+		},
 		{ fieldname: "item_code", label: __("Item"), fieldtype: "Link", options: "Item" },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
 		{ fieldname: "brand", label: __("Brand"), fieldtype: "Link", options: "Brand" },
