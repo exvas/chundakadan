@@ -13,12 +13,19 @@ frappe.ui.form.on("Daily Work Summary", {
 		if (frm.doc.docstatus !== 0 || frm.is_new()) return;
 
 		const draft = ["Draft", "Returned"].includes(frm.doc.custom_approval_status);
-		if (draft && is_mine(frm)) {
-			frm.add_custom_button(__("Send for Remarks"), () => send(frm)).addClass("btn-primary");
-		}
 		if (!draft && waiting_on_me(frm)) {
-			frm.add_custom_button(__("Add Remarks & Forward"), () => remark(frm)).addClass("btn-primary");
 			frm.add_custom_button(__("Return for Correction"), () => send_back(frm));
+		}
+
+		// Submit is refused by the server — the GM closes this through the
+		// chain — so don't offer a button that cannot work. While there are
+		// unsaved changes Frappe's own Save must stay the primary action.
+		if (frm.is_dirty()) return;
+		frm.page.clear_primary_action();
+		if (draft && is_mine(frm)) {
+			frm.page.set_primary_action(__("Send for Remarks"), () => send(frm));
+		} else if (!draft && waiting_on_me(frm)) {
+			frm.page.set_primary_action(__("Add Remarks & Forward"), () => remark(frm));
 		}
 	},
 });
