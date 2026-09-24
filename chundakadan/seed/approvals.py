@@ -48,6 +48,10 @@ CARDS = [
 	 [["Purchase Order", "workflow_state", "in", PO_STATES_FOR_MY_ROLE]], "#3B82F6"),
 	("Cheques To Collect", "Post Dated Cheque",
 	 [["Post Dated Cheque", "status", "=", "Pending"], ["Post Dated Cheque", "docstatus", "=", 1]], None, "#22C55E"),
+	("Work Summaries Pending", "Daily Work Summary",
+	 [["Daily Work Summary", "custom_approval_status", "in", ["Pending", "Partially Approved"]],
+	  ["Daily Work Summary", "docstatus", "=", 0]],
+	 [["Daily Work Summary", "current_approver", "=", MINE]], "#6366F1"),
 	("Items Awaiting Approval", "Item",
 	 [["Item", "custom_approval_status", "=", "Pending"]], None, "#14B8A6"),
 	("Follow-ups Due", "Customer Follow Up",
@@ -138,6 +142,22 @@ WORKSPACE = {
    }
   },
   {
+   "id": "ap_nc8",
+   "type": "number_card",
+   "data": {
+    "number_card_name": "Work Summaries Pending",
+    "col": 3
+   }
+  },
+  {
+   "id": "ap_nc9",
+   "type": "number_card",
+   "data": {
+    "number_card_name": "Items Awaiting Approval",
+    "col": 3
+   }
+  },
+  {
    "id": "ap_hdr2",
    "type": "header",
    "data": {
@@ -170,7 +190,9 @@ WORKSPACE = {
   "Office Expense Vouchers Pending",
   "Purchase Orders Awaiting Approval",
   "Cheques To Collect",
-  "Follow-ups Due"
+  "Follow-ups Due",
+  "Work Summaries Pending",
+  "Items Awaiting Approval"
  ],
  "shortcuts": [],
  "links": [
@@ -179,7 +201,7 @@ WORKSPACE = {
    "label": "Approvals",
    "hidden": 0,
    "is_query_report": 0,
-   "link_count": 4,
+   "link_count": 5,
    "onboard": 0
   },
   {
@@ -207,6 +229,16 @@ WORKSPACE = {
    "link_type": "DocType",
    "link_to": "Employee Advance",
    "label": "Employee Advance",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Daily Work Summary",
+   "label": "Daily Work Summary",
    "hidden": 0,
    "is_query_report": 0,
    "link_count": 0,

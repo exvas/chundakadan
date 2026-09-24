@@ -29,7 +29,10 @@ class TestApprovalsWorkspace(FrappeTestCase):
 
 	def test_approval_cards_are_scoped_to_the_signed_in_user(self):
 		for label, doctype, _filters, dynamic, _colour in CARDS:
-			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order"):
+			# These cards are not "waiting on me" by user: a cheque or a
+			# follow-up belongs to nobody in particular, a PO is scoped by
+			# workflow role, and an Item is scoped by the approval role.
+			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order", "Item"):
 				continue
 			if not frappe.db.exists("DocType", doctype):
 				continue

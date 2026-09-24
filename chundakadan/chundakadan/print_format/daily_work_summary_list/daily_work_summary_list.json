@@ -1,0 +1,18 @@
+{
+ "creation": "2026-09-24 12:00:00",
+ "doc_type": "Daily Work Summary",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "disabled": 0,
+ "font_size": 12,
+ "html": "<div class=\"dws-print\">\n  <h2 style=\"text-align:center;margin:0 0 4px 0;\">Daily Work Summary List</h2>\n  <div style=\"text-align:center;font-size:12px;margin-bottom:10px;\">\n    {{ doc.employee_name }}{% if doc.department %} &mdash; {{ doc.department }}{% endif %}\n  </div>\n  <table class=\"table table-bordered\" style=\"width:100%;font-size:12px;\">\n    <thead>\n      <tr>\n        <th style=\"width:15%;text-align:center;\">DATE</th>\n        <th style=\"width:25%;text-align:center;\">TASK</th>\n        <th style=\"width:45%;text-align:center;\">WORK DESCRIPTION</th>\n        <th style=\"width:15%;text-align:center;\">REMARKS</th>\n      </tr>\n    </thead>\n    <tbody>\n      {% for row in doc.tasks %}\n      <tr>\n        <td>{% if loop.first %}{{ frappe.format(doc.work_date, {\"fieldtype\": \"Date\"}) }}{% endif %}</td>\n        <td>{{ row.task or \"\" }}</td>\n        <td>{{ row.work_description or \"\" }}</td>\n        <td>{% if loop.first %}{{ doc.hod_remarks or \"\" }}{% endif %}</td>\n      </tr>\n      {% endfor %}\n    </tbody>\n  </table>\n  <table style=\"width:100%;font-size:12px;margin-top:12px;\">\n    <tr>\n      <td style=\"width:50%;vertical-align:top;padding-right:10px;\">\n        <b>HOD Remarks</b><br>{{ doc.hod_remarks or \"&mdash;\" }}\n      </td>\n      <td style=\"width:50%;vertical-align:top;\">\n        <b>GM Remarks</b><br>{{ doc.gm_remarks or \"&mdash;\" }}\n      </td>\n    </tr>\n  </table>\n</div>",
+ "idx": 0,
+ "modified": "2026-09-24 12:00:00",
+ "module": "Chundakadan",
+ "name": "Daily Work Summary List",
+ "owner": "Administrator",
+ "print_format_builder": 0,
+ "print_format_type": "Jinja",
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

@@ -394,6 +394,7 @@ ignore_links_on_delete = [
 ]
 
 permission_query_conditions = {
+    "Daily Work Summary": "chundakadan.chundakadan.api.work_summary.get_permission_query_conditions",
     "Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",
     "Employee Advance": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_employee_advance",
@@ -402,6 +403,7 @@ permission_query_conditions = {
 }
 
 has_permission = {
+    "Daily Work Summary": "chundakadan.chundakadan.api.work_summary.has_permission",
     "Leave Application": "chundakadan.chundakadan.api.leave.has_permission",
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.has_permission",
     "Employee Advance": "chundakadan.chundakadan.api.expense_approval.has_permission",
