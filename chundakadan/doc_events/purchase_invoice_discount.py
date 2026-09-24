@@ -22,8 +22,11 @@ PROPERTIES = {
 	"price_list_rate": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "label": ("List Price", "Data")},
 	"discount_percentage": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Disc %", "Data")},
 	"discount_amount": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Disc Amnt", "Data")},
-	"rate": {"columns": (2, "Int")},
+	# one column, not two: Avail. Qty (purchase_invoice_available_qty) takes
+	# the other one and the grid is only ten wide
+	"rate": {"columns": (1, "Int")},
 	"amount": {"columns": (2, "Int")},
+	"custom_available_qty": {"in_list_view": (1, "Check"), "columns": (1, "Int")},
 }
 
 

@@ -345,3 +345,39 @@ function set_plain_list_price_label(frm) {
     const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
     if (grid) grid.update_docfield_property('price_list_rate', 'label', __('List Price'));
 }
+
+// "Avail. Qty" — what is already in the warehouse the goods are going into.
+// The server refreshes this on every draft save; this fills it the moment an
+// item or a warehouse is picked, so the column is right before saving too.
+const CHUNDAKADAN_AVAIL_QTY = "custom_available_qty";
+
+function chundakadan_fill_available_qty(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row) return;
+	const warehouse = row.warehouse || frm.doc.set_warehouse;
+	if (!row.item_code || !warehouse) {
+		frappe.model.set_value(cdt, cdn, CHUNDAKADAN_AVAIL_QTY, 0);
+		return;
+	}
+	frappe
+		.xcall(
+			"chundakadan.doc_events.purchase_invoice_available_qty.available_qty",
+			{ item_code: row.item_code, warehouse: warehouse }
+		)
+		.then((qty) => frappe.model.set_value(cdt, cdn, CHUNDAKADAN_AVAIL_QTY, qty || 0))
+		.catch(() => {});
+}
+
+frappe.ui.form.on("Purchase Invoice Item", {
+	item_code: chundakadan_fill_available_qty,
+	warehouse: chundakadan_fill_available_qty,
+});
+
+frappe.ui.form.on("Purchase Invoice", {
+	set_warehouse(frm) {
+		// the rows that follow the invoice's warehouse all move with it
+		(frm.doc.items || []).forEach((row) => {
+			if (!row.warehouse) chundakadan_fill_available_qty(frm, row.doctype, row.name);
+		});
+	},
+});

@@ -256,6 +256,8 @@ doc_events = {
             # rows the user already had: re-date them before ERPNext checks
             # the due date against the (possibly new) template
             "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
+            # what is already in the warehouse the goods are going into
+            "chundakadan.doc_events.purchase_invoice_available_qty.set_available_qty",
         ],
         # rows ERPNext has just built from the bill date: re-date them too
         "validate": "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
@@ -346,6 +348,7 @@ after_migrate = [
     "chundakadan.patches.hide_invoice_fields.execute",
     "chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
     "chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",
+    "chundakadan.doc_events.purchase_invoice_available_qty.ensure_purchase_invoice_available_qty",
     "chundakadan.seed.po_workflow.ensure_po_workflow",
     "chundakadan.seed.approvals.ensure_approvals_workspace",
     "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.ensure_payment_entry_field",
