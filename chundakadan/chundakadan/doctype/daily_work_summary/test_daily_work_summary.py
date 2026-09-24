@@ -657,3 +657,39 @@ class TestMobileEndpoints(WorkSummaryCase):
 		self.assertFalse(mine["is_approver"])
 		self.assertTrue(theirs["is_approver"])
 		self.assertGreaterEqual(theirs["pending_count"], 1)
+
+
+class TestPermissions(WorkSummaryCase):
+	"""Everybody writes their own summary, so every role on the doctype can
+	create one -- an approver is an employee too."""
+
+	def setUp(self):
+		super().setUp()
+		_import("daily_work_summary.json")
+
+	def test_every_role_on_the_doctype_can_create(self):
+		perms = frappe.get_all(
+			"DocPerm", filters={"parent": "Daily Work Summary"},
+			fields=["role", "create", "read", "write"],
+		)
+		self.assertTrue(perms)
+		for perm in perms:
+			self.assertEqual(perm.create, 1, perm.role)
+			self.assertEqual(perm.read, 1, perm.role)
+			self.assertEqual(perm.write, 1, perm.role)
+
+	def test_the_employee_role_is_among_them(self):
+		roles = {p.role for p in frappe.get_all(
+			"DocPerm", filters={"parent": "Daily Work Summary"}, fields=["role"]
+		)}
+		self.assertIn("Employee", roles)
+
+	def test_an_approver_can_create_their_own_summary(self):
+		approver_employee = frappe.db.get_value("Employee", {"user_id": self.hod}, "name")
+		if not approver_employee:
+			self.skipTest("the resolved HOD has no employee record")
+		frappe.set_user(self.hod)
+		try:
+			self.assertTrue(frappe.has_permission("Daily Work Summary", "create"))
+		finally:
+			frappe.set_user("Administrator")
