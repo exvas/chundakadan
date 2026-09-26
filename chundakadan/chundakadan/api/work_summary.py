@@ -25,6 +25,12 @@ from frappe.utils import now
 ROLE_GM = "GM Leave Approver"
 ADMIN_ROLES = ("Administrator", "System Manager")
 
+#: roles that see every summary, drafts included. The GM closes the chain
+#: and is answerable for the whole company, so a summary sitting unsent in
+#: somebody's drafts is exactly what they need to be able to see; HR
+#: administers the doctype.
+SEES_EVERYTHING = ("System Manager", ROLE_GM, "HR Manager")
+
 STATUS_DRAFT = "Draft"
 STATUS_PENDING = "Pending"
 STATUS_PARTIAL = "Partially Approved"
@@ -90,6 +96,15 @@ def _is_admin(user: str) -> bool:
 		return True
 	roles = frappe.get_roles(user)
 	return any(role in roles for role in ADMIN_ROLES)
+
+
+def sees_everything(user: str | None = None) -> bool:
+	"""The GM and HR see every summary, including drafts nobody has sent."""
+	user = user or frappe.session.user
+	if user == "Administrator":
+		return True
+	roles = frappe.get_roles(user)
+	return any(role in roles for role in SEES_EVERYTHING)
 
 
 def employee_user(doc) -> str | None:
@@ -388,7 +403,7 @@ def _notify(user, title, body, docname):
 def get_permission_query_conditions(user=None):
 	"""An employee sees their own; an approver sees what is or was theirs."""
 	user = user or frappe.session.user
-	if _is_admin(user):
+	if sees_everything(user):
 		return ""
 	safe = frappe.db.escape(user)
 	clauses = [
@@ -411,7 +426,7 @@ def get_permission_query_conditions(user=None):
 
 def has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
-	if _is_admin(user):
+	if sees_everything(user):
 		return True
 	if is_owner(doc, user):
 		return True

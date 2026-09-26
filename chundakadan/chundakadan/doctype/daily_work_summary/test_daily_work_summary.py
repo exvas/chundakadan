@@ -349,6 +349,63 @@ class TestVisibility(WorkSummaryCase):
 		self.assertFalse(ws.has_permission(doc, user=OTHER_USER))
 
 
+class TestWhoSeesEverything(WorkSummaryCase):
+	"""The GM closes every chain, so a draft nobody sent is still theirs to
+	see -- but seeing is not acting."""
+
+	def _visible_to(self, user):
+		frappe.set_user(user)
+		try:
+			condition = ws.get_permission_query_conditions()
+			if not condition:
+				return frappe.get_all("Daily Work Summary", pluck="name", ignore_permissions=True)
+			return frappe.db.sql(
+				f"select name from `tabDaily Work Summary` where {condition}", pluck=True
+			)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_the_gm_sees_a_draft_that_was_never_sent(self):
+		draft = self._summary()
+		self.assertEqual(draft.custom_approval_status, ws.STATUS_DRAFT)
+		self.assertEqual(draft.approval_flow, [])
+		self.assertIn(draft.name, self._visible_to(self.gm))
+		self.assertTrue(ws.has_permission(draft, user=self.gm))
+
+	def test_the_hod_does_not_see_a_draft_that_was_never_sent(self):
+		draft = self._summary()
+		self.assertNotIn(draft.name, self._visible_to(self.hod))
+
+	def test_the_hod_sees_it_once_it_is_sent(self):
+		sent = self._send(self._summary())
+		self.assertIn(sent.name, self._visible_to(self.hod))
+
+	def test_an_unrelated_employee_still_sees_nothing(self):
+		draft = self._summary()
+		self.assertNotIn(draft.name, self._visible_to(OTHER_USER))
+		self.assertFalse(ws.has_permission(draft, user=OTHER_USER))
+
+	def test_seeing_everything_is_not_acting_on_everything(self):
+		"""The GM may open a summary sitting with the HOD, but not sign it."""
+		sent = self._send(self._summary())
+		self.assertIn(sent.name, self._visible_to(self.gm))
+		self.assertTrue(ws.sees_everything(self.gm))
+		self.assertFalse(ws.can_act_now(sent, self.gm))
+		frappe.set_user(self.gm)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				ws.add_remarks(sent.name, "signing out of turn")
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_the_gm_still_only_gets_their_own_step_in_waiting_on_me(self):
+		sent = self._send(self._summary())
+		frappe.set_user(self.gm)
+		waiting = [r["name"] for r in ws.waiting_on_me()]
+		frappe.set_user("Administrator")
+		self.assertNotIn(sent.name, waiting, "it is still with the HOD")
+
+
 class TestHodResolution(WorkSummaryCase):
 	def test_sales_goes_to_the_sales_hod(self):
 		self.assertEqual(ws.hod_role_for_department("Sales& Marketing - CA"), HOD_ROLE)
