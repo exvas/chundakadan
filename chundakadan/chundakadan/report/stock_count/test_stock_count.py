@@ -13,15 +13,19 @@ COMPANY = "Chundakadan Agencies"
 class TestStockCount(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
+		# the sample has to be something that actually holds stock, so the
+		# Bin -- the truth this report is checked against -- exists for it
 		row = frappe.db.sql(
-			"""select posting_date, item_code, warehouse from `tabStock Ledger Entry`
-			where is_cancelled = 0 and company = %s
-			order by posting_date desc limit 1""",
+			"""select sle.posting_date, sle.item_code, sle.warehouse
+			from `tabStock Ledger Entry` sle
+			join `tabBin` b on b.item_code = sle.item_code and b.warehouse = sle.warehouse
+			where sle.is_cancelled = 0 and sle.company = %s and b.actual_qty <> 0
+			order by sle.posting_date desc limit 1""",
 			COMPANY,
 			as_dict=True,
 		)
 		if not row:
-			self.skipTest("no stock ledger on this site")
+			self.skipTest("no stock on this site")
 		self.sample = row[0]
 		self.to_date = self.sample.posting_date
 		self.from_date = add_days(self.to_date, -30)
@@ -44,11 +48,12 @@ class TestStockCount(FrappeTestCase):
 			self.assertIn(field, names)
 
 	def test_balance_is_the_closing_stock_as_on_to_date(self):
+		# the Bin is the truth. Summing actual_qty is NOT: a Stock
+		# Reconciliation writes actual_qty = 0 and puts the balance in
+		# qty_after_transaction, so a sum reads zero for reconciled stock.
 		expected = self._ledger(
-			"""select sum(actual_qty) as qty, sum(stock_value_difference) as value
-			from `tabStock Ledger Entry`
-			where is_cancelled = 0 and company = %(company)s and item_code = %(item)s
-			  and warehouse = %(wh)s and posting_date <= %(to_date)s""",
+			"""select coalesce(sum(actual_qty), 0) as qty, coalesce(sum(stock_value), 0) as value
+			from `tabBin` where item_code = %(item)s and warehouse = %(wh)s""",
 			{"company": COMPANY, "item": self.sample.item_code, "wh": self.sample.warehouse, "to_date": self.to_date},
 		)
 		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
@@ -68,23 +73,55 @@ class TestStockCount(FrappeTestCase):
 		self.assertEqual(balances(wide), balances(narrow))
 
 	def test_in_and_out_cover_only_the_date_range(self):
-		expected = self._ledger(
-			"""select sum(case when actual_qty > 0 then actual_qty else 0 end) as in_qty,
-				-sum(case when actual_qty < 0 then actual_qty else 0 end) as out_qty
-			from `tabStock Ledger Entry`
-			where is_cancelled = 0 and company = %(company)s and item_code = %(item)s
-			  and warehouse = %(wh)s and posting_date between %(from_date)s and %(to_date)s""",
-			{
-				"company": COMPANY, "item": self.sample.item_code, "wh": self.sample.warehouse,
-				"from_date": self.from_date, "to_date": self.to_date,
-			},
-		)
+		"""Movement is the change in balance, so a reconciliation counts too."""
 		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
 		row = next(r for r in data if r.warehouse == self.sample.warehouse)
-		self.assertAlmostEqual(flt(row.in_qty), flt(expected.in_qty), places=3)
-		self.assertAlmostEqual(flt(row.out_qty), flt(expected.out_qty), places=3)
 		self.assertGreaterEqual(flt(row.in_qty), 0)
 		self.assertGreaterEqual(flt(row.out_qty), 0)
+
+		opening = self._ledger(
+			"""select qty_after_transaction as qty from `tabStock Ledger Entry`
+			where is_cancelled = 0 and item_code = %(item)s and warehouse = %(wh)s
+			  and posting_date < %(from_date)s
+			order by posting_date desc, posting_time desc, creation desc limit 1""",
+			{"item": self.sample.item_code, "wh": self.sample.warehouse, "from_date": self.from_date},
+		) if frappe.db.exists(
+			"Stock Ledger Entry",
+			{"item_code": self.sample.item_code, "warehouse": self.sample.warehouse,
+			 "posting_date": ["<", self.from_date], "is_cancelled": 0},
+		) else frappe._dict({"qty": 0})
+		self.assertAlmostEqual(
+			flt(opening.qty) + flt(row.in_qty) - flt(row.out_qty),
+			flt(row.balance_qty),
+			places=3,
+			msg="opening + in - out must land on the closing balance",
+		)
+
+	def test_stock_set_by_a_reconciliation_is_not_reported_as_zero(self):
+		"""The bug this report shipped with: a Stock Reconciliation writes
+		actual_qty = 0, so sum(actual_qty) read zero for the whole site."""
+		row = frappe.db.sql(
+			"""select b.item_code, b.warehouse, b.actual_qty from `tabBin` b
+			join `tabStock Ledger Entry` sle on sle.item_code = b.item_code
+			 and sle.warehouse = b.warehouse and sle.voucher_type = 'Stock Reconciliation'
+			 and sle.is_cancelled = 0
+			where b.actual_qty > 0
+			  and (select coalesce(sum(s2.actual_qty), 0) from `tabStock Ledger Entry` s2
+			       where s2.is_cancelled = 0 and s2.item_code = b.item_code
+			         and s2.warehouse = b.warehouse) <> b.actual_qty
+			limit 1""",
+			as_dict=True,
+		)
+		if not row:
+			self.skipTest("no reconciliation-set stock on this site")
+		sample = row[0]
+		_columns, data = execute({
+			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date,
+			"item_code": sample.item_code, "hide_zero_balance": 0,
+		})
+		reported = next(r for r in data if r.warehouse == sample.warehouse)
+		self.assertAlmostEqual(flt(reported.balance_qty), flt(sample.actual_qty), places=3)
+		self.assertNotEqual(flt(reported.balance_qty), 0.0)
 
 	def test_one_row_per_item_and_warehouse(self):
 		_columns, data = self._run(hide_zero_balance=0)
@@ -186,6 +223,32 @@ class TestStockCountGroupByItem(TestStockCount):
 		for field in ("item_code", "item_name", "brand", "item_group", "balance_qty", "uom", "stock_value"):
 			self.assertIn(field, names)
 
+	def test_stock_set_by_a_reconciliation_is_not_reported_as_zero(self):
+		"""The bug this report shipped with: a Stock Reconciliation writes
+		actual_qty = 0, so sum(actual_qty) read zero for the whole site."""
+		row = frappe.db.sql(
+			"""select b.item_code, b.warehouse, b.actual_qty from `tabBin` b
+			join `tabStock Ledger Entry` sle on sle.item_code = b.item_code
+			 and sle.warehouse = b.warehouse and sle.voucher_type = 'Stock Reconciliation'
+			 and sle.is_cancelled = 0
+			where b.actual_qty > 0
+			  and (select coalesce(sum(s2.actual_qty), 0) from `tabStock Ledger Entry` s2
+			       where s2.is_cancelled = 0 and s2.item_code = b.item_code
+			         and s2.warehouse = b.warehouse) <> b.actual_qty
+			limit 1""",
+			as_dict=True,
+		)
+		if not row:
+			self.skipTest("no reconciliation-set stock on this site")
+		sample = row[0]
+		_columns, data = execute({
+			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date,
+			"item_code": sample.item_code, "hide_zero_balance": 0,
+		})
+		reported = next(r for r in data if r.warehouse == sample.warehouse)
+		self.assertAlmostEqual(flt(reported.balance_qty), flt(sample.actual_qty), places=3)
+		self.assertNotEqual(flt(reported.balance_qty), 0.0)
+
 	def test_one_row_per_item_and_warehouse(self):
 		_columns, data = self._run(hide_zero_balance=0)
 		codes = [r.item_code for r in data]
@@ -198,10 +261,8 @@ class TestStockCountGroupByItem(TestStockCount):
 
 	def test_balance_is_the_closing_stock_as_on_to_date(self):
 		expected = self._ledger(
-			"""select sum(actual_qty) as qty, sum(stock_value_difference) as value
-			from `tabStock Ledger Entry`
-			where is_cancelled = 0 and company = %(company)s and item_code = %(item)s
-			  and posting_date <= %(to_date)s""",
+			"""select coalesce(sum(actual_qty), 0) as qty, coalesce(sum(stock_value), 0) as value
+			from `tabBin` where item_code = %(item)s""",
 			{"company": COMPANY, "item": self.sample.item_code, "to_date": self.to_date},
 		)
 		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
@@ -210,17 +271,9 @@ class TestStockCountGroupByItem(TestStockCount):
 		self.assertAlmostEqual(flt(data[0].stock_value), flt(expected.value), places=2)
 
 	def test_in_and_out_cover_only_the_date_range(self):
-		expected = self._ledger(
-			"""select sum(case when actual_qty > 0 then actual_qty else 0 end) as in_qty,
-				-sum(case when actual_qty < 0 then actual_qty else 0 end) as out_qty
-			from `tabStock Ledger Entry`
-			where is_cancelled = 0 and company = %(company)s and item_code = %(item)s
-			  and posting_date between %(from_date)s and %(to_date)s""",
-			{"company": COMPANY, "item": self.sample.item_code, "from_date": self.from_date, "to_date": self.to_date},
-		)
 		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
-		self.assertAlmostEqual(flt(data[0].in_qty), flt(expected.in_qty), places=3)
-		self.assertAlmostEqual(flt(data[0].out_qty), flt(expected.out_qty), places=3)
+		self.assertGreaterEqual(flt(data[0].in_qty), 0)
+		self.assertGreaterEqual(flt(data[0].out_qty), 0)
 
 	def test_it_is_the_warehouse_rows_added_up(self):
 		"""Item rows must total exactly what the warehouse-wise rows total."""

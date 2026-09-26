@@ -6,6 +6,14 @@ Stock Ledger, so it matches Stock Balance. In Qty and Out Qty show what
 moved between the From Date and the To Date, which is what the date range
 is for -- the balance itself is always "as on To Date".
 
+Everything here works off `qty_after_transaction`, never `sum(actual_qty)`.
+A Stock Reconciliation writes **actual_qty = 0** and puts the new balance in
+`qty_after_transaction`, so summing actual_qty reports zero for any stock
+that was set by a reconciliation -- which on a site opened by reconciliation
+is nearly every item. The per-row movement is therefore the difference from
+the previous row, which is also how ERPNext's own Stock Balance report
+handles it.
+
 Group By decides the shape: "Item and Warehouse" gives a row per item per
 warehouse, "Item" collapses the warehouses into one row per item. Rows that
 never moved and hold nothing are left out.
@@ -69,29 +77,47 @@ def get_data(filters):
 		conditions.append("item.item_group = %(item_group)s")
 
 	by_warehouse = group_by_warehouse(filters)
-	warehouse_select = "sle.warehouse," if by_warehouse else ""
-	warehouse_group = ", sle.warehouse" if by_warehouse else ""
+	warehouse_select = "ledger.warehouse," if by_warehouse else ""
+	warehouse_group = ", ledger.warehouse" if by_warehouse else ""
 
 	rows = frappe.db.sql(
 		f"""
+		with ledger as (
+			select
+				sle.item_code,
+				sle.warehouse,
+				sle.posting_date,
+				sle.qty_after_transaction,
+				sle.stock_value,
+				sle.qty_after_transaction - coalesce(lag(sle.qty_after_transaction) over (
+					partition by sle.item_code, sle.warehouse
+					order by sle.posting_date, sle.posting_time, sle.creation
+				), 0) as delta,
+				row_number() over (
+					partition by sle.item_code, sle.warehouse
+					order by sle.posting_date desc, sle.posting_time desc, sle.creation desc
+				) as newest
+			from `tabStock Ledger Entry` sle
+			join `tabItem` item on item.name = sle.item_code
+			where {" and ".join(conditions)}
+		)
 		select
-			sle.item_code,
+			ledger.item_code,
 			item.item_name,
 			item.brand,
 			item.item_group,
 			{warehouse_select}
-			sum(sle.actual_qty) as balance_qty,
+			sum(case when ledger.newest = 1 then ledger.qty_after_transaction else 0 end) as balance_qty,
 			item.stock_uom as uom,
-			sum(sle.stock_value_difference) as stock_value,
-			sum(case when sle.posting_date >= %(from_date)s and sle.actual_qty > 0
-				then sle.actual_qty else 0 end) as in_qty,
-			-sum(case when sle.posting_date >= %(from_date)s and sle.actual_qty < 0
-				then sle.actual_qty else 0 end) as out_qty,
-			max(case when sle.posting_date >= %(from_date)s then sle.posting_date end) as last_movement
-		from `tabStock Ledger Entry` sle
-		join `tabItem` item on item.name = sle.item_code
-		where {" and ".join(conditions)}
-		group by sle.item_code{warehouse_group}
+			sum(case when ledger.newest = 1 then ledger.stock_value else 0 end) as stock_value,
+			sum(case when ledger.posting_date >= %(from_date)s and ledger.delta > 0
+				then ledger.delta else 0 end) as in_qty,
+			-sum(case when ledger.posting_date >= %(from_date)s and ledger.delta < 0
+				then ledger.delta else 0 end) as out_qty,
+			max(case when ledger.posting_date >= %(from_date)s then ledger.posting_date end) as last_movement
+		from ledger
+		join `tabItem` item on item.name = ledger.item_code
+		group by ledger.item_code{warehouse_group}
 		having balance_qty <> 0 or in_qty <> 0 or out_qty <> 0
 		order by item.item_name{warehouse_group}
 		""",
