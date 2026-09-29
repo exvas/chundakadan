@@ -109,23 +109,27 @@ def get_approver_by_role(role):
     return None
 
 
-def generate_approval_flow(doc, designation):
+def _chain_for_department(department):
+    """Fallback chain for a designation the table does not name.
+
+    Sales and marketing staff go through their HOD first; accounts, finance
+    and purchase staff through the Accounts Manager. Everyone else keeps the
+    plain HR -> GM chain, per the client's sheet.
     """
-    Generates the approval sequence based on the employee's designation,
-    populates the child table 'approval_flow', and sets the initial current approver.
+    name = (department or "").lower()
+    if "sales" in name or "marketing" in name:
+        return ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+    if "account" in name or "finance" in name or "procurement" in name or "purchase" in name:
+        return ["Accounts Manager Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+    return ["HR Leave Approver", "GM Leave Approver"]
 
-    Flow Logic (canonical per Razeel 2026-06-02 spec):
-    - General Manager       : HR  (1 step)
-    - HR Coord./Coord./Asst.: GM  (1 step)
-    - Area Sales Manager / Accounts Manager (HODs themselves): HR -> GM
-    - Sales Executive       : Sales HOD -> HR -> GM
-    - Accountant / Purchaser: Accounts Manager (HOD) -> HR -> GM
-    - Everyone else         : HR -> GM
 
-    "Sales HOD Leave Approver" covers BOTH Marketing HOD
-    (marketing@chundakadan.in) and Northern HOD
-    (chundakadannorthasm@gmail.com). Either can approve via the
-    widened _caller_can_act_on policy.
+def role_sequence_for(designation, department=None):
+    """Which roles must sign this person's leave, in order.
+
+    Split out of generate_approval_flow so the routing can be checked
+    without a database -- it is the part that goes wrong, and it went
+    unnoticed until a live application showed the wrong chain.
     """
     role_sequence = []
 
@@ -147,6 +151,11 @@ def generate_approval_flow(doc, designation):
         "Senior Brand Co-ordinator", "Brand Co-ordinator", "Senior Brand Manager",
         "Brand Manager", "Senior Dispatch Co-ordinator", "Dispatch Co-ordinator",
         "Marketing Specialist", "Product Manager",
+        # 2026-09-29: live staff held these and were falling through to the
+        # HR -> GM fallback, skipping their own HOD. Fathima Rasla K
+        # (Customer Relations Executive) is the one that surfaced it.
+        "Customer Relations Executive", "Sales Co-ordinator", "Sales Coordinator",
+        "Senior Area Sales Manager",
         # legacy / current spellings kept so existing staff don't break
         "Sales Executive", "BDE", "Dispatch Coordinator",
     )
@@ -154,7 +163,7 @@ def generate_approval_flow(doc, designation):
     ACCOUNTS_CHAIN = (
         "Senior Accountant", "Chief Accountant", "Accountant",
         "Senior Purchaser", "Purchaser", "Senior Billing Executive",
-        "Billing Executive",
+        "Billing Executive", "Billing Staff",
         # legacy
         "Purchase Coordinator",
     )
@@ -162,7 +171,17 @@ def generate_approval_flow(doc, designation):
     # (they ARE the HR approver) -> GM only  (table rows 18, 19)
     GM_ONLY = (
         "HR Associate", "Administration Co-ordinator", "Administration Coordinator",
-        "HR Coordinator", "Coordinator",
+        "HR Coordinator", "Coordinator", "HR Assistant",
+    )
+
+    # The HODs themselves. Their own leave must NOT enter the chain they sign,
+    # so these are matched before the department fallback below and land on
+    # HR -> GM. Without this list the fallback would send the Sales &
+    # Marketing Manager to himself for approval.
+    OWN_CHAIN_HODS = (
+        "Sales & Marketing Manager", "Deputy Sales & Marketing Manager",
+        "Sales and Marketing Manager", "Deputy Sales and Marketing Manager",
+        "Accounts Manager", "Chief Accountant",
     )
 
     if designation in SALES_CHAIN:
@@ -175,13 +194,46 @@ def generate_approval_flow(doc, designation):
     # ended at GM = self, which we avoid).
     elif designation == "General Manager":
         role_sequence = ["HR Leave Approver"]
-    # Everyone else -> HR -> GM. Covers the managers who are themselves approvers
-    # (Deputy Manager, Sales & Marketing Manager, Deputy Sales & Marketing
-    # Manager, Accounts Manager) plus all floor/ops/exec/other roles (rows 16-17,
-    # 21, 29-44, 47-50).
-    else:
+    # An HOD signs this chain, so their own leave skips it.
+    elif designation in OWN_CHAIN_HODS:
         role_sequence = ["HR Leave Approver", "GM Leave Approver"]
-        
+    else:
+        # DEPARTMENT SAFETY NET (2026-09-29). The designation table came from
+        # the client's 50-row sheet, so any title added later fell through to
+        # HR -> GM and quietly skipped the person's own HOD. The rule the
+        # client actually states is "everyone under Marketing goes to the SM
+        # or DM first", so fall back on the department rather than on HR.
+        #
+        # Floor, Dispatch, Housekeeping and Retail deliberately stay on
+        # HR -> GM, which is what the client's sheet says for those rows.
+        role_sequence = _chain_for_department(department)
+    return role_sequence
+
+
+def generate_approval_flow(doc, designation):
+    """
+    Generates the approval sequence based on the employee's designation,
+    populates the child table 'approval_flow', and sets the initial current approver.
+
+    Flow Logic (canonical per Razeel 2026-06-02 spec):
+    - General Manager       : HR  (1 step)
+    - HR Coord./Coord./Asst.: GM  (1 step)
+    - Area Sales Manager / Accounts Manager (HODs themselves): HR -> GM
+    - Sales Executive       : Sales HOD -> HR -> GM
+    - Accountant / Purchaser: Accounts Manager (HOD) -> HR -> GM
+    - Everyone else         : HR -> GM
+
+    "Sales HOD Leave Approver" covers BOTH Marketing HOD
+    (marketing@chundakadan.in) and Northern HOD
+    (chundakadannorthasm@gmail.com). Either can approve via the
+    widened _caller_can_act_on policy.
+    """
+    role_sequence = role_sequence_for(
+        designation,
+        doc.get("department")
+        or (frappe.db.get_value("Employee", doc.employee, "department") if doc.get("employee") else None),
+    )
+
     # TRANSACTIONAL: resolve ALL approvers BEFORE touching the doc's
     # approval_flow. Avoids the corruption pattern where clear-then-
     # throw left the leave with an empty chain (HR-LAP-2026-00194
