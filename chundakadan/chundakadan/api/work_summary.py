@@ -107,6 +107,34 @@ def sees_everything(user: str | None = None) -> bool:
 	return any(role in roles for role in SEES_EVERYTHING)
 
 
+def departments_for_role(role: str) -> list[str]:
+	"""Every department whose work summaries this HOD role oversees.
+
+	Built from the same matching `hod_role_for_department` uses, so a
+	department can never be routed to one HOD and shown to another.
+	"""
+	return [
+		d for d in frappe.get_all("Department", pluck="name")
+		if hod_role_for_department(d) == role
+	]
+
+
+def oversees_departments(user: str | None = None) -> list[str]:
+	"""Departments this user is the HOD of, by role.
+
+	The Sales HOD asked to follow the whole sales team's summaries, not only
+	the ones parked at their own step, so they see their departments outright
+	-- drafts included, the same as the GM.
+	"""
+	user = user or frappe.session.user
+	roles = frappe.get_roles(user)
+	departments = []
+	for role in ("Sales HOD Leave Approver", "Accounts Manager Leave Approver"):
+		if role in roles:
+			departments.extend(departments_for_role(role))
+	return sorted(set(departments))
+
+
 def employee_user(doc) -> str | None:
 	if not doc.get("employee"):
 		return None
@@ -350,6 +378,78 @@ def return_for_correction(docname: str, reason: str | None = None):
 
 
 @frappe.whitelist()
+def team_summaries(scope: str = "waiting", limit: int = 50):
+	"""What an HOD follows: their step's queue, or the whole team.
+
+	`scope="all"` is the sales manager's ask -- every summary from the
+	departments they head, drafts included, not only what is parked with
+	them right now.
+	"""
+	if scope != "all":
+		return waiting_on_me()
+	departments = oversees_departments()
+	if not departments and not sees_everything():
+		return []
+	filters = {"docstatus": ["<", 2]}
+	if departments and not sees_everything():
+		filters["department"] = ["in", departments]
+	return frappe.get_all(
+		"Daily Work Summary",
+		filters=filters,
+		fields=["name", "employee", "employee_name", "work_date", "department",
+		        "custom_approval_status", "current_approver", "current_approval_index"],
+		order_by="work_date desc, modified desc",
+		limit_page_length=int(limit or 50),
+		ignore_permissions=True,
+	)
+
+
+@frappe.whitelist()
+def add_comment(docname: str, comment: str | None = None):
+	"""Leave a note on a summary without touching the chain.
+
+	The HOD remark is part of the approval and belongs to that one step; a
+	manager following the team needs to say something on any summary, at any
+	time, without signing anything.
+	"""
+	doc = frappe.get_doc("Daily Work Summary", docname)
+	if not (sees_everything() or can_act_now(doc) or is_owner(doc)
+	        or (doc.department and doc.department in oversees_departments())):
+		raise frappe.PermissionError(_("You cannot comment on {0}").format(docname))
+	comment = (comment or "").strip()
+	if not comment:
+		frappe.throw(_("Write something before posting."))
+	entry = frappe.get_doc({
+		"doctype": "Comment",
+		"comment_type": "Comment",
+		"reference_doctype": "Daily Work Summary",
+		"reference_name": docname,
+		"content": comment,
+		"comment_email": frappe.session.user,
+		"comment_by": frappe.db.get_value("User", frappe.session.user, "full_name"),
+	})
+	entry.flags.ignore_permissions = True
+	entry.insert()
+	_notify(employee_user(doc), _("Comment on your work summary"), comment, docname)
+	return {"comment": entry.name}
+
+
+@frappe.whitelist()
+def comments(docname: str):
+	"""Notes left on a summary, oldest first."""
+	doc = frappe.get_doc("Daily Work Summary", docname)
+	if not has_permission(doc):
+		raise frappe.PermissionError(_("You cannot read {0}").format(docname))
+	return frappe.get_all(
+		"Comment",
+		filters={"reference_doctype": "Daily Work Summary", "reference_name": docname,
+		         "comment_type": "Comment"},
+		fields=["name", "comment_by", "comment_email", "content", "creation"],
+		order_by="creation asc",
+	)
+
+
+@frappe.whitelist()
 def waiting_on_me():
 	"""Summaries at this user's step — the desk card and the mobile team tab."""
 	user = frappe.session.user
@@ -421,6 +521,10 @@ def get_permission_query_conditions(user=None):
 			f"exists (select 1 from `tabChundakadan Approval Detail` af "
 			f"where af.parent = `tabDaily Work Summary`.name and af.approver_role in ({role_list}))"
 		)
+	departments = oversees_departments(user)
+	if departments:
+		dept_list = ", ".join(frappe.db.escape(d) for d in departments)
+		clauses.append(f"`tabDaily Work Summary`.department in ({dept_list})")
 	return "(" + " or ".join(clauses) + ")"
 
 
@@ -431,6 +535,8 @@ def has_permission(doc, ptype=None, user=None):
 	if is_owner(doc, user):
 		return True
 	if can_act_now(doc, user):
+		return True
+	if doc.get("department") and doc.get("department") in oversees_departments(user):
 		return True
 	return any(row.approver == user for row in (doc.get("approval_flow") or []))
 

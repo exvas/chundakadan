@@ -406,6 +406,120 @@ class TestWhoSeesEverything(WorkSummaryCase):
 		self.assertNotIn(sent.name, waiting, "it is still with the HOD")
 
 
+class TestTheHodFollowsTheirDepartment(WorkSummaryCase):
+	"""The sales manager asked to follow the whole team, not just the
+	summaries parked at his own step."""
+
+	def test_the_departments_a_role_covers_come_from_the_same_mapping(self):
+		sales = ws.departments_for_role(HOD_ROLE)
+		self.assertTrue(sales, "no department maps to the sales HOD")
+		for department in sales:
+			self.assertEqual(ws.hod_role_for_department(department), HOD_ROLE)
+
+	def test_the_sales_hod_oversees_the_sales_departments(self):
+		department = frappe.db.get_value("Employee", self.employee, "department")
+		expected_role = ws.hod_role_for_department(department)
+		holder = ws.user_for_role(expected_role)
+		self.assertIn(department, ws.oversees_departments(holder))
+
+	def test_an_ordinary_employee_oversees_nothing(self):
+		self.assertEqual(ws.oversees_departments(OTHER_USER), [])
+
+	def test_the_hod_sees_a_draft_from_their_own_department(self):
+		draft = self._summary()
+		department = frappe.db.get_value("Employee", self.employee, "department")
+		holder = ws.user_for_role(ws.hod_role_for_department(department))
+		frappe.set_user(holder)
+		try:
+			condition = ws.get_permission_query_conditions()
+			rows = frappe.db.sql(
+				f"select name from `tabDaily Work Summary` where {condition}", pluck=True
+			) if condition else []
+			self.assertIn(draft.name, rows)
+			self.assertTrue(ws.has_permission(draft))
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_scope_all_returns_the_whole_department(self):
+		draft = self._summary()
+		department = frappe.db.get_value("Employee", self.employee, "department")
+		holder = ws.user_for_role(ws.hod_role_for_department(department))
+		frappe.set_user(holder)
+		try:
+			names = [r["name"] for r in ws.team_summaries(scope="all")]
+			waiting = [r["name"] for r in ws.team_summaries()]
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIn(draft.name, names, "a draft belongs in the all-team view")
+		self.assertNotIn(draft.name, waiting, "but not in the queue at their step")
+
+	def test_scope_all_is_empty_for_somebody_who_heads_nothing(self):
+		self._summary()
+		frappe.set_user(OTHER_USER)
+		try:
+			self.assertEqual(ws.team_summaries(scope="all"), [])
+		finally:
+			frappe.set_user("Administrator")
+
+
+class TestComments(WorkSummaryCase):
+	def setUp(self):
+		super().setUp()
+		self.item = self._summary()
+		self.department = frappe.db.get_value("Employee", self.employee, "department")
+		self.head = ws.user_for_role(ws.hod_role_for_department(self.department))
+
+	def test_the_hod_can_leave_a_note_without_signing_anything(self):
+		frappe.set_user(self.head)
+		try:
+			ws.add_comment(self.item.name, "Add the Kannur visits tomorrow")
+			notes = ws.comments(self.item.name)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(len(notes), 1)
+		self.assertEqual(notes[0].content, "Add the Kannur visits tomorrow")
+		self.item.reload()
+		self.assertEqual(self.item.custom_approval_status, ws.STATUS_DRAFT)
+		self.assertIsNone(self.item.hod_remarks, "a comment is not a remark")
+
+	def test_the_employee_can_reply_on_their_own(self):
+		frappe.set_user(EMP_USER)
+		try:
+			ws.add_comment(self.item.name, "Will do")
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(len(ws.comments(self.item.name)), 1)
+
+	def test_an_empty_note_is_refused(self):
+		frappe.set_user(self.head)
+		try:
+			for blank in ("", "   ", None):
+				with self.assertRaises(frappe.ValidationError):
+					ws.add_comment(self.item.name, blank)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_somebody_outside_the_department_cannot_comment(self):
+		frappe.set_user(OTHER_USER)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				ws.add_comment(self.item.name, "not mine")
+			with self.assertRaises(frappe.PermissionError):
+				ws.comments(self.item.name)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_notes_come_back_oldest_first(self):
+		frappe.set_user(self.head)
+		try:
+			ws.add_comment(self.item.name, "first")
+			ws.add_comment(self.item.name, "second")
+			notes = ws.comments(self.item.name)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual([n.content for n in notes], ["first", "second"])
+
+
 class TestHodResolution(WorkSummaryCase):
 	def test_sales_goes_to_the_sales_hod(self):
 		self.assertEqual(ws.hod_role_for_department("Sales& Marketing - CA"), HOD_ROLE)
