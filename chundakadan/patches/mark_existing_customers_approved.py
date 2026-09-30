@@ -1,27 +1,26 @@
 # Copyright (c) 2026, Chundakadan and contributors
-"""Every Item that already exists counts as approved.
+"""Every Customer that already exists counts as approved.
 
-Item Approval only judges what is created after it is switched on. Without
-this, the day the switch is ticked every item on the site would read
-"Pending" and the approver would face a list of thousands.
+Customer Approval only judges what is created after it is switched on.
+Without this, the day the switch is ticked all 2,183 customers would read
+"Pending" and the approver would face an impossible list.
 
-Only the status is written. `disabled` is left exactly as it is, so items
-somebody disabled on purpose stay disabled.
+Only the status is written. `disabled` is left exactly as it is.
 """
 
 import frappe
 
-from chundakadan.doc_events.item_approval import ensure_item_approval_fields
+from chundakadan.doc_events.customer_approval import ensure_customer_approval_fields
 
 
 def execute():
-	ensure_item_approval_fields()
-	if not _column_exists("Item"):
+	ensure_customer_approval_fields()
+	if not _column_exists("Customer"):
 		# has_column() answers from a cached column list, which is stale right
 		# after the custom field is created -- ask the database itself
 		return
 	frappe.db.sql(
-		"""update `tabItem`
+		"""update `tabCustomer`
 		set custom_approval_status = 'Approved'
 		where custom_approval_status is null or custom_approval_status = ''"""
 	)

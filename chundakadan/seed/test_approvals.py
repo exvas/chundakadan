@@ -32,7 +32,7 @@ class TestApprovalsWorkspace(FrappeTestCase):
 			# These cards are not "waiting on me" by user: a cheque or a
 			# follow-up belongs to nobody in particular, a PO is scoped by
 			# workflow role, and an Item is scoped by the approval role.
-			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order", "Item"):
+			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order", "Item", "Customer"):
 				continue
 			if not frappe.db.exists("DocType", doctype):
 				continue

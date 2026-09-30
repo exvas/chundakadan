@@ -47,6 +47,7 @@ doctype_js = {
     "Sales Order" : "public/js/sales_order.js",
     "Payment Entry" : "public/js/payment_entry.js",
     "Item" : ["public/js/item.js", "public/js/item_approval.js"],
+    "Customer" : "public/js/customer_approval.js",
     "Address": "public/js/address.js",
     "Sales Invoice" : "public/js/sales_invoice.js",
     "Delivery Note" : "public/js/delivery_note.js",
@@ -72,6 +73,7 @@ doctype_js = {
 }
 doctype_list_js = {
     "Item": "public/js/item_list.js",
+    "Customer": "public/js/customer_list.js",
     "Leave Application" : "public/js/leave_application_list.js",
     "Employee Checkin" : "public/js/employee_checkin_list.js",
     "Office Expense Voucher": "public/js/office_expense_voucher_list.js",
@@ -236,7 +238,14 @@ doc_events = {
         "after_insert": "chundakadan.doc_events.item_approval.notify_approvers",
     },
     "Customer": {
-        "before_insert": "chundakadan.doc_events.tax_defaults.apply_customer_defaults",
+        "before_insert": [
+            "chundakadan.doc_events.tax_defaults.apply_customer_defaults",
+            # a new Customer is held Pending + disabled until the approval
+            # role clears it (off until Chundakadan Settings switches it on)
+            "chundakadan.doc_events.customer_approval.hold_new_customer",
+        ],
+        "validate": "chundakadan.doc_events.customer_approval.guard_approval_fields",
+        "after_insert": "chundakadan.doc_events.customer_approval.notify_approvers",
     },
     # Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
     # when blank (the Sales Invoice equivalent lives in the single merged
@@ -345,6 +354,7 @@ after_migrate = [
     "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
     "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
     "chundakadan.doc_events.item_approval.ensure_item_approval_fields",
+    "chundakadan.doc_events.customer_approval.ensure_customer_approval_fields",
     "chundakadan.patches.hide_invoice_fields.execute",
     "chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
     "chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",

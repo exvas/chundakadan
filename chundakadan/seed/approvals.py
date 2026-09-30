@@ -54,6 +54,8 @@ CARDS = [
 	 [["Daily Work Summary", "current_approver", "=", MINE]], "#6366F1"),
 	("Items Awaiting Approval", "Item",
 	 [["Item", "custom_approval_status", "=", "Pending"]], None, "#14B8A6"),
+	("Customers Awaiting Approval", "Customer",
+	 [["Customer", "custom_approval_status", "=", "Pending"]], None, "#A855F7"),
 	("Follow-ups Due", "Customer Follow Up",
 	 [["Customer Follow Up", "status", "=", "Open"]],
 	 [["Customer Follow Up", "next_follow_up_date", "<=", TODAY_JS]], "#DC2626"),
@@ -158,6 +160,14 @@ WORKSPACE = {
    }
   },
   {
+   "id": "ap_nc10",
+   "type": "number_card",
+   "data": {
+    "number_card_name": "Customers Awaiting Approval",
+    "col": 3
+   }
+  },
+  {
    "id": "ap_hdr2",
    "type": "header",
    "data": {
@@ -192,7 +202,8 @@ WORKSPACE = {
   "Cheques To Collect",
   "Follow-ups Due",
   "Work Summaries Pending",
-  "Items Awaiting Approval"
+  "Items Awaiting Approval",
+  "Customers Awaiting Approval"
  ],
  "shortcuts": [],
  "links": [
