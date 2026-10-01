@@ -37,8 +37,12 @@ STATUS_PARTIAL = "Partially Approved"
 STATUS_APPROVED = "Approved"
 STATUS_RETURNED = "Returned"
 
-#: which remark field belongs to which step of the chain
-REMARK_FIELD = {0: "hod_remarks", 1: "gm_remarks"}
+#: which remark field belongs to which step of the chain.
+#: 2026-10-01: the chain is the GM alone. The HOD step was dropped on the
+#: user's instruction -- the HOD still follows their department and can
+#: comment, but nothing waits on them. `hod_remarks` is retired: the ones
+#: already written stay readable, nobody can write a new one.
+REMARK_FIELD = {0: "gm_remarks"}
 FINAL_STATES = (STATUS_APPROVED,)
 
 
@@ -81,9 +85,14 @@ def user_for_role(role: str) -> str | None:
 
 
 def chain_roles(doc) -> list[str]:
-	"""HOD first, then the GM who closes it."""
-	hod = hod_role_for_department(doc.get("department"))
-	return [hod] if hod == ROLE_GM else [hod, ROLE_GM]
+	"""The GM alone.
+
+	Until 2026-10-01 this was HOD then GM. The user asked for GM approval
+	only: a summary should not sit waiting on a department head. The HOD
+	keeps the visibility and the comments (`oversees_departments`,
+	`add_comment`) -- they follow the team without blocking it.
+	"""
+	return [ROLE_GM]
 
 
 # --------------------------------------------------------------------------

@@ -25,7 +25,7 @@ frappe.ui.form.on("Daily Work Summary", {
 		if (draft && is_mine(frm)) {
 			frm.page.set_primary_action(__("Send for Remarks"), () => send(frm));
 		} else if (!draft && waiting_on_me(frm)) {
-			frm.page.set_primary_action(__("Add Remarks & Forward"), () => remark(frm));
+			frm.page.set_primary_action(__("Add Remarks & Close"), () => remark(frm));
 		}
 	},
 });
@@ -64,7 +64,7 @@ function send(frm) {
 }
 
 function remark(frm) {
-	const label = (frm.doc.current_approval_index || 0) === 0 ? __("HOD Remarks") : __("GM Remarks");
+	const label = __("GM Remarks");
 	frappe.prompt(
 		[{ fieldname: "remarks", label: label, fieldtype: "Small Text", reqd: 1 }],
 		(values) => {

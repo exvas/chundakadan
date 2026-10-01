@@ -136,7 +136,9 @@
    "fieldtype": "Small Text",
    "label": "HOD Remarks",
    "no_copy": 1,
-   "description": "Written by the head of the department."
+   "description": "Retired 2026-10-01 \u2014 the chain is the GM alone. Older summaries keep what their HOD wrote.",
+   "read_only": 1,
+   "depends_on": "hod_remarks"
   },
   {
    "fieldname": "column_break_remarks",

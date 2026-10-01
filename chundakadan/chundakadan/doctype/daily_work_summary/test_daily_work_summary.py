@@ -120,52 +120,49 @@ class TestTheChain(WorkSummaryCase):
 		self.assertFalse(doc.current_approver)
 		self.assertEqual(doc.department, frappe.db.get_value("Employee", self.employee, "department"))
 
-	def test_sending_puts_it_in_front_of_the_hod(self):
+	def test_sending_puts_it_in_front_of_the_gm(self):
+		"""2026-10-01: the chain is the GM alone -- no HOD step."""
 		doc = self._send(self._summary())
 		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
-		self.assertEqual(doc.current_approver, self.hod)
-		self.assertEqual([r.approver_role for r in doc.approval_flow], [HOD_ROLE, GM_ROLE])
-
-	def test_the_hod_remark_passes_it_to_the_gm(self):
-		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
-		result = ws.add_remarks(doc.name, "Good coverage, push the Calicut orders")
-		frappe.set_user("Administrator")
-		doc.reload()
-		self.assertEqual(result["status"], ws.STATUS_PARTIAL)
-		self.assertEqual(doc.hod_remarks, "Good coverage, push the Calicut orders")
 		self.assertEqual(doc.current_approver, self.gm)
-		self.assertEqual(doc.docstatus, 0)
+		self.assertEqual([r.approver_role for r in doc.approval_flow], [GM_ROLE])
+
+	def test_the_hod_is_no_longer_in_the_chain(self):
+		doc = self._send(self._summary())
+		self.assertNotIn(HOD_ROLE, [r.approver_role for r in doc.approval_flow])
+		frappe.set_user(self.hod)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				ws.add_remarks(doc.name, "not my step any more")
+		finally:
+			frappe.set_user("Administrator")
 
 	def test_the_gm_remark_closes_and_submits_it(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
-		ws.add_remarks(doc.name, "HOD ok")
 		frappe.set_user(self.gm)
 		ws.add_remarks(doc.name, "Noted")
 		frappe.set_user("Administrator")
 		doc.reload()
 		self.assertEqual(doc.custom_approval_status, ws.STATUS_APPROVED)
 		self.assertEqual(doc.gm_remarks, "Noted")
-		self.assertEqual(doc.hod_remarks, "HOD ok")
 		self.assertIsNone(doc.current_approver)
 		self.assertEqual(doc.docstatus, 1)
 
-	def test_each_step_is_stamped_in_the_flow(self):
+	def test_the_step_is_stamped_in_the_flow(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
-		ws.add_remarks(doc.name, "HOD ok")
+		frappe.set_user(self.gm)
+		ws.add_remarks(doc.name, "GM ok")
 		frappe.set_user("Administrator")
 		doc.reload()
 		row = doc.approval_flow[0]
 		self.assertEqual(row.status, "Approved")
-		self.assertEqual(row.approver, self.hod)
-		self.assertEqual(row.remarks, "HOD ok")
+		self.assertEqual(row.approver, self.gm)
+		self.assertEqual(row.remarks, "GM ok")
 		self.assertTrue(row.approved_on)
 
 	def test_a_remark_is_required_to_move_it_on(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		for blank in ("", "   ", None):
 			with self.assertRaises(frappe.ValidationError):
 				ws.add_remarks(doc.name, blank)
@@ -175,8 +172,6 @@ class TestTheChain(WorkSummaryCase):
 
 	def test_a_closed_summary_cannot_be_moved_again(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
-		ws.add_remarks(doc.name, "ok")
 		frappe.set_user(self.gm)
 		ws.add_remarks(doc.name, "closed")
 		with self.assertRaises(frappe.ValidationError):
@@ -185,9 +180,9 @@ class TestTheChain(WorkSummaryCase):
 
 
 class TestReturnForCorrection(WorkSummaryCase):
-	def test_the_hod_can_hand_it_back(self):
+	def test_the_gm_can_hand_it_back(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		ws.return_for_correction(doc.name, "Add the Kannur visits")
 		frappe.set_user("Administrator")
 		doc.reload()
@@ -198,19 +193,19 @@ class TestReturnForCorrection(WorkSummaryCase):
 
 	def test_the_employee_can_send_it_again(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		ws.return_for_correction(doc.name, "not enough detail")
 		frappe.set_user(EMP_USER)
 		ws.send_for_remarks(doc.name)
 		frappe.set_user("Administrator")
 		doc.reload()
 		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
-		self.assertEqual(doc.current_approver, self.hod)
+		self.assertEqual(doc.current_approver, self.gm)
 		self.assertIsNone(doc.return_reason)
 
 	def test_a_reason_is_required(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		with self.assertRaises(frappe.ValidationError):
 			ws.return_for_correction(doc.name, "")
 		frappe.set_user("Administrator")
@@ -229,16 +224,17 @@ class TestGuards(WorkSummaryCase):
 		second = self._summary(work_date=add_days(today(), -1))
 		self.assertTrue(second.name)
 
-	def test_the_employee_cannot_write_the_hod_remark(self):
+	def test_the_employee_cannot_write_the_gm_remark(self):
 		doc = self._send(self._summary())
 		frappe.set_user(EMP_USER)
 		doc.reload()
-		doc.hod_remarks = "I did great"
+		doc.gm_remarks = "I did great"
 		with self.assertRaises(frappe.PermissionError):
 			doc.save(ignore_permissions=True)
 		frappe.set_user("Administrator")
 
 	def test_the_hod_cannot_write_the_gm_remark(self):
+		"""The HOD follows the team but signs nothing."""
 		doc = self._send(self._summary())
 		frappe.set_user(self.hod)
 		doc.reload()
@@ -247,15 +243,15 @@ class TestGuards(WorkSummaryCase):
 			doc.save(ignore_permissions=True)
 		frappe.set_user("Administrator")
 
-	def test_the_hod_may_write_the_hod_remark(self):
+	def test_the_gm_may_write_the_gm_remark_on_the_form(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		doc.reload()
-		doc.hod_remarks = "Typed on the form"
+		doc.gm_remarks = "Typed on the form"
 		doc.save(ignore_permissions=True)
 		frappe.set_user("Administrator")
 		self.assertEqual(
-			frappe.db.get_value("Daily Work Summary", doc.name, "hod_remarks"), "Typed on the form"
+			frappe.db.get_value("Daily Work Summary", doc.name, "gm_remarks"), "Typed on the form"
 		)
 
 	def test_somebody_outside_the_chain_cannot_act(self):
@@ -298,21 +294,18 @@ class TestGuards(WorkSummaryCase):
 
 
 class TestVisibility(WorkSummaryCase):
-	def test_the_hod_role_sees_it_waiting(self):
+	def test_the_gm_sees_it_waiting(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		names = [r["name"] for r in ws.waiting_on_me()]
 		frappe.set_user("Administrator")
 		self.assertIn(doc.name, names)
 
-	def test_the_gm_only_sees_it_once_it_reaches_them(self):
+	def test_the_hod_has_nothing_waiting_on_them(self):
+		"""They follow the department, but the queue is the GM's."""
 		doc = self._send(self._summary())
-		frappe.set_user(self.gm)
-		self.assertNotIn(doc.name, [r["name"] for r in ws.waiting_on_me()])
 		frappe.set_user(self.hod)
-		ws.add_remarks(doc.name, "passed on")
-		frappe.set_user(self.gm)
-		self.assertIn(doc.name, [r["name"] for r in ws.waiting_on_me()])
+		self.assertNotIn(doc.name, [r["name"] for r in ws.waiting_on_me()])
 		frappe.set_user("Administrator")
 
 	def test_an_unrelated_user_sees_nothing_waiting(self):
@@ -385,25 +378,23 @@ class TestWhoSeesEverything(WorkSummaryCase):
 		self.assertNotIn(draft.name, self._visible_to(OTHER_USER))
 		self.assertFalse(ws.has_permission(draft, user=OTHER_USER))
 
-	def test_seeing_everything_is_not_acting_on_everything(self):
-		"""The GM may open a summary sitting with the HOD, but not sign it."""
+	def test_the_hod_sees_everything_but_signs_nothing(self):
 		sent = self._send(self._summary())
-		self.assertIn(sent.name, self._visible_to(self.gm))
-		self.assertTrue(ws.sees_everything(self.gm))
-		self.assertFalse(ws.can_act_now(sent, self.gm))
-		frappe.set_user(self.gm)
+		self.assertIn(sent.name, self._visible_to(self.hod))
+		self.assertFalse(ws.can_act_now(sent, self.hod))
+		frappe.set_user(self.hod)
 		try:
 			with self.assertRaises(frappe.PermissionError):
 				ws.add_remarks(sent.name, "signing out of turn")
 		finally:
 			frappe.set_user("Administrator")
 
-	def test_the_gm_still_only_gets_their_own_step_in_waiting_on_me(self):
+	def test_the_hod_queue_is_empty_even_though_they_see_everything(self):
 		sent = self._send(self._summary())
-		frappe.set_user(self.gm)
+		frappe.set_user(self.hod)
 		waiting = [r["name"] for r in ws.waiting_on_me()]
 		frappe.set_user("Administrator")
-		self.assertNotIn(sent.name, waiting, "it is still with the HOD")
+		self.assertNotIn(sent.name, waiting, "the GM owns the queue")
 
 
 class TestTheHodFollowsTheirDepartment(WorkSummaryCase):
@@ -535,9 +526,9 @@ class TestHodResolution(WorkSummaryCase):
 		for dept in (None, "", "Stores - CA"):
 			self.assertEqual(ws.hod_role_for_department(dept), "HR Leave Approver")
 
-	def test_the_chain_always_ends_at_the_gm(self):
+	def test_the_chain_is_the_gm_alone(self):
 		doc = self._summary()
-		self.assertEqual(ws.chain_roles(doc)[-1], GM_ROLE)
+		self.assertEqual(ws.chain_roles(doc), [GM_ROLE])
 
 
 class TestRemindersAndStatus(WorkSummaryCase):
