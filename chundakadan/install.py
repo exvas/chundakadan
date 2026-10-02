@@ -858,10 +858,18 @@ def ensure_visit_log_location_field(*args, **kwargs):
 # field on Chundakadan Settings. Mirrors the Leave Application multi-
 # step approval shape but with an amount-based chain length.
 
+# (doctype, amount field, the field the approval block must sit AFTER)
+#
+# The anchor has to be the LAST field of the block it follows, never a field
+# in the middle of a section. Anchoring on `purpose` / `total_sanctioned_amount`
+# / `subject` dropped the approval Section Break into the middle of those
+# sections, and every field after it -- including Employee Advance's
+# `advance_amount` and Expense Claim's `grand_total` -- was swallowed into the
+# collapsed Approval Workflow section and became invisible on the form.
 _APPROVAL_DOCTYPES = [
-    ("Expense Claim",     "total_claimed_amount", "total_sanctioned_amount"),
-    ("Employee Advance",  "advance_amount",       "purpose"),
-    ("Payment Request",   "grand_total",          "subject"),
+    ("Expense Claim",     "total_claimed_amount", "grand_total"),
+    ("Employee Advance",  "advance_amount",       "return_amount"),
+    ("Payment Request",   "grand_total",          "make_sales_invoice"),
 ]
 
 
@@ -913,6 +921,7 @@ def ensure_expense_approval_fields(*args, **kwargs):
     ]
 
     created = 0
+    moved = []
     for dt, _amount_field, insert_after in _APPROVAL_DOCTYPES:
         if not frappe.db.exists("DocType", dt):
             print(f"chundakadan.install: DocType '{dt}' not found, skipping")
@@ -925,6 +934,15 @@ def ensure_expense_approval_fields(*args, **kwargs):
             prev = spec["fieldname"]  # chain so order is preserved
 
             if frappe.db.exists("Custom Field", cf_name):
+                # Correct an anchor set by an older version of this function:
+                # the fields exist but sit in the wrong place, hiding the
+                # amount fields that followed them.
+                current = frappe.db.get_value("Custom Field", cf_name, "insert_after")
+                if current != field_spec["insert_after"]:
+                    frappe.db.set_value(
+                        "Custom Field", cf_name, "insert_after", field_spec["insert_after"]
+                    )
+                    moved.append(cf_name)
                 continue
             try:
                 frappe.get_doc({
@@ -937,6 +955,11 @@ def ensure_expense_approval_fields(*args, **kwargs):
                 created += 1
             except Exception as e:
                 print(f"chundakadan.install: could not create {cf_name}: {e}")
+
+    if moved:
+        for dt, _a, _i in _APPROVAL_DOCTYPES:
+            frappe.clear_cache(doctype=dt)
+        print(f"chundakadan.install: re-anchored {len(moved)} approval fields: {moved}")
 
     # Threshold field on Chundakadan Settings
     if frappe.db.exists("DocType", "Chundakadan Settings"):
