@@ -203,7 +203,6 @@
    "read": 1,
    "write": 1,
    "create": 1,
-   "submit": 1,
    "email": 1,
    "print": 1,
    "share": 1,
@@ -213,7 +212,6 @@
    "role": "Sales HOD Leave Approver",
    "read": 1,
    "write": 1,
-   "submit": 1,
    "print": 1,
    "report": 1,
    "create": 1
@@ -222,7 +220,6 @@
    "role": "Accounts Manager Leave Approver",
    "read": 1,
    "write": 1,
-   "submit": 1,
    "print": 1,
    "report": 1,
    "create": 1
@@ -231,7 +228,6 @@
    "role": "HR Leave Approver",
    "read": 1,
    "write": 1,
-   "submit": 1,
    "print": 1,
    "report": 1,
    "create": 1
@@ -240,7 +236,6 @@
    "role": "GM Leave Approver",
    "read": 1,
    "write": 1,
-   "submit": 1,
    "print": 1,
    "report": 1,
    "create": 1
@@ -250,7 +245,6 @@
    "read": 1,
    "write": 1,
    "create": 1,
-   "submit": 1,
    "cancel": 1,
    "delete": 1,
    "print": 1,
@@ -261,7 +255,6 @@
    "read": 1,
    "write": 1,
    "create": 1,
-   "submit": 1,
    "cancel": 1,
    "delete": 1,
    "print": 1,

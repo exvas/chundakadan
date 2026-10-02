@@ -841,6 +841,29 @@ class TestPermissions(WorkSummaryCase):
 		super().setUp()
 		_import("daily_work_summary.json")
 
+	def test_nobody_holds_submit_on_the_doctype(self):
+		"""Submit is not a path a user may take -- the GM closes a summary
+		through add_remarks, which submits as Administrator. Leaving the
+		permission on put a "Submit this document to confirm" banner and a
+		Submit button on every draft, inviting people round the approval."""
+		perms = frappe.get_all(
+			"DocPerm", filters={"parent": "Daily Work Summary"}, fields=["role", "submit"]
+		)
+		self.assertTrue(perms)
+		for perm in perms:
+			self.assertFalse(perm.submit, f"{perm.role} still has submit")
+
+	def test_the_gm_can_still_close_one_without_submit_permission(self):
+		doc = self._send(self._summary())
+		frappe.set_user(self.gm)
+		try:
+			ws.add_remarks(doc.name, "Closing it")
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		self.assertEqual(doc.docstatus, 1)
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_APPROVED)
+
 	def test_every_role_on_the_doctype_can_create(self):
 		perms = frappe.get_all(
 			"DocPerm", filters={"parent": "Daily Work Summary"},
