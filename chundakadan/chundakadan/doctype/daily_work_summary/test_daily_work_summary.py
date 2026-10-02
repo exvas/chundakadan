@@ -263,12 +263,24 @@ class TestGuards(WorkSummaryCase):
 			ws.return_for_correction(doc.name, "not mine")
 		frappe.set_user("Administrator")
 
-	def test_only_the_employee_may_send_their_own_summary(self):
+	def test_an_unrelated_employee_cannot_send_somebody_else_s_summary(self):
 		doc = self._summary()
 		frappe.set_user(OTHER_USER)
 		with self.assertRaises(frappe.PermissionError):
 			ws.send_for_remarks(doc.name)
 		frappe.set_user("Administrator")
+
+	def test_the_gm_may_push_a_draft_that_is_stuck(self):
+		"""They see every draft, so they need to be able to move one on."""
+		doc = self._summary()
+		frappe.set_user(self.gm)
+		try:
+			ws.send_for_remarks(doc.name)
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
+		self.assertEqual(doc.current_approver, self.gm)
 
 	def test_sending_twice_is_refused(self):
 		doc = self._send(self._summary())

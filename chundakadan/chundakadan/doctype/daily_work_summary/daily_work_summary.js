@@ -1,8 +1,10 @@
 // Copyright (c) 2026, Chundakadan and contributors
 frappe.ui.form.on("Daily Work Summary", {
 	refresh(frm) {
-		frm.set_df_property("hod_remarks", "read_only", !step_is_mine(frm, 0));
-		frm.set_df_property("gm_remarks", "read_only", !step_is_mine(frm, 1));
+		// The chain is the GM alone, so the only step is index 0 and the only
+		// remark is the GM's. hod_remarks is retired: read-only in the doctype
+		// and hidden unless an older summary already carries one.
+		frm.set_df_property("gm_remarks", "read_only", !step_is_mine(frm, 0));
 
 		if (frm.doc.custom_approval_status === "Returned" && frm.doc.return_reason) {
 			frm.dashboard.set_headline_alert(
@@ -10,19 +12,26 @@ frappe.ui.form.on("Daily Work Summary", {
 				"orange"
 			);
 		}
-		if (frm.doc.docstatus !== 0 || frm.is_new()) return;
+		if (frm.is_new()) return;
+
+		// Say where it stands, always. A draft otherwise shows nothing at all --
+		// the remark boxes and the flow table are empty and Frappe hides them --
+		// which reads as "the approval disappeared".
+		show_where_it_stands(frm);
+
+		if (frm.doc.docstatus !== 0) return;
 
 		const draft = ["Draft", "Returned"].includes(frm.doc.custom_approval_status);
 		if (!draft && waiting_on_me(frm)) {
 			frm.add_custom_button(__("Return for Correction"), () => send_back(frm));
 		}
 
-		// Submit is refused by the server — the GM closes this through the
-		// chain — so don't offer a button that cannot work. While there are
+		// Submit is refused by the server -- the GM closes this through the
+		// chain -- so don't offer a button that cannot work. While there are
 		// unsaved changes Frappe's own Save must stay the primary action.
 		if (frm.is_dirty()) return;
 		frm.page.clear_primary_action();
-		if (draft && is_mine(frm)) {
+		if (draft && can_send(frm)) {
 			frm.page.set_primary_action(__("Send for Remarks"), () => send(frm));
 		} else if (!draft && waiting_on_me(frm)) {
 			frm.page.set_primary_action(__("Add Remarks & Close"), () => remark(frm));
@@ -30,8 +39,35 @@ frappe.ui.form.on("Daily Work Summary", {
 	},
 });
 
-function is_mine(frm) {
-	return frm.doc.owner === frappe.session.user;
+// The employee sends their own. The GM and HR can also push one that is
+// sitting in somebody's drafts -- the server allows it, and without it a
+// manager looking at a stuck draft has nothing to click.
+function can_send(frm) {
+	if (frm.doc.owner === frappe.session.user) return true;
+	return ["GM Leave Approver", "HR Manager", "System Manager"].some((r) =>
+		frappe.user_roles.includes(r)
+	);
+}
+
+function show_where_it_stands(frm) {
+	const status = frm.doc.custom_approval_status;
+	if (frm.doc.docstatus === 1 || status === "Approved") {
+		frm.dashboard.set_headline_alert(__("Closed by the General Manager"), "green");
+		return;
+	}
+	if (status === "Pending" || status === "Partially Approved") {
+		frm.dashboard.set_headline_alert(
+			__("Waiting on {0}", [frm.doc.current_approver || __("the General Manager")]),
+			"blue"
+		);
+		return;
+	}
+	if (status === "Draft") {
+		frm.dashboard.set_headline_alert(
+			__("Not sent yet — Send for Remarks puts this in front of the General Manager"),
+			"orange"
+		);
+	}
 }
 
 function waiting_on_me(frm) {
@@ -41,6 +77,7 @@ function waiting_on_me(frm) {
 }
 
 // Only the approver standing at that step may type in that remark box.
+// With a one-step chain the index is always 0.
 function step_is_mine(frm, index) {
 	if (frm.doc.docstatus !== 0) return false;
 	if ((frm.doc.current_approval_index || 0) !== index) return false;

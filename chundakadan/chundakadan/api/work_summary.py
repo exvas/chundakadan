@@ -285,7 +285,9 @@ def _build_flow(doc):
 def send_for_remarks(docname: str):
 	"""The employee sends the day's summary to their HOD."""
 	doc = frappe.get_doc("Daily Work Summary", docname)
-	if not (is_owner(doc) or _is_admin(frappe.session.user)):
+	# the employee sends their own; the GM and HR can also push one that is
+	# stuck in somebody's drafts, which is the whole point of them seeing drafts
+	if not (is_owner(doc) or sees_everything()):
 		raise frappe.PermissionError(_("Only {0} can send this summary").format(doc.employee_name))
 	if doc.custom_approval_status not in (STATUS_DRAFT, STATUS_RETURNED):
 		frappe.throw(_("This summary has already been sent."))
