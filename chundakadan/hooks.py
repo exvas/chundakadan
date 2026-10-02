@@ -353,6 +353,7 @@ after_migrate = [
     "chundakadan.doc_events.stock_control.ensure_update_stock_settings",
     "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
     "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
+    "chundakadan.doc_events.interview_status.ensure_interview_on_hold_status",
     "chundakadan.doc_events.item_approval.ensure_item_approval_fields",
     "chundakadan.doc_events.customer_approval.ensure_customer_approval_fields",
     "chundakadan.patches.hide_invoice_fields.execute",
