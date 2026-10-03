@@ -99,7 +99,7 @@
    "fieldname": "outcome",
    "fieldtype": "Select",
    "label": "Outcome",
-   "options": "Called\nNo Answer\nPromised to Pay\nDisputed\nPaid",
+   "options": "Called\nNo Answer\nPromised to Pay\nDisputed\nPartially Paid\nPaid",
    "reqd": 1,
    "default": "Called",
    "in_list_view": 1,

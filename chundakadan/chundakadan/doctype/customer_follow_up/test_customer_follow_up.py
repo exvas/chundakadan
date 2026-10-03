@@ -109,3 +109,20 @@ class TestCustomerFollowUp(FrappeTestCase):
 		todo = doc.todo
 		doc.delete()
 		self.assertFalse(frappe.db.exists("ToDo", todo))
+
+	def test_partially_paid_is_an_outcome(self):
+		ensure_doctype()
+		options = frappe.get_meta("Customer Follow Up", cached=False).get_field("outcome").options.split("\n")
+		self.assertIn("Partially Paid", options)
+
+	def test_partially_paid_keeps_the_chase_running(self):
+		"""Part of the money is still owed, so the chase does not close."""
+		doc = self._follow_up(outcome="Partially Paid")
+		self.assertEqual(doc.status, "Open")
+		self.assertEqual(str(doc.next_follow_up_date), str(add_days(nowdate(), 3)))
+		self.assertTrue(doc.todo)
+		self.assertEqual(frappe.db.get_value("ToDo", doc.todo, "status"), "Open")
+
+	def test_partially_paid_still_needs_a_next_date(self):
+		with self.assertRaises(frappe.ValidationError):
+			self._follow_up(outcome="Partially Paid", next_follow_up_date=None)
