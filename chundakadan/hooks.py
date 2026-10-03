@@ -246,6 +246,11 @@ doc_events = {
         ],
         "validate": "chundakadan.doc_events.customer_approval.guard_approval_fields",
         "after_insert": "chundakadan.doc_events.customer_approval.notify_approvers",
+        # Address Line 2 shows the territory, so it follows a change of one
+        "on_update": "chundakadan.doc_events.address_territory.sync_addresses_to_territory",
+    },
+    "Address": {
+        "validate": "chundakadan.doc_events.address_territory.set_line2_from_territory",
     },
     # Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
     # when blank (the Sales Invoice equivalent lives in the single merged
