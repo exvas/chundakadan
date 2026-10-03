@@ -190,6 +190,39 @@ def validate(doc, method=None):
 	_one_per_day(doc)
 	_guard_remarks(doc)
 	_guard_direct_submit(doc)
+	_auto_send(doc)
+
+
+def _auto_send(doc):
+	"""A saved summary with work in it is in front of the GM. Full stop.
+
+	There used to be a separate "Send for Remarks" step. Nobody pressed it,
+	so every summary sat in Draft and the GM -- the only approver -- opened
+	the list to a column of "Draft" with nothing to act on. With a one-step
+	chain that step bought nothing, so writing the day's work is the sending.
+
+	A summary with no task yet stays a draft: there is nothing to approve.
+	"""
+	if int(doc.get("docstatus") or 0) != 0:
+		return
+	if doc.flags.get("returning"):
+		# the save that hands it back must not send it straight out again
+		return
+	if doc.custom_approval_status == STATUS_RETURNED:
+		# a returned summary goes back only when the employee has worked on
+		# it; the GM reading it should not push it on for them
+		if not is_owner(doc):
+			return
+	elif doc.custom_approval_status != STATUS_DRAFT:
+		return
+	if not doc.get("tasks"):
+		return
+	# never block a save over the chain: if the GM role has no active holder,
+	# the summary simply stays a draft until it does.
+	try:
+		_build_flow(doc)
+	except frappe.ValidationError:
+		doc.custom_approval_status = STATUS_DRAFT
 
 
 def _default_employee(doc):
@@ -289,8 +322,11 @@ def send_for_remarks(docname: str):
 	# stuck in somebody's drafts, which is the whole point of them seeing drafts
 	if not (is_owner(doc) or sees_everything()):
 		raise frappe.PermissionError(_("Only {0} can send this summary").format(doc.employee_name))
+	if doc.custom_approval_status in FINAL_STATES:
+		frappe.throw(_("This summary is already closed."))
 	if doc.custom_approval_status not in (STATUS_DRAFT, STATUS_RETURNED):
-		frappe.throw(_("This summary has already been sent."))
+		# saving already sent it; the mobile app still calls this, so say yes
+		return {"status": doc.custom_approval_status, "current_approver": doc.current_approver}
 	if not doc.get("tasks"):
 		frappe.throw(_("Add at least one task before sending."))
 	_build_flow(doc)
@@ -370,6 +406,7 @@ def return_for_correction(docname: str, reason: str | None = None):
 	original = frappe.session.user
 	try:
 		frappe.set_user("Administrator")
+		doc.flags.returning = True
 		doc.custom_approval_status = STATUS_RETURNED
 		doc.return_reason = reason
 		doc.current_approver = employee_user(doc)

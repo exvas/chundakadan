@@ -31,23 +31,11 @@ frappe.ui.form.on("Daily Work Summary", {
 		// unsaved changes Frappe's own Save must stay the primary action.
 		if (frm.is_dirty()) return;
 		frm.page.clear_primary_action();
-		if (draft && can_send(frm)) {
-			frm.page.set_primary_action(__("Send for Remarks"), () => send(frm));
-		} else if (!draft && waiting_on_me(frm)) {
+		if (!draft && waiting_on_me(frm)) {
 			frm.page.set_primary_action(__("Add Remarks & Close"), () => remark(frm));
 		}
 	},
 });
-
-// The employee sends their own. The GM and HR can also push one that is
-// sitting in somebody's drafts -- the server allows it, and without it a
-// manager looking at a stuck draft has nothing to click.
-function can_send(frm) {
-	if (frm.doc.owner === frappe.session.user) return true;
-	return ["GM Leave Approver", "HR Manager", "System Manager"].some((r) =>
-		frappe.user_roles.includes(r)
-	);
-}
 
 function show_where_it_stands(frm) {
 	const status = frm.doc.custom_approval_status;
@@ -63,8 +51,10 @@ function show_where_it_stands(frm) {
 		return;
 	}
 	if (status === "Draft") {
+		// saving a summary that has work in it puts it with the GM, so a
+		// draft at this point means the day's tasks are still empty
 		frm.dashboard.set_headline_alert(
-			__("Not sent yet — Send for Remarks puts this in front of the General Manager"),
+			__("Add the day's tasks and save — that puts this in front of the General Manager"),
 			"orange"
 		);
 	}
@@ -82,22 +72,6 @@ function step_is_mine(frm, index) {
 	if (frm.doc.docstatus !== 0) return false;
 	if ((frm.doc.current_approval_index || 0) !== index) return false;
 	return waiting_on_me(frm);
-}
-
-function send(frm) {
-	frm.save().then(() =>
-		frappe
-			.xcall("chundakadan.chundakadan.api.work_summary.send_for_remarks", {
-				docname: frm.doc.name,
-			})
-			.then((r) => {
-				frappe.show_alert({
-					message: __("Sent to {0}", [r.current_approver]),
-					indicator: "green",
-				});
-				frm.reload_doc();
-			})
-	);
 }
 
 function remark(frm) {

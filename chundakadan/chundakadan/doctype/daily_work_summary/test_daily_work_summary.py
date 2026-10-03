@@ -105,6 +105,21 @@ class WorkSummaryCase(FrappeTestCase):
 		frappe.set_user("Administrator")
 		return doc
 
+	def _draft(self, work_date=None, as_user=EMP_USER):
+		"""A summary sitting in Draft -- what every one of them looked like
+		before saving started sending them.
+
+		Tasks are mandatory, so an empty summary cannot be saved at all;
+		a draft is made by putting a real one back into that state, which
+		is exactly what the summaries already in the system look like.
+		"""
+		doc = self._summary(work_date=work_date, as_user=as_user)
+		doc.db_set("custom_approval_status", ws.STATUS_DRAFT, update_modified=False)
+		doc.db_set("current_approver", None, update_modified=False)
+		frappe.db.delete("Chundakadan Approval Detail", {"parent": doc.name})
+		doc.reload()
+		return doc
+
 	def _send(self, doc):
 		frappe.set_user(EMP_USER)
 		ws.send_for_remarks(doc.name)
@@ -114,11 +129,43 @@ class WorkSummaryCase(FrappeTestCase):
 
 
 class TestTheChain(WorkSummaryCase):
-	def test_a_new_summary_starts_as_a_draft(self):
+	def test_a_summary_cannot_be_saved_without_tasks(self):
+		"""Which is why a summary no longer sits in Draft at all: there is
+		nothing to save that would not also be ready for the GM."""
+		frappe.set_user(EMP_USER)
+		try:
+			with self.assertRaises(frappe.MandatoryError):
+				frappe.get_doc({
+					"doctype": "Daily Work Summary",
+					"employee": self.employee,
+					"company": self.company,
+					"work_date": today(),
+				}).insert(ignore_permissions=True)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_saving_the_day_s_work_puts_it_in_front_of_the_gm(self):
+		"""2026-10-03: there is no separate send step any more.
+
+		Nobody pressed it, so every summary sat in Draft and the GM -- the
+		only approver -- had nothing to act on.
+		"""
 		doc = self._summary()
-		self.assertEqual(doc.custom_approval_status, ws.STATUS_DRAFT)
-		self.assertFalse(doc.current_approver)
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
+		self.assertEqual(doc.current_approver, self.gm)
+		self.assertEqual([r.approver_role for r in doc.approval_flow], [GM_ROLE])
 		self.assertEqual(doc.department, frappe.db.get_value("Employee", self.employee, "department"))
+
+	def test_the_gm_can_close_it_without_anyone_sending_it(self):
+		doc = self._summary()
+		frappe.set_user(self.gm)
+		try:
+			ws.add_remarks(doc.name, "seen, carry on")
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_APPROVED)
+		self.assertEqual(doc.docstatus, 1)
 
 	def test_sending_puts_it_in_front_of_the_gm(self):
 		"""2026-10-01: the chain is the GM alone -- no HOD step."""
@@ -180,6 +227,36 @@ class TestTheChain(WorkSummaryCase):
 
 
 class TestReturnForCorrection(WorkSummaryCase):
+	def test_a_returned_summary_stays_returned(self):
+		"""Auto-send must not undo the return the moment it is saved."""
+		doc = self._summary()
+		frappe.set_user(self.gm)
+		try:
+			ws.return_for_correction(doc.name, "too thin")
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_RETURNED)
+		self.assertEqual(doc.approval_flow, [])
+
+	def test_the_employee_fixing_a_returned_summary_sends_it_again(self):
+		doc = self._summary()
+		frappe.set_user(self.gm)
+		try:
+			ws.return_for_correction(doc.name, "too thin")
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		frappe.set_user(EMP_USER)
+		try:
+			doc.append("tasks", {"task": "Ledger", "work_description": "reconciled 4 parties"})
+			doc.save()
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
+		self.assertEqual(doc.current_approver, self.gm)
+
 	def test_the_gm_can_hand_it_back(self):
 		doc = self._send(self._summary())
 		frappe.set_user(self.gm)
@@ -270,28 +347,37 @@ class TestGuards(WorkSummaryCase):
 			ws.send_for_remarks(doc.name)
 		frappe.set_user("Administrator")
 
-	def test_the_gm_may_push_a_draft_that_is_stuck(self):
-		"""They see every draft, so they need to be able to move one on."""
-		doc = self._summary()
-		frappe.set_user(self.gm)
+	def test_a_draft_left_over_from_before_is_sent_when_it_is_saved(self):
+		doc = self._draft()
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_DRAFT)
+		frappe.set_user(EMP_USER)
 		try:
-			ws.send_for_remarks(doc.name)
+			doc.append("tasks", {"task": "Stock count", "work_description": "Stores"})
+			doc.save()
 		finally:
 			frappe.set_user("Administrator")
 		doc.reload()
 		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
 		self.assertEqual(doc.current_approver, self.gm)
 
-	def test_sending_twice_is_refused(self):
+	def test_sending_an_already_sent_summary_is_a_no_op(self):
+		"""The mobile app still calls send after saving; saying no to that
+		would surface as an error on a summary that is perfectly fine."""
 		doc = self._send(self._summary())
 		frappe.set_user(EMP_USER)
-		with self.assertRaises(frappe.ValidationError):
-			ws.send_for_remarks(doc.name)
-		frappe.set_user("Administrator")
+		try:
+			result = ws.send_for_remarks(doc.name)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(result["status"], ws.STATUS_PENDING)
+		doc.reload()
+		self.assertEqual(doc.custom_approval_status, ws.STATUS_PENDING)
+		self.assertEqual(len(doc.approval_flow), 1)
 
-	def test_a_summary_with_no_tasks_cannot_be_sent(self):
-		doc = self._summary()
+	def test_a_summary_stripped_of_its_tasks_cannot_be_sent(self):
+		doc = self._draft()
 		frappe.db.delete("Daily Work Summary Task", {"parent": doc.name})
+		doc.reload()
 		frappe.set_user(EMP_USER)
 		with self.assertRaises(frappe.ValidationError):
 			ws.send_for_remarks(doc.name)
@@ -371,14 +457,14 @@ class TestWhoSeesEverything(WorkSummaryCase):
 			frappe.set_user("Administrator")
 
 	def test_the_gm_sees_a_draft_that_was_never_sent(self):
-		draft = self._summary()
+		draft = self._draft()
 		self.assertEqual(draft.custom_approval_status, ws.STATUS_DRAFT)
 		self.assertEqual(draft.approval_flow, [])
 		self.assertIn(draft.name, self._visible_to(self.gm))
 		self.assertTrue(ws.has_permission(draft, user=self.gm))
 
 	def test_the_hod_does_not_see_a_draft_that_was_never_sent(self):
-		draft = self._summary()
+		draft = self._draft()
 		self.assertNotIn(draft.name, self._visible_to(self.hod))
 
 	def test_the_hod_sees_it_once_it_is_sent(self):
@@ -386,7 +472,7 @@ class TestWhoSeesEverything(WorkSummaryCase):
 		self.assertIn(sent.name, self._visible_to(self.hod))
 
 	def test_an_unrelated_employee_still_sees_nothing(self):
-		draft = self._summary()
+		draft = self._draft()
 		self.assertNotIn(draft.name, self._visible_to(OTHER_USER))
 		self.assertFalse(ws.has_permission(draft, user=OTHER_USER))
 
@@ -482,7 +568,8 @@ class TestComments(WorkSummaryCase):
 		self.assertEqual(len(notes), 1)
 		self.assertEqual(notes[0].content, "Add the Kannur visits tomorrow")
 		self.item.reload()
-		self.assertEqual(self.item.custom_approval_status, ws.STATUS_DRAFT)
+		self.assertEqual(self.item.custom_approval_status, ws.STATUS_PENDING,
+		                 "a comment must not move the summary along")
 		self.assertIsNone(self.item.hod_remarks, "a comment is not a remark")
 
 	def test_the_employee_can_reply_on_their_own(self):
@@ -570,9 +657,16 @@ class TestRemindersAndStatus(WorkSummaryCase):
 		self.assertIn(self.employee, missing)
 
 	def test_a_draft_still_counts_as_not_submitted(self):
-		self._summary()
+		"""A summary left in Draft never reached the GM, so the day is still
+		missing as far as the reminder is concerned."""
+		self._draft()
 		missing = [e.name for e in ws.not_submitted(today())]
 		self.assertIn(self.employee, missing, "a draft nobody sent is still missing")
+
+	def test_saving_the_day_s_work_takes_them_off_the_list(self):
+		self._summary()
+		missing = [e.name for e in ws.not_submitted(today())]
+		self.assertNotIn(self.employee, missing)
 
 	def test_sending_takes_them_off_the_list(self):
 		self._send(self._summary())
@@ -716,7 +810,7 @@ class TestMobileEndpoints(WorkSummaryCase):
 		res = self._call(save_work_summary, tasks=[{"task": "Visit", "work_description": "3 shops"}])
 		frappe.set_user("Administrator")
 		self.assertTrue(res["success"], res)
-		self.assertEqual(res["data"]["custom_approval_status"], ws.STATUS_DRAFT)
+		self.assertEqual(res["data"]["custom_approval_status"], ws.STATUS_PENDING)
 		self.assertEqual(len(res["data"]["tasks"]), 1)
 
 	def test_saving_again_the_same_day_updates_it(self):
@@ -729,8 +823,9 @@ class TestMobileEndpoints(WorkSummaryCase):
 			{"task": "Collection", "work_description": "2 cheques"},
 		])
 		frappe.set_user("Administrator")
-		self.assertEqual(first["data"]["name"], second["data"]["name"])
+		self.assertEqual(first["data"]["name"], second["data"]["name"], second)
 		self.assertEqual(len(second["data"]["tasks"]), 2)
+		self.assertEqual(second["data"]["custom_approval_status"], ws.STATUS_PENDING)
 
 	def test_saving_with_send_puts_it_in_front_of_the_hod(self):
 		from field_sales.Api.auth import save_work_summary
@@ -751,10 +846,31 @@ class TestMobileEndpoints(WorkSummaryCase):
 		frappe.set_user("Administrator")
 		self.assertFalse(res["success"])
 
-	def test_a_sent_summary_cannot_be_edited_from_the_app(self):
+	def test_the_day_s_summary_can_still_be_added_to_after_it_is_sent(self):
+		"""Saving sends, so the summary is with the GM from the first save.
+		The employee still works the rest of the day and must be able to
+		add to it."""
 		from field_sales.Api.auth import save_work_summary
 
 		self._send(self._summary())
+		frappe.set_user(EMP_USER)
+		res = self._call(save_work_summary, tasks=[
+			{"task": "Visit", "work_description": "3 shops"},
+			{"task": "Collection", "work_description": "2 cheques"},
+		])
+		frappe.set_user("Administrator")
+		self.assertTrue(res["success"], res)
+		self.assertEqual(len(res["data"]["tasks"]), 2)
+
+	def test_a_closed_summary_cannot_be_edited_from_the_app(self):
+		from field_sales.Api.auth import save_work_summary
+
+		doc = self._send(self._summary())
+		frappe.set_user(self.gm)
+		try:
+			ws.add_remarks(doc.name, "closed for the day")
+		finally:
+			frappe.set_user("Administrator")
 		frappe.set_user(EMP_USER)
 		res = self._call(save_work_summary, tasks=[{"task": "Sneaky", "work_description": "edit"}])
 		frappe.set_user("Administrator")
