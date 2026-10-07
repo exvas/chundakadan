@@ -65,7 +65,19 @@ def _month(value):
 
 
 def _sales(filters):
-	"""Grouped sales. Returns are negative rows, so they net off."""
+	"""Grouped sales, tax included. Returns are negative rows, so they net off.
+
+	The figure has to tie to the Sales Register, which shows the invoice
+	grand total -- so does this.
+
+	Lines carry `base_amount` (tax included, because CA prices GST-inclusive)
+	while `base_net_amount` strips the tax out; summing the net was what put
+	this report below the register. Grand total also carries what sits on the
+	invoice rather than on a line -- freight, for one -- so for a grouping that
+	is a property of the invoice the sales figure is read from the invoice
+	itself. Grouped by brand it cannot be: freight belongs to no brand, so
+	those rows sum the lines and are tax-inclusive but carry no freight.
+	"""
 	conditions = [
 		"si.docstatus = 1",
 		"si.company = %(company)s",
@@ -90,7 +102,7 @@ def _sales(filters):
 		f"""
 		select
 			{group_sql} as group_value,
-			sum(sii.base_net_amount) as sales,
+			sum(sii.base_amount) as sales,
 			count(distinct si.name) as invoices,
 			sum(sii.stock_qty) as qty,
 			min(si.posting_date) as first_date
@@ -103,6 +115,46 @@ def _sales(filters):
 		filters,
 		as_dict=True,
 	)
+
+
+def _invoice_group_sql(filters):
+	return {
+		"Sales Person": "si.custom_sales_person",
+		"Customer": "si.customer",
+		"Day": "si.posting_date",
+		"Month": "date_format(si.posting_date, '%%Y-%%m')",
+	}[filters.group_by]
+
+
+def _invoice_totals(filters):
+	"""Grand total per group, straight off the invoice.
+
+	Only for a grouping the invoice itself carries, and only when no brand
+	filter is on -- with one, an invoice's grand total would count lines of
+	every other brand too.
+	"""
+	conditions = [
+		"si.docstatus = 1",
+		"si.company = %(company)s",
+		"si.posting_date between %(from_date)s and %(to_date)s",
+	]
+	if filters.get("sales_person"):
+		conditions.append("si.custom_sales_person = %(sales_person)s")
+	if filters.get("customer"):
+		conditions.append("si.customer = %(customer)s")
+
+	rows = frappe.db.sql(
+		f"""
+		select {_invoice_group_sql(filters)} as group_value,
+		       sum(si.base_grand_total) as sales
+		from `tabSales Invoice` si
+		where {" and ".join(conditions)}
+		group by group_value
+		""",
+		filters,
+		as_dict=True,
+	)
+	return {r.group_value: r.sales for r in rows}
 
 
 def _collection(filters):
@@ -145,11 +197,19 @@ def _collection(filters):
 
 
 def get_data(filters):
+	# the lines give the invoice count and the quantity; the sales figure
+	# comes off the invoice itself wherever the grouping allows it, so the
+	# total ties to the Sales Register
+	totals = {}
+	if filters.group_by not in SALES_ONLY and not filters.get("brand"):
+		totals = _invoice_totals(filters)
+
 	rows = {}
 	for row in _sales(filters):
 		key = row.group_value
 		rows[key] = {
-			"group_value": key, "sales": row.sales or 0, "invoices": row.invoices or 0,
+			"group_value": key, "sales": totals.get(key, row.sales) or 0,
+			"invoices": row.invoices or 0,
 			"qty": row.qty or 0, "collection": 0, "receipts": 0,
 			"first_date": row.first_date,
 		}

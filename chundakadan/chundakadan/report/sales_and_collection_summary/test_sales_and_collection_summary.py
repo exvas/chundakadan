@@ -84,15 +84,31 @@ class TestTheNumbers(SummaryCase):
 		if not frappe.db.exists("Sales Invoice", {"docstatus": 1, "company": self.company}):
 			self.skipTest("no submitted invoices on this site")
 
-	def test_the_sales_total_matches_the_invoices(self):
+	def test_the_sales_total_matches_the_sales_register(self):
+		"""The register shows the grand total, and so must this."""
 		_columns, data = self._run()
 		expected = frappe.db.sql(
-			"""select sum(sii.base_net_amount) from `tabSales Invoice Item` sii
-			join `tabSales Invoice` si on si.name = sii.parent
-			where si.docstatus = 1 and si.company = %s and si.posting_date between %s and %s""",
+			"""select sum(base_grand_total) from `tabSales Invoice`
+			where docstatus = 1 and company = %s and posting_date between %s and %s""",
 			(self.company, add_days(today(), -365), today()),
 		)[0][0]
 		self.assertAlmostEqual(sum(flt(r["sales"]) for r in data), flt(expected), places=2)
+
+	def test_the_sales_figure_includes_the_tax(self):
+		"""Summing base_net_amount stripped the GST out and put the report
+		below the register -- the bug this guards."""
+		_columns, data = self._run()
+		net, tax = frappe.db.sql(
+			"""select sum(base_net_total), sum(base_total_taxes_and_charges)
+			from `tabSales Invoice`
+			where docstatus = 1 and company = %s and posting_date between %s and %s""",
+			(self.company, add_days(today(), -365), today()),
+		)[0]
+		if not flt(tax):
+			self.skipTest("no taxed invoices on this site")
+		total = sum(flt(r["sales"]) for r in data)
+		self.assertGreater(total, flt(net), "sales must carry the tax")
+		self.assertAlmostEqual(total, flt(net) + flt(tax), places=2)
 
 	def test_the_collection_total_matches_the_receipts(self):
 		_columns, data = self._run()
@@ -113,14 +129,36 @@ class TestTheNumbers(SummaryCase):
 				flt(row["balance"]), flt(row["sales"]) - flt(row["collection"]), places=2
 			)
 
-	def test_grouping_by_brand_totals_the_same_sales(self):
+	def test_grouping_by_brand_totals_the_lines(self):
+		"""A brand row sums its own lines, tax included.
+
+		It cannot carry what sits on the invoice rather than on a line --
+		freight belongs to no brand -- so it ties to the invoice total
+		rather than the grand total.
+		"""
+		_columns, by_brand = self._run(group_by="Brand")
+		expected = frappe.db.sql(
+			"""select sum(sii.base_amount) from `tabSales Invoice Item` sii
+			join `tabSales Invoice` si on si.name = sii.parent
+			where si.docstatus = 1 and si.company = %s and si.posting_date between %s and %s""",
+			(self.company, add_days(today(), -365), today()),
+		)[0][0]
+		self.assertAlmostEqual(
+			sum(flt(r["sales"]) for r in by_brand), flt(expected), places=2
+		)
+
+	def test_brand_and_person_differ_only_by_the_invoice_level_charges(self):
 		_columns, by_person = self._run()
 		_columns, by_brand = self._run(group_by="Brand")
+		charges = frappe.db.sql(
+			"""select sum(base_grand_total - base_total) from `tabSales Invoice`
+			where docstatus = 1 and company = %s and posting_date between %s and %s""",
+			(self.company, add_days(today(), -365), today()),
+		)[0][0]
 		self.assertAlmostEqual(
-			sum(flt(r["sales"]) for r in by_brand),
-			sum(flt(r["sales"]) for r in by_person),
+			sum(flt(r["sales"]) for r in by_person) - sum(flt(r["sales"]) for r in by_brand),
+			flt(charges or 0),
 			places=2,
-			msg="the same sales, cut a different way",
 		)
 
 	def test_months_come_back_in_order(self):
