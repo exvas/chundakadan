@@ -117,7 +117,7 @@ class TestCustomerFollowUp(FrappeTestCase):
 
 	def test_partially_paid_keeps_the_chase_running(self):
 		"""Part of the money is still owed, so the chase does not close."""
-		doc = self._follow_up(outcome="Partially Paid")
+		doc = self._follow_up(outcome="Partially Paid", paid_amount=self._part_of_the_bill())
 		self.assertEqual(doc.status, "Open")
 		self.assertEqual(str(doc.next_follow_up_date), str(add_days(nowdate(), 3)))
 		self.assertTrue(doc.todo)
@@ -125,4 +125,40 @@ class TestCustomerFollowUp(FrappeTestCase):
 
 	def test_partially_paid_still_needs_a_next_date(self):
 		with self.assertRaises(frappe.ValidationError):
-			self._follow_up(outcome="Partially Paid", next_follow_up_date=None)
+			self._follow_up(outcome="Partially Paid", paid_amount=self._part_of_the_bill(),
+			                next_follow_up_date=None)
+
+	def _part_of_the_bill(self):
+		"""Some of what is owed -- never all of it, which would be Paid."""
+		return flt(customer_outstanding(self.customer, COMPANY)) / 2
+
+	def test_a_part_payment_is_recorded(self):
+		ensure_doctype()
+		part = self._part_of_the_bill()
+		doc = self._follow_up(outcome="Partially Paid", paid_amount=part)
+		self.assertEqual(flt(doc.paid_amount), flt(part))
+		self.assertEqual(doc.status, "Open")
+
+	def test_partially_paid_needs_an_amount(self):
+		ensure_doctype()
+		with self.assertRaises(frappe.ValidationError):
+			self._follow_up(outcome="Partially Paid", paid_amount=0)
+
+	def test_a_part_payment_cannot_exceed_the_outstanding(self):
+		"""Paying the lot is Paid, not Partially Paid."""
+		ensure_doctype()
+		outstanding = customer_outstanding(self.customer, COMPANY)
+		with self.assertRaises(frappe.ValidationError):
+			self._follow_up(outcome="Partially Paid", paid_amount=flt(outstanding) + 1)
+
+	def test_the_amount_is_dropped_when_the_outcome_is_not_a_part_payment(self):
+		ensure_doctype()
+		doc = self._follow_up(outcome="Called", paid_amount=self._part_of_the_bill())
+		self.assertEqual(flt(doc.paid_amount), 0)
+
+	def test_the_field_only_shows_for_a_part_payment(self):
+		ensure_doctype()
+		field = frappe.get_meta("Customer Follow Up", cached=False).get_field("paid_amount")
+		self.assertEqual(field.fieldtype, "Currency")
+		self.assertEqual(field.depends_on, "eval:doc.outcome=='Partially Paid'")
+		self.assertEqual(field.mandatory_depends_on, "eval:doc.outcome=='Partially Paid'")

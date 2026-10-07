@@ -54,9 +54,11 @@ function render_history(frm) {
 		const html = rows
 			.map((row) => {
 				const amount = format_currency(row.outstanding_amount || 0);
+				// a part-payment is the one number worth seeing in the history
+				const paid = row.paid_amount ? ` · paid ${format_currency(row.paid_amount)}` : "";
 				const next = row.next_follow_up_date ? ` · next ${frappe.datetime.str_to_user(row.next_follow_up_date)}` : "";
 				const remarks = row.remarks ? ` — ${frappe.utils.escape_html(row.remarks)}` : "";
-				return `<div style="margin:2px 0">${frappe.datetime.str_to_user(row.follow_up_date)} · <b>${row.outcome}</b> · ${amount}${next}${remarks}</div>`;
+				return `<div style="margin:2px 0">${frappe.datetime.str_to_user(row.follow_up_date)} · <b>${row.outcome}</b> · ${amount}${paid}${next}${remarks}</div>`;
 			})
 			.join("");
 		frm.dashboard.set_headline(`<div><b>${__("Chase history")}</b>${html}</div>`, "blue");

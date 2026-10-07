@@ -14,6 +14,7 @@ from frappe.utils import flt, getdate, nowdate
 OPEN = "Open"
 CLOSED = "Closed"
 PAID = "Paid"
+PARTLY_PAID = "Partially Paid"
 
 
 class CustomerFollowUp(Document):
@@ -31,8 +32,26 @@ class CustomerFollowUp(Document):
 			self.promised_amount = 0
 		if not self.outstanding_amount:
 			self.outstanding_amount = customer_outstanding(self.customer, self.company)
+		# after the outstanding is stamped: the part-payment is checked against it
+		self._validate_paid_amount()
 		if not self.sales_person:
 			self.sales_person = _sales_person_for(self.customer)
+
+	def _validate_paid_amount(self):
+		"""The part-payment belongs to a Partially Paid chase and nowhere else."""
+		if self.outcome != PARTLY_PAID:
+			self.paid_amount = 0
+			return
+		if flt(self.paid_amount) <= 0:
+			frappe.throw(_("Enter how much the customer paid."))
+		outstanding = flt(self.outstanding_amount)
+		if outstanding and flt(self.paid_amount) > outstanding:
+			frappe.throw(
+				_("{0} is more than the {1} outstanding — mark the outcome as Paid instead.").format(
+					frappe.format_value(flt(self.paid_amount), {"fieldtype": "Currency"}),
+					frappe.format_value(outstanding, {"fieldtype": "Currency"}),
+				)
+			)
 
 	def after_insert(self):
 		self.close_previous_chases()
@@ -107,7 +126,7 @@ def chase_history(customer, company=None, limit=10):
 	return frappe.get_all(
 		"Customer Follow Up",
 		filters=filters,
-		fields=["name", "follow_up_date", "outcome", "status", "outstanding_amount", "promised_amount", "remarks", "next_follow_up_date"],
+		fields=["name", "follow_up_date", "outcome", "status", "outstanding_amount", "promised_amount", "paid_amount", "remarks", "next_follow_up_date"],
 		order_by="follow_up_date desc, creation desc",
 		limit=int(limit),
 	)

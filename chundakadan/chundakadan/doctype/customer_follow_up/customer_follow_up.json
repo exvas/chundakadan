@@ -24,6 +24,7 @@
   "outcome_section",
   "outcome",
   "promised_amount",
+  "paid_amount",
   "column_break_outcome",
   "next_follow_up_date",
   "status",
@@ -110,6 +111,14 @@
    "fieldtype": "Currency",
    "label": "Promised Amount",
    "depends_on": "eval:doc.outcome=='Promised to Pay'"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Amount Paid",
+   "depends_on": "eval:doc.outcome=='Partially Paid'",
+   "mandatory_depends_on": "eval:doc.outcome=='Partially Paid'",
+   "description": "How much the customer actually paid"
   },
   {
    "fieldname": "column_break_outcome",
