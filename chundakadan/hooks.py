@@ -359,6 +359,7 @@ after_migrate = [
     "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
     "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
     "chundakadan.doc_events.interview_status.ensure_interview_on_hold_status",
+    "chundakadan.chundakadan.api.grievance.ensure_grievance_permissions",
     "chundakadan.doc_events.item_approval.ensure_item_approval_fields",
     "chundakadan.doc_events.customer_approval.ensure_customer_approval_fields",
     "chundakadan.patches.hide_invoice_fields.execute",
@@ -414,6 +415,8 @@ ignore_links_on_delete = [
 
 permission_query_conditions = {
     "Daily Work Summary": "chundakadan.chundakadan.api.work_summary.get_permission_query_conditions",
+    # a grievance is read by the GM and HR Manager, and by whoever raised it
+    "Employee Grievance": "chundakadan.chundakadan.api.grievance.get_permission_query_conditions",
     "Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",
     "Employee Advance": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_employee_advance",
@@ -423,6 +426,7 @@ permission_query_conditions = {
 
 has_permission = {
     "Daily Work Summary": "chundakadan.chundakadan.api.work_summary.has_permission",
+    "Employee Grievance": "chundakadan.chundakadan.api.grievance.has_permission",
     "Leave Application": "chundakadan.chundakadan.api.leave.has_permission",
     "Expense Claim": "chundakadan.chundakadan.api.expense_approval.has_permission",
     "Employee Advance": "chundakadan.chundakadan.api.expense_approval.has_permission",
