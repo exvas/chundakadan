@@ -56,6 +56,10 @@ CARDS = [
 	 [["Item", "custom_approval_status", "=", "Pending"]], None, "#14B8A6"),
 	("Customers Awaiting Approval", "Customer",
 	 [["Customer", "custom_approval_status", "=", "Pending"]], None, "#A855F7"),
+	# the permission query on Employee Grievance does the scoping: the GM and
+	# the HR Manager count every open grievance, everybody else their own
+	("Grievances Open", "Employee Grievance",
+	 [["Employee Grievance", "status", "=", "Open"]], None, "#E11D48"),
 	("Follow-ups Due", "Customer Follow Up",
 	 [["Customer Follow Up", "status", "=", "Open"]],
 	 [["Customer Follow Up", "next_follow_up_date", "<=", TODAY_JS]], "#DC2626"),
@@ -168,6 +172,14 @@ WORKSPACE = {
    }
   },
   {
+   "id": "ap_nc11",
+   "type": "number_card",
+   "data": {
+    "number_card_name": "Grievances Open",
+    "col": 3
+   }
+  },
+  {
    "id": "ap_hdr2",
    "type": "header",
    "data": {
@@ -203,7 +215,8 @@ WORKSPACE = {
   "Follow-ups Due",
   "Work Summaries Pending",
   "Items Awaiting Approval",
-  "Customers Awaiting Approval"
+  "Customers Awaiting Approval",
+  "Grievances Open"
  ],
  "shortcuts": [],
  "links": [
@@ -212,7 +225,7 @@ WORKSPACE = {
    "label": "Approvals",
    "hidden": 0,
    "is_query_report": 0,
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0
   },
   {
@@ -260,6 +273,16 @@ WORKSPACE = {
    "link_type": "DocType",
    "link_to": "Purchase Order",
    "label": "Purchase Order",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "link_type": "DocType",
+   "link_to": "Employee Grievance",
+   "label": "Employee Grievance",
    "hidden": 0,
    "is_query_report": 0,
    "link_count": 0,

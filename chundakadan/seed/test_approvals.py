@@ -31,8 +31,11 @@ class TestApprovalsWorkspace(FrappeTestCase):
 		for label, doctype, _filters, dynamic, _colour in CARDS:
 			# These cards are not "waiting on me" by user: a cheque or a
 			# follow-up belongs to nobody in particular, a PO is scoped by
-			# workflow role, and an Item is scoped by the approval role.
-			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order", "Item", "Customer"):
+			# workflow role, an Item by the approval role, and a grievance
+			# by its own permission query -- the GM and the HR Manager count
+			# every open one, everybody else their own.
+			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order",
+			               "Item", "Customer", "Employee Grievance"):
 				continue
 			if not frappe.db.exists("DocType", doctype):
 				continue
@@ -72,6 +75,23 @@ class TestApprovalsWorkspace(FrappeTestCase):
 				self.assertIn(block["data"]["number_card_name"], labels)
 			if block["type"] == "card":
 				self.assertIn(block["data"]["card_name"], card_breaks)
+
+	def test_every_card_break_counts_its_own_links(self):
+		"""link_count is maintained by hand, so it drifts silently."""
+		counts = {}
+		current = None
+		for link in WORKSPACE["links"]:
+			if link["type"] == "Card Break":
+				current = link["label"]
+				counts[current] = [link["link_count"], 0]
+			else:
+				counts[current][1] += 1
+		for label, (declared, actual) in counts.items():
+			self.assertEqual(declared, actual, label)
+
+	def test_the_grievance_list_is_on_the_workspace(self):
+		links = [l["link_to"] for l in WORKSPACE["links"] if l["type"] == "Link"]
+		self.assertIn("Employee Grievance", links)
 
 	def test_lists_are_links_not_shortcuts(self):
 		# a DocType shortcut always shows a global count badge, which

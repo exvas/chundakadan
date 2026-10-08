@@ -26,3 +26,4 @@ chundakadan.patches.sync_cdn_gm_modules
 chundakadan.patches.backfill_pdc_payment_links
 chundakadan.patches.mark_existing_items_approved
 chundakadan.patches.mark_existing_customers_approved
+chundakadan.patches.add_grievance_to_approvals
