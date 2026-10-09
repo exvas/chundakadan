@@ -139,6 +139,41 @@ def _user_has_admin_role(user: str) -> bool:
     return False
 
 
+def _why_you_cannot_act(doc, doctype: str, action: str, user: str | None = None) -> str:
+    """Say what is actually in the way.
+
+    "You don't have permission" reads as a rights problem and sends people
+    looking for a role they already have. Nearly always the truth is that
+    the document is still sitting with somebody earlier in the chain.
+    """
+    user = user or frappe.session.user
+    waiting_on = doc.get("current_approver")
+    idx = int(doc.get("current_approval_index") or 0)
+    flow = doc.get("approval_flow") or []
+
+    mine_later = False
+    for position, row in enumerate(flow):
+        if position <= idx:
+            continue
+        row_approver = row.get("approver") if isinstance(row, dict) else row.approver
+        row_role = row.get("approver_role") if isinstance(row, dict) else row.approver_role
+        if row_approver == user or (row_role and _user_holds_role(user, row_role)):
+            mine_later = True
+            break
+
+    if waiting_on and mine_later:
+        return _("This {0} is with {1} and comes to you once they have acted.").format(
+            doctype, _who(waiting_on)
+        )
+    if waiting_on:
+        return _("This {0} is waiting on {1}, not on you.").format(doctype, _who(waiting_on))
+    return _("You are not an approver on this {0}.").format(doctype)
+
+
+def _who(user: str) -> str:
+    return frappe.db.get_value("User", user, "full_name") or user
+
+
 def _caller_can_act_on(doc, user: str | None = None) -> bool:
     """Mirrors the leave workflow's gate. True if the user can move
     the doc forward at its current step."""
@@ -340,8 +375,7 @@ def approve(doctype: str, docname: str):
         frappe.throw(_("This {0} has already been finalised.").format(doctype))
 
     if not _caller_can_act_on(doc):
-        frappe.throw(_("You don't have permission to approve this {0}.")
-                     .format(doctype))
+        frappe.throw(_why_you_cannot_act(doc, doctype, "approve"))
 
     idx = int(doc.get("current_approval_index") or 0)
     flow = doc.get("approval_flow") or []
@@ -424,8 +458,7 @@ def reject(doctype: str, docname: str, remarks: str | None = None):
         frappe.throw(_("This {0} has already been finalised.").format(doctype))
 
     if not _caller_can_act_on(doc):
-        frappe.throw(_("You don't have permission to reject this {0}.")
-                     .format(doctype))
+        frappe.throw(_why_you_cannot_act(doc, doctype, "reject"))
 
     idx = int(doc.get("current_approval_index") or 0)
     flow = doc.get("approval_flow") or []

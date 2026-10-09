@@ -81,3 +81,66 @@ class TestExpenseApprovalChain(FrappeTestCase):
 		claim.insert(ignore_permissions=True)
 		self.assertEqual([row.approver_role for row in claim.approval_flow], [ea.ROLE_ACCOUNTS, ea.ROLE_GM])
 		self.assertEqual(claim.custom_approval_status, "Pending")
+
+
+class TestWhyYouCannotAct(FrappeTestCase):
+	"""The refusal has to say what is in the way.
+
+	The GM read "You don't have permission to reject this Employee Advance"
+	and took it for a rights problem; the advance was simply still with
+	Accounts, one step earlier.
+	"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.accounts = frappe.db.get_value(
+			"Has Role", {"role": ea.ROLE_ACCOUNTS, "parenttype": "User"}, "parent"
+		)
+		self.gm = frappe.db.get_value(
+			"Has Role", {"role": ea.ROLE_GM, "parenttype": "User"}, "parent"
+		)
+		if not (self.accounts and self.gm):
+			self.skipTest("chain roles have no holders")
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _doc(self):
+		return frappe._dict({
+			"doctype": "Employee Advance",
+			"current_approver": self.accounts,
+			"current_approval_index": 0,
+			"approval_flow": [
+				{"approver": self.accounts, "approver_role": ea.ROLE_ACCOUNTS},
+				{"approver": self.gm, "approver_role": ea.ROLE_GM},
+			],
+		})
+
+	def test_it_names_who_the_document_is_with(self):
+		message = ea._why_you_cannot_act(self._doc(), "Employee Advance", "reject", self.gm)
+		self.assertIn(ea._who(self.accounts), message)
+
+	def test_it_says_the_turn_is_coming(self):
+		message = ea._why_you_cannot_act(self._doc(), "Employee Advance", "reject", self.gm)
+		self.assertIn("comes to you", message)
+
+	def test_it_never_calls_it_a_permission_problem(self):
+		message = ea._why_you_cannot_act(self._doc(), "Employee Advance", "reject", self.gm)
+		self.assertNotIn("permission", message.lower())
+
+	def test_somebody_outside_the_chain_is_told_so(self):
+		message = ea._why_you_cannot_act(
+			self._doc(), "Employee Advance", "approve", "nobody@chundakadan.test"
+		)
+		self.assertIn("not on you", message)
+
+	def test_with_no_chain_at_all_it_says_you_are_not_an_approver(self):
+		doc = frappe._dict({
+			"doctype": "Expense Claim", "current_approver": None,
+			"current_approval_index": 0, "approval_flow": [],
+		})
+		message = ea._why_you_cannot_act(doc, "Expense Claim", "approve", self.gm)
+		self.assertIn("not an approver", message)
+
+	def test_who_falls_back_to_the_email(self):
+		self.assertEqual(ea._who("nobody@chundakadan.test"), "nobody@chundakadan.test")
