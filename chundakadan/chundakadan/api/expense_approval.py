@@ -270,8 +270,17 @@ def validate(doc, method=None):
 
 def _generate_approval_flow(doc, roles: list[str]):
     """Reset the approval chain on the doc. Throws if any role has no
-    role-holder configured."""
+    role-holder configured.
+
+    One person signs a document once. When somebody holds two of the
+    roles in a chain -- as happens whenever a manager stands in for a
+    vacant post above them -- their later step is dropped rather than
+    asking them to approve their own approval, which is no check at all.
+    The step they keep is the FIRST, so the document still travels as
+    far up the chain as it would have.
+    """
     doc.set("approval_flow", [])
+    already = set()
     for role in roles:
         approver = _get_approver_by_role(role)
         if not approver:
@@ -280,6 +289,9 @@ def _generate_approval_flow(doc, roles: list[str]):
                 "role '{0}'. Ask an admin to assign this role to a user "
                 "via the User list."
             ).format(role))
+        if approver in already:
+            continue
+        already.add(approver)
         doc.append("approval_flow", {
             "approver": approver,
             "approver_role": role,

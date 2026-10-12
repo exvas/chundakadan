@@ -144,3 +144,67 @@ class TestWhyYouCannotAct(FrappeTestCase):
 
 	def test_who_falls_back_to_the_email(self):
 		self.assertEqual(ea._who("nobody@chundakadan.test"), "nobody@chundakadan.test")
+
+
+class TestOnePersonSignsOnce(FrappeTestCase):
+	"""A manager standing in for a vacant post above them holds two of the
+	chain's roles. Asking them to approve their own approval is no check at
+	all, so the later step is dropped.
+
+	The GM left on 2026-10-09 and the Deputy Sales & Marketing Manager took
+	the GM's approvals, which put the same person at two steps of the
+	Purchase Order and leave chains.
+	"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self._real = ea._get_approver_by_role
+
+	def tearDown(self):
+		ea._get_approver_by_role = self._real
+		frappe.db.rollback()
+
+	def _flow_for(self, mapping, roles):
+		ea._get_approver_by_role = lambda role: mapping.get(role)
+		doc = frappe.new_doc("Employee Advance")
+		ea._generate_approval_flow(doc, roles)
+		return doc
+
+	def test_the_same_person_appears_once(self):
+		doc = self._flow_for(
+			{ea.ROLE_ACCOUNTS: "one@test.com", ea.ROLE_GM: "one@test.com"},
+			[ea.ROLE_ACCOUNTS, ea.ROLE_GM],
+		)
+		self.assertEqual([r.approver for r in doc.approval_flow], ["one@test.com"])
+
+	def test_it_is_the_first_step_that_is_kept(self):
+		"""So the document still travels as far up the chain as it would."""
+		doc = self._flow_for(
+			{ea.ROLE_ACCOUNTS: "one@test.com", ea.ROLE_GM: "one@test.com"},
+			[ea.ROLE_ACCOUNTS, ea.ROLE_GM],
+		)
+		self.assertEqual(doc.approval_flow[0].approver_role, ea.ROLE_ACCOUNTS)
+
+	def test_two_different_people_both_stay(self):
+		doc = self._flow_for(
+			{ea.ROLE_ACCOUNTS: "one@test.com", ea.ROLE_GM: "two@test.com"},
+			[ea.ROLE_ACCOUNTS, ea.ROLE_GM],
+		)
+		self.assertEqual(
+			[r.approver for r in doc.approval_flow], ["one@test.com", "two@test.com"]
+		)
+
+	def test_the_document_still_starts_with_somebody(self):
+		doc = self._flow_for(
+			{ea.ROLE_ACCOUNTS: "one@test.com", ea.ROLE_GM: "one@test.com"},
+			[ea.ROLE_ACCOUNTS, ea.ROLE_GM],
+		)
+		self.assertEqual(doc.current_approver, "one@test.com")
+		self.assertEqual(doc.current_approval_index, 0)
+		self.assertEqual(doc.custom_approval_status, "Pending")
+
+	def test_a_missing_role_holder_is_still_refused(self):
+		ea._get_approver_by_role = lambda role: None
+		doc = frappe.new_doc("Employee Advance")
+		with self.assertRaises(frappe.ValidationError):
+			ea._generate_approval_flow(doc, [ea.ROLE_ACCOUNTS])

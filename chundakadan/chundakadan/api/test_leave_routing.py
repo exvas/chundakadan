@@ -7,6 +7,10 @@ unnoticed until a live application showed the wrong chain.
 
 import unittest
 
+import frappe
+from frappe.tests.utils import FrappeTestCase
+
+from chundakadan.chundakadan.api import leave
 from chundakadan.chundakadan.api.leave import role_sequence_for
 
 SALES = ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
@@ -111,3 +115,69 @@ class TestTheChainIsAlwaysUsable(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestOnePersonSignsALeaveOnce(FrappeTestCase):
+	"""A manager standing in for a vacant post above them holds two of the
+	chain's roles, which would put them at two steps of the same leave.
+
+	The GM left on 2026-10-09 and the Deputy Sales & Marketing Manager --
+	already the Sales HOD approver -- took the GM's approvals.
+	"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self._real = leave.get_approver_by_role
+
+	def tearDown(self):
+		leave.get_approver_by_role = self._real
+		frappe.db.rollback()
+
+	def _flow(self, mapping, designation="Sales Executive"):
+		leave.get_approver_by_role = lambda role: mapping.get(role)
+		doc = frappe.new_doc("Leave Application")
+		doc.department = SALES_DEPT
+		leave.generate_approval_flow(doc, designation)
+		return doc
+
+	def test_the_stand_in_signs_once(self):
+		doc = self._flow({
+			"Sales HOD Leave Approver": "razeel@test.com",
+			"HR Leave Approver": "hr@test.com",
+			"GM Leave Approver": "razeel@test.com",
+		})
+		self.assertEqual(
+			[r.approver for r in doc.approval_flow], ["razeel@test.com", "hr@test.com"]
+		)
+
+	def test_the_step_kept_is_the_first(self):
+		doc = self._flow({
+			"Sales HOD Leave Approver": "razeel@test.com",
+			"HR Leave Approver": "hr@test.com",
+			"GM Leave Approver": "razeel@test.com",
+		})
+		self.assertEqual(doc.approval_flow[0].approver_role, "Sales HOD Leave Approver")
+
+	def test_three_different_people_all_stay(self):
+		doc = self._flow({
+			"Sales HOD Leave Approver": "sales@test.com",
+			"HR Leave Approver": "hr@test.com",
+			"GM Leave Approver": "gm@test.com",
+		})
+		self.assertEqual(len(doc.approval_flow), 3)
+
+	def test_the_leave_still_starts_with_somebody(self):
+		doc = self._flow({
+			"Sales HOD Leave Approver": "razeel@test.com",
+			"HR Leave Approver": "hr@test.com",
+			"GM Leave Approver": "razeel@test.com",
+		})
+		self.assertEqual(doc.current_approver, "razeel@test.com")
+		self.assertEqual(doc.current_approval_index, 0)
+
+	def test_a_missing_role_holder_is_still_refused(self):
+		leave.get_approver_by_role = lambda role: None
+		doc = frappe.new_doc("Leave Application")
+		doc.department = SALES_DEPT
+		with self.assertRaises(frappe.ValidationError):
+			leave.generate_approval_flow(doc, "Sales Executive")

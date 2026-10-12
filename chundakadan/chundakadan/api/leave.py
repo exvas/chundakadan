@@ -249,9 +249,18 @@ def generate_approval_flow(doc, designation):
             )
         resolved.append((role, approver))
 
-    # All resolved — NOW commit to the doc
+    # All resolved — NOW commit to the doc.
+    # One person signs a leave once: when somebody holds two of the roles
+    # in the sequence -- as happens whenever a manager stands in for a
+    # vacant post above them -- their later step is dropped. Approving
+    # your own approval is no check at all. The step kept is the FIRST,
+    # so the leave still travels as far up the chain as it would have.
     doc.set("approval_flow", [])
+    already = set()
     for role, approver in resolved:
+        if approver in already:
+            continue
+        already.add(approver)
         doc.append("approval_flow", {
             "approver": approver,
             "approver_role": role,
