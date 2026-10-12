@@ -104,8 +104,9 @@ class TestPOWorkflow(FrappeTestCase):
 	def test_full_chain_approves_and_submits(self):
 		po = self._draft_po()
 		for role, action, expected in (
-			(PURCHASER, "Send for Verification", BILLING),
-			(BILLING_ROLE, "Verify", SALES),
+			# 2026-10-12: Billing Verification was dropped -- the post it
+			# belonged to no longer exists, so the step had nobody to take it
+			(PURCHASER, "Send for Verification", SALES),
 			(SALES_ROLE, "Verify", ACCOUNTS),
 			(ACCOUNTS_ROLE, "Verify", GM),
 			(GM_ROLE, "Approve", APPROVED),
@@ -117,7 +118,7 @@ class TestPOWorkflow(FrappeTestCase):
 
 	def test_wrong_role_cannot_move_the_chain(self):
 		po = self._draft_po()
-		self._as(BILLING_ROLE)  # billing cannot start the chain
+		self._as(SALES_ROLE)  # the first verifier cannot start the chain
 		self.assertEqual([t.action for t in get_transitions(frappe.get_doc(DOCTYPE, po.name))], [])
 		with self.assertRaises(WorkflowTransitionError):
 			apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Send for Verification")
@@ -125,9 +126,7 @@ class TestPOWorkflow(FrappeTestCase):
 	def test_verifier_can_reject_and_purchaser_reopens(self):
 		po = self._draft_po()
 		self._as(PURCHASER)
-		apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Send for Verification")
-		self._as(BILLING_ROLE)
-		po = apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Verify")
+		po = apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Send for Verification")
 		self.assertEqual(po.workflow_state, SALES)
 		self._as(SALES_ROLE)
 		po = apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Reject")
@@ -140,7 +139,7 @@ class TestPOWorkflow(FrappeTestCase):
 		po = self._draft_po()
 		self._as(PURCHASER)
 		apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Send for Verification")
-		for role in (BILLING_ROLE, SALES_ROLE, ACCOUNTS_ROLE):
+		for role in (SALES_ROLE, ACCOUNTS_ROLE):
 			self._as(role)
 			apply_workflow(frappe.get_doc(DOCTYPE, po.name), "Verify")
 		self._as(ACCOUNTS_ROLE)

@@ -34,6 +34,9 @@ GM_ROLE = "PO Approver"
 # into the profile; each of these profiles has exactly this one user.
 ROLE_PROFILES = {
 	PURCHASER: "CDN Purchaser",
+	# BILLING_ROLE kept here only so the role and its profile survive; the
+	# billing step itself was dropped from the chain on 2026-10-12 (see
+	# STATES) because nobody fills that post any more.
 	BILLING_ROLE: "CDN Accountant",
 	SALES_ROLE: "CDN Sales Admin",
 	ACCOUNTS_ROLE: "CDN Accounts Manager",
@@ -49,9 +52,15 @@ ROLE_USERS = {
 }
 
 # state, docstatus, role that may edit in this state, style
+#
+# 2026-10-12: the Billing Verification step is GONE. The accountant who held
+# it moved up to the Accounts Manager post, leaving the step with no one to
+# fill it, and every purchase order stopped there. A step nobody can take is
+# not a control, it is a wall. BILLING stays defined so that an order sitting
+# in that state is still a legal state while it is moved on.
 STATES = [
 	(DRAFT, 0, PURCHASER, ""),
-	(BILLING, 0, BILLING_ROLE, "Warning"),
+	(BILLING, 0, SALES_ROLE, "Warning"),
 	(SALES, 0, SALES_ROLE, "Warning"),
 	(ACCOUNTS, 0, ACCOUNTS_ROLE, "Warning"),
 	(GM, 0, GM_ROLE, "Warning"),
@@ -61,9 +70,10 @@ STATES = [
 
 # state, action, next state, role
 TRANSITIONS = [
-	(DRAFT, "Send for Verification", BILLING, PURCHASER),
-	(BILLING, "Verify", SALES, BILLING_ROLE),
-	(BILLING, "Reject", REJECTED, BILLING_ROLE),
+	(DRAFT, "Send for Verification", SALES, PURCHASER),
+	# left behind for orders already parked in the old state
+	(BILLING, "Verify", SALES, SALES_ROLE),
+	(BILLING, "Reject", REJECTED, SALES_ROLE),
 	(SALES, "Verify", ACCOUNTS, SALES_ROLE),
 	(SALES, "Reject", REJECTED, SALES_ROLE),
 	(ACCOUNTS, "Verify", GM, ACCOUNTS_ROLE),
