@@ -20,9 +20,12 @@ def execute(filters=None):
 def get_columns():
 	return [
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 200},
-		{"label": _("Amount"), "fieldname": "amount", "fieldtype": "Currency", "width": 160},
+		# the label says "excl. GST" because it is not obvious and it has cost
+		# the office a morning: this is base_net_amount, the taxable value,
+		# while Sales & Collection Summary shows a brand WITH the tax in
+		{"label": _("Amount (excl. GST)"), "fieldname": "amount", "fieldtype": "Currency", "width": 170},
 		# beside the amount it is netted out of, so the difference is plain
-		{"label": _("Returns"), "fieldname": "returns", "fieldtype": "Currency", "width": 130},
+		{"label": _("Returns (excl. GST)"), "fieldname": "returns", "fieldtype": "Currency", "width": 150},
 		{"label": _("Qty"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
 		{"label": _("Invoices"), "fieldname": "invoices", "fieldtype": "Int", "width": 90},
 		{"label": _("Customers"), "fieldname": "customers", "fieldtype": "Int", "width": 100},

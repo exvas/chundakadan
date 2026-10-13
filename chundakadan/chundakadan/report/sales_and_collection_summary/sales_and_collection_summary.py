@@ -47,7 +47,9 @@ def get_columns(filters):
 			"label": group["label"], "fieldname": "group_value",
 			"fieldtype": group["fieldtype"], "options": group.get("options"), "width": 200,
 		},
-		{"label": _("Sales"), "fieldname": "sales", "fieldtype": "Currency", "width": 140},
+		# say it on the label: this one carries the tax, and the Brand Wise
+		# Sales Report does not, so the same brand reads differently there
+		{"label": _("Sales (incl. GST)"), "fieldname": "sales", "fieldtype": "Currency", "width": 160},
 		{"label": _("Invoices"), "fieldname": "invoices", "fieldtype": "Int", "width": 90},
 		{"label": _("Qty Sold"), "fieldname": "qty", "fieldtype": "Float", "width": 110},
 	]

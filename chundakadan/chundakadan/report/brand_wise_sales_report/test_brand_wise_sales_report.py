@@ -161,3 +161,10 @@ class TestReturnsAreVisible(TestBrandWiseSalesReport):
 			places=2,
 		)
 
+	def test_the_label_says_the_tax_is_not_in_it(self):
+		"""Nobody should have to read the SQL to learn that."""
+		columns, _data = self._run()
+		by_name = {c["fieldname"]: c["label"] for c in columns}
+		self.assertIn("excl. GST", by_name["amount"])
+		self.assertIn("excl. GST", by_name["returns"])
+

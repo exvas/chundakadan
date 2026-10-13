@@ -94,6 +94,13 @@ class TestTheNumbers(SummaryCase):
 		)[0][0]
 		self.assertAlmostEqual(sum(flt(r["sales"]) for r in data), flt(expected), places=2)
 
+	def test_the_label_says_the_tax_is_in_it(self):
+		"""The Brand Wise Sales Report shows a brand WITHOUT the tax; if the
+		labels do not say which is which, the two look like a discrepancy."""
+		columns, _data = self._run()
+		sales = next(c for c in columns if c["fieldname"] == "sales")
+		self.assertIn("incl. GST", sales["label"])
+
 	def test_the_sales_figure_includes_the_tax(self):
 		"""Summing base_net_amount stripped the GST out and put the report
 		below the register -- the bug this guards."""
