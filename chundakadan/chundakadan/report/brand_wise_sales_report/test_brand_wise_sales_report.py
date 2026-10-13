@@ -25,7 +25,10 @@ class TestBrandWiseSalesReport(FrappeTestCase):
 
 	def test_columns(self):
 		columns, _data = self._run()
-		self.assertEqual([c["fieldname"] for c in columns], ["brand", "amount", "qty", "invoices", "customers"])
+		self.assertEqual(
+			[c["fieldname"] for c in columns],
+			["brand", "amount", "returns", "qty", "invoices", "customers"],
+		)
 
 	def test_totals_match_the_invoice_lines(self):
 		_columns, data = self._run()
@@ -111,3 +114,50 @@ class TestBrandWiseSalesReport(FrappeTestCase):
 			finally:
 				frappe.set_user("Administrator")
 		frappe.db.rollback()
+
+
+class TestReturnsAreVisible(TestBrandWiseSalesReport):
+	"""A netted-off return was a silent difference against the office's own
+	spreadsheet -- AUSTO read ₹6.44L here and ₹7.9L there, and nobody could
+	see why. The return now has a column of its own and a filter."""
+
+	def test_the_returns_column_holds_only_returns(self):
+		_columns, data = self._run()
+		expected = frappe.db.sql(
+			"""select sum(sii.base_net_amount) as amount
+			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
+			where si.docstatus = 1 and si.is_return = 1 and si.company = %s
+			  and si.posting_date = %s""",
+			(COMPANY, self.sample.posting_date), as_dict=True,
+		)[0]
+		self.assertAlmostEqual(
+			sum(flt(r.returns) for r in data), flt(expected.amount or 0), places=2
+		)
+
+	def test_excluding_returns_leaves_the_returns_column_empty(self):
+		_columns, data = self._run(exclude_returns=1)
+		self.assertEqual(sum(flt(r.returns) for r in data), 0)
+
+	def test_excluding_returns_matches_the_sales_only_total(self):
+		_columns, data = self._run(exclude_returns=1)
+		expected = frappe.db.sql(
+			"""select sum(sii.base_net_amount) as amount
+			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
+			where si.docstatus = 1 and si.is_return = 0 and si.company = %s
+			  and si.posting_date = %s""",
+			(COMPANY, self.sample.posting_date), as_dict=True,
+		)[0]
+		self.assertAlmostEqual(
+			sum(flt(r.amount) for r in data), flt(expected.amount or 0), places=2
+		)
+
+	def test_amount_less_returns_is_what_the_filter_gives(self):
+		"""The two views have to agree, or the column is just decoration."""
+		_columns, netted = self._run()
+		_columns, sales_only = self._run(exclude_returns=1)
+		self.assertAlmostEqual(
+			sum(flt(r.amount) for r in netted) - sum(flt(r.returns) for r in netted),
+			sum(flt(r.amount) for r in sales_only),
+			places=2,
+		)
+

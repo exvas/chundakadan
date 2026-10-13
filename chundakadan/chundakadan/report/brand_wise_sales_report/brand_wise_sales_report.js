@@ -10,5 +10,8 @@ frappe.query_reports["Brand Wise Sales Report"] = {
 		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person" },
 		{ fieldname: "brand", label: __("Brand"), fieldtype: "Link", options: "Brand" },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
+		{
+			fieldname: "exclude_returns", label: __("Exclude Returns"), fieldtype: "Check", default: 0,
+		},
 	],
 };

@@ -21,6 +21,8 @@ def get_columns():
 	return [
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 200},
 		{"label": _("Amount"), "fieldname": "amount", "fieldtype": "Currency", "width": 160},
+		# beside the amount it is netted out of, so the difference is plain
+		{"label": _("Returns"), "fieldname": "returns", "fieldtype": "Currency", "width": 130},
 		{"label": _("Qty"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
 		{"label": _("Invoices"), "fieldname": "invoices", "fieldtype": "Int", "width": 90},
 		{"label": _("Customers"), "fieldname": "customers", "fieldtype": "Int", "width": 100},
@@ -39,12 +41,17 @@ def get_data(filters):
 		conditions.append("item.brand = %(brand)s")
 	if filters.get("customer"):
 		conditions.append("si.customer = %(customer)s")
+	if filters.get("exclude_returns"):
+		conditions.append("si.is_return = 0")
 
 	return frappe.db.sql(
 		f"""
 		select
 			coalesce(nullif(item.brand, ''), '{_("Without Brand")}') as brand,
 			sum(sii.base_net_amount) as amount,
+			-- shown on its own so a netted-off return is never a silent
+			-- difference against somebody's spreadsheet
+			sum(case when si.is_return = 1 then sii.base_net_amount else 0 end) as returns,
 			sum(sii.stock_qty) as qty,
 			count(distinct si.name) as invoices,
 			count(distinct si.customer) as customers
