@@ -33,7 +33,7 @@ class TestBrandWiseSalesReport(FrappeTestCase):
 	def test_totals_match_the_invoice_lines(self):
 		_columns, data = self._run()
 		expected = frappe.db.sql(
-			"""select sum(sii.base_net_amount) as amount
+			"""select sum(sii.base_amount) as amount
 			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
 			where si.docstatus = 1 and si.company = %s and si.posting_date = %s""",
 			(COMPANY, self.sample.posting_date), as_dict=True,
@@ -55,7 +55,7 @@ class TestBrandWiseSalesReport(FrappeTestCase):
 		if brand == "Without Brand":
 			self.skipTest("top row is unbranded")
 		expected = frappe.db.sql(
-			"""select sum(sii.base_net_amount) as amount
+			"""select sum(sii.base_amount) as amount
 			from `tabSales Invoice Item` sii
 			join `tabSales Invoice` si on si.name = sii.parent
 			join `tabItem` item on item.name = sii.item_code
@@ -69,7 +69,7 @@ class TestBrandWiseSalesReport(FrappeTestCase):
 			self.skipTest("invoice has no sales person")
 		_columns, data = self._run(sales_person=self.sample.custom_sales_person)
 		expected = frappe.db.sql(
-			"""select sum(sii.base_net_amount) as amount
+			"""select sum(sii.base_amount) as amount
 			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
 			where si.docstatus = 1 and si.company = %s and si.posting_date = %s and si.custom_sales_person = %s""",
 			(COMPANY, self.sample.posting_date, self.sample.custom_sales_person), as_dict=True,
@@ -124,7 +124,7 @@ class TestReturnsAreVisible(TestBrandWiseSalesReport):
 	def test_the_returns_column_holds_only_returns(self):
 		_columns, data = self._run()
 		expected = frappe.db.sql(
-			"""select sum(sii.base_net_amount) as amount
+			"""select sum(sii.base_amount) as amount
 			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
 			where si.docstatus = 1 and si.is_return = 1 and si.company = %s
 			  and si.posting_date = %s""",
@@ -141,7 +141,7 @@ class TestReturnsAreVisible(TestBrandWiseSalesReport):
 	def test_excluding_returns_matches_the_sales_only_total(self):
 		_columns, data = self._run(exclude_returns=1)
 		expected = frappe.db.sql(
-			"""select sum(sii.base_net_amount) as amount
+			"""select sum(sii.base_amount) as amount
 			from `tabSales Invoice Item` sii join `tabSales Invoice` si on si.name = sii.parent
 			where si.docstatus = 1 and si.is_return = 0 and si.company = %s
 			  and si.posting_date = %s""",
@@ -165,6 +165,34 @@ class TestReturnsAreVisible(TestBrandWiseSalesReport):
 		"""Nobody should have to read the SQL to learn that."""
 		columns, _data = self._run()
 		by_name = {c["fieldname"]: c["label"] for c in columns}
-		self.assertIn("excl. GST", by_name["amount"])
-		self.assertIn("excl. GST", by_name["returns"])
+		self.assertIn("incl. GST", by_name["amount"])
+		self.assertIn("incl. GST", by_name["returns"])
+
+
+class TestTheTwoBrandReportsAgree(TestBrandWiseSalesReport):
+	"""A brand read ₹6.44L here and a different figure in Sales & Collection
+	Summary, because one carried the tax and the other did not. They are the
+	same figure now, and this keeps them that way."""
+
+	def test_a_brand_totals_the_same_in_both_reports(self):
+		from chundakadan.chundakadan.report.sales_and_collection_summary.sales_and_collection_summary import (
+			execute as summary,
+		)
+
+		_columns, mine = self._run()
+		if not mine:
+			self.skipTest("no sales on the sample day")
+		_columns, theirs = summary({
+			"company": COMPANY,
+			"from_date": self.sample.posting_date,
+			"to_date": self.sample.posting_date,
+			"group_by": "Brand",
+		})
+		by_brand = {r["group_value"]: flt(r["sales"]) for r in theirs}
+		for row in mine:
+			if row.brand not in by_brand:
+				continue
+			self.assertAlmostEqual(
+				flt(row.amount), by_brand[row.brand], places=2, msg=row.brand
+			)
 

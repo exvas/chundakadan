@@ -20,12 +20,12 @@ def execute(filters=None):
 def get_columns():
 	return [
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 200},
-		# the label says "excl. GST" because it is not obvious and it has cost
-		# the office a morning: this is base_net_amount, the taxable value,
-		# while Sales & Collection Summary shows a brand WITH the tax in
-		{"label": _("Amount (excl. GST)"), "fieldname": "amount", "fieldtype": "Currency", "width": 170},
+		# the office reads every sales figure with the tax in it, and
+		# Sales & Collection Summary already does -- the same brand reading
+		# two different totals in two reports was the whole confusion
+		{"label": _("Amount (incl. GST)"), "fieldname": "amount", "fieldtype": "Currency", "width": 170},
 		# beside the amount it is netted out of, so the difference is plain
-		{"label": _("Returns (excl. GST)"), "fieldname": "returns", "fieldtype": "Currency", "width": 150},
+		{"label": _("Returns (incl. GST)"), "fieldname": "returns", "fieldtype": "Currency", "width": 150},
 		{"label": _("Qty"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
 		{"label": _("Invoices"), "fieldname": "invoices", "fieldtype": "Int", "width": 90},
 		{"label": _("Customers"), "fieldname": "customers", "fieldtype": "Int", "width": 100},
@@ -51,10 +51,12 @@ def get_data(filters):
 		f"""
 		select
 			coalesce(nullif(item.brand, ''), '{_("Without Brand")}') as brand,
-			sum(sii.base_net_amount) as amount,
+			-- base_amount, not base_net_amount: CA prices GST-inclusive, so
+			-- this is what the line is actually billed at
+			sum(sii.base_amount) as amount,
 			-- shown on its own so a netted-off return is never a silent
 			-- difference against somebody's spreadsheet
-			sum(case when si.is_return = 1 then sii.base_net_amount else 0 end) as returns,
+			sum(case when si.is_return = 1 then sii.base_amount else 0 end) as returns,
 			sum(sii.stock_qty) as qty,
 			count(distinct si.name) as invoices,
 			count(distinct si.customer) as customers
