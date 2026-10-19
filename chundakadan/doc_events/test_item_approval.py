@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt, now
 from frappe.tests.utils import FrappeTestCase
 
 from chundakadan.chundakadan.api import item_approval as api
@@ -489,3 +490,63 @@ class TestMobileEndpoints(ItemApprovalCase):
 		res = self._call(reject_items, items=[self.item.name], reason="")
 		self.assertFalse(res["success"])
 		self.assertEqual(res["http_status_code"], 500)
+
+
+class TestAnApprovedItemStaysEditable(ItemApprovalCase):
+	"""Approval decides whether the item may be used, not who may ever edit
+	it again. An accountant correcting a valuation rate on an item approved
+	weeks ago was refused with "Only the Item approval role may change
+	Approved On" -- a Datetime the form hands back as a string, compared
+	raw against the datetime on the saved document. Nothing had changed.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self._settings(True)
+		self.item = self._new_item()
+		frappe.set_user(APPROVER)
+		doc = frappe.get_doc("Item", self.item.name)
+		doc.set(api.STATUS_FIELD, api.APPROVED)
+		doc.custom_approved_by = APPROVER
+		doc.custom_approved_on = now()
+		doc.disabled = 0
+		doc.save(ignore_permissions=True)
+		frappe.set_user("Administrator")
+
+	def _reopen_as_creator(self):
+		frappe.set_user(CREATOR)
+		return frappe.get_doc("Item", self.item.name)
+
+	def test_an_ordinary_person_can_edit_an_approved_item(self):
+		doc = self._reopen_as_creator()
+		doc.valuation_rate = 123.45
+		doc.save(ignore_permissions=True)
+		self.assertEqual(
+			flt(frappe.db.get_value("Item", self.item.name, "valuation_rate")), 123.45
+		)
+
+	def test_the_approval_stamp_coming_back_as_a_string_is_not_a_change(self):
+		"""The exact shape of the bug."""
+		doc = self._reopen_as_creator()
+		doc.custom_approved_on = str(doc.custom_approved_on)
+		doc.description = "edited"
+		doc.save(ignore_permissions=True)
+
+	def test_a_real_change_to_the_stamp_is_still_refused(self):
+		doc = self._reopen_as_creator()
+		doc.custom_approved_on = "2020-01-01 00:00:00"
+		with self.assertRaises(frappe.PermissionError):
+			doc.save(ignore_permissions=True)
+
+	def test_the_status_is_still_guarded(self):
+		doc = self._reopen_as_creator()
+		doc.set(api.STATUS_FIELD, "Rejected")
+		with self.assertRaises(frappe.PermissionError):
+			doc.save(ignore_permissions=True)
+
+	def test_blank_and_none_are_the_same_emptiness(self):
+		frappe.db.set_value("Item", self.item.name, "custom_rejection_reason", None,
+		                    update_modified=False)
+		doc = self._reopen_as_creator()
+		doc.custom_rejection_reason = ""
+		doc.save(ignore_permissions=True)
