@@ -19,6 +19,8 @@ it in Returned so the employee can fix it and send it again.
 from __future__ import annotations
 
 import frappe
+
+from chundakadan.utils.fields import field_changed
 from frappe import _
 from frappe.utils import now
 
@@ -272,7 +274,7 @@ def _guard_remarks(doc):
 	idx = int(doc.get("current_approval_index") or 0)
 	mine = REMARK_FIELD.get(idx) if doc.custom_approval_status in (STATUS_PENDING, STATUS_PARTIAL) else None
 	for step, field in REMARK_FIELD.items():
-		if doc.get(field) == before.get(field):
+		if not field_changed("Daily Work Summary", doc, before, field):
 			continue
 		if field != mine or not can_act_now(doc):
 			frappe.throw(

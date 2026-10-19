@@ -9,8 +9,9 @@ the feature needs.
 import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.utils import cstr, get_datetime, getdate, now
+from frappe.utils import now
 
+from chundakadan.utils.fields import field_changed
 from chundakadan.chundakadan.api.item_approval import (
 	APPROVED,
 	PENDING,
@@ -132,7 +133,7 @@ def guard_approval_fields(doc, method=None):
 	if not before:
 		return
 	for field in GUARDED_FIELDS:
-		if _differs(doc, before, field):
+		if field_changed("Item", doc, before, field):
 			frappe.throw(
 				_("Only the Item approval role may change {0}").format(
 					frappe.get_meta("Item").get_label(field)
@@ -144,33 +145,6 @@ def guard_approval_fields(doc, method=None):
 			_("{0} is not approved yet, so it cannot be enabled").format(doc.name),
 			frappe.PermissionError,
 		)
-
-
-def _differs(doc, before, field) -> bool:
-	"""Did this field really change?
-
-	A plain `!=` says yes far too often. Approved On is a Datetime: the
-	form hands it back as the string "2026-10-05 10:00:00" while the saved
-	document holds a datetime object, so the two never match and an
-	ordinary edit -- an accountant correcting a valuation rate on an item
-	that was approved weeks ago -- is refused with "Only the Item approval
-	role may change Approved On". Nothing had changed.
-
-	So compare like with like, and treat None and "" as the same emptiness.
-	"""
-	new, old = doc.get(field), before.get(field)
-	if not new and not old:
-		return False
-	fieldtype = (frappe.get_meta("Item").get_field(field) or frappe._dict()).get("fieldtype")
-	try:
-		if fieldtype == "Datetime":
-			return get_datetime(new) != get_datetime(old)
-		if fieldtype == "Date":
-			return getdate(new) != getdate(old)
-	except Exception:
-		# an unparseable value is a real change -- let the guard speak
-		return True
-	return cstr(new) != cstr(old)
 
 
 def notify_approvers(doc, method=None):

@@ -6,6 +6,8 @@ file wires them to Customer's save cycle and creates the custom fields.
 """
 
 import frappe
+
+from chundakadan.utils.fields import field_changed
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now
@@ -127,7 +129,7 @@ def guard_approval_fields(doc, method=None):
 	if not before:
 		return
 	for field in GUARDED_FIELDS:
-		if doc.get(field) != before.get(field):
+		if field_changed("Customer", doc, before, field):
 			frappe.throw(
 				_("Only the Customer approval role may change {0}").format(
 					frappe.get_meta("Customer").get_label(field)
