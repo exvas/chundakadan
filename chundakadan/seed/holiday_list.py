@@ -216,18 +216,32 @@ def upsert_holidays(target_list=HOLIDAY_LIST_NAME, years=None):
     target_to = all_rows[-1][0]
 
     if frappe.db.exists("Holiday List", target_list):
-        # Update existing — extend dates + append missing holidays
+        # Update existing — seed only the years the list does not cover yet.
+        #
+        # A year already on the list belongs to HR, not to us. They delete the
+        # holidays the office does not actually take and add the ones we do not
+        # know about; re-adding "missing" dates on every migrate put every
+        # deleted holiday straight back, which is what HR kept reporting.
+        # So we add a YEAR, once, and never touch it again.
         doc = frappe.get_doc("Holiday List", target_list)
-        existing_dates = {h.holiday_date for h in doc.holidays}
+        existing_dates = {_date.fromisoformat(str(h.holiday_date)) for h in doc.holidays}
+        years_on_the_list = {d.year for d in existing_dates}
 
-        # Extend date range to cover the new years (don't shrink it)
+        rows_to_add = [r for r in all_rows if r[0].year not in years_on_the_list]
+        if not rows_to_add:
+            print(f"  · {target_list}: {years} already on the list — left alone")
+            return target_list
+
+        # Extend the range for the years we are actually adding (never shrink)
+        target_from = min(r[0] for r in rows_to_add)
+        target_to = max(r[0] for r in rows_to_add)
         if doc.from_date is None or _date.fromisoformat(str(doc.from_date)) > target_from:
             doc.from_date = str(target_from)
         if doc.to_date is None or _date.fromisoformat(str(doc.to_date)) < target_to:
             doc.to_date = str(target_to)
 
         added = 0
-        for d, desc, weekly in all_rows:
+        for d, desc, weekly in rows_to_add:
             if d in existing_dates:
                 continue
             doc.append("holidays", {
