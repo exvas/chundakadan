@@ -445,6 +445,7 @@ override_doctype_class = {
     "chundakadan.overrides.leave_application.CustomLeaveApplication",
     "Employee Checkin": "chundakadan.overrides.employee_checkin.CustomEmployeeCheckin",
     "Purchase Invoice": "chundakadan.overrides.purchase_invoice.CustomPurchaseInvoice",
+    "Sales Invoice": "chundakadan.overrides.sales_invoice.CustomSalesInvoice",
 }
 
 
