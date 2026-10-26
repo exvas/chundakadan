@@ -263,6 +263,12 @@ doc_events = {
     "Purchase Order": {
         "before_insert": "chundakadan.seed.po_workflow.set_default_workflow_state",
     },
+    # the Amount of a late-arrival deduction is only the sum of the days still
+    # listed in its table, recomputed here so the browser is never the one
+    # deciding what is cut from someone's salary
+    "Additional Salary": {
+        "validate": "chundakadan.doc_events.additional_salary.sync_late_entry_total",
+    },
     "Purchase Invoice": {
         "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
         "before_validate": [

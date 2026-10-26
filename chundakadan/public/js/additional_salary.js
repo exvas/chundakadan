@@ -37,7 +37,11 @@ function chundakadan_sync_late_total(frm) {
 }
 
 frappe.ui.form.on("Additional Salary", {
+	// one row deleted, and the bulk "Delete" button over the checkboxes
 	[LATE_TABLE + "_remove"]: function (frm) {
+		chundakadan_sync_late_total(frm);
+	},
+	[LATE_TABLE + "_delete"]: function (frm) {
 		chundakadan_sync_late_total(frm);
 	},
 
