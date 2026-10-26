@@ -1,9 +1,50 @@
 // Copyright (c) 2026, Ashkar and contributors
 // "Fetch Late Arrival Deduction" — pull this employee's late check-ins for the
 // payroll month into the Late Entry Details table and set Amount = total.
+//
+// A fetched day can be dropped: a late arrival that was approved should not be
+// cut. Removing the row re-adds nothing, it only takes that day's deduction out
+// of Amount and out of the sentence in Reason, so the figure always matches the
+// days still listed. Rows cannot be added or edited by hand — the columns are
+// read-only and the grid refuses new rows — so the only honest edit is removal.
+
+const LATE_TABLE = "custom_late_entry_details";
+
+// Amount and Reason follow whatever days are left in the table.
+function chundakadan_sync_late_total(frm) {
+	const rows = frm.doc[LATE_TABLE] || [];
+	let total = 0;
+	let minutes = 0;
+	rows.forEach(function (r) {
+		total += flt(r.deduction);
+		minutes += cint(r.late_minutes);
+	});
+	frm.set_value("amount", Math.round(total));
+
+	// keep the existing period, only restate the counts
+	const period = (frm.doc.custom_reason || "").match(/(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})/);
+	if (period) {
+		frm.set_value(
+			"custom_reason",
+			__("Late entry deduction {0} to {1}: {2} late min over {3} day(s)", [
+				period[1],
+				period[2],
+				minutes,
+				rows.length,
+			])
+		);
+	}
+}
 
 frappe.ui.form.on("Additional Salary", {
+	[LATE_TABLE + "_remove"]: function (frm) {
+		chundakadan_sync_late_total(frm);
+	},
+
 	refresh(frm) {
+		const grid = frm.get_field(LATE_TABLE) && frm.get_field(LATE_TABLE).grid;
+		if (grid) grid.cannot_add_rows = true; // removal only, never invention
+
 		if (frm.doc.docstatus !== 0) return; // only editable drafts
 
 		frm.add_custom_button(__("Fetch Late Arrival Deduction"), function () {

@@ -455,7 +455,11 @@ def ensure_additional_salary_fields(*args, **kwargs):
             "fieldtype": "Table",
             "options": "Late Entry Detail",
             "insert_after": "custom_late_entry_section",
-            "read_only": 1,
+            # editable so HR can DELETE a day that should not be cut (an
+            # approved late arrival, say). The individual columns are read-only
+            # on the child doctype and the grid refuses new rows, so the only
+            # thing anyone can do here is remove a row — and Amount follows.
+            "read_only": 0,
         },
     ]
     made = False

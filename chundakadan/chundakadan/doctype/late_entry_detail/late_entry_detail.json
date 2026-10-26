@@ -16,35 +16,40 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Date",
-   "columns": 2
+   "columns": 2,
+   "read_only": 1
   },
   {
    "fieldname": "check_in_time",
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Check-in Time",
-   "columns": 3
+   "columns": 3,
+   "read_only": 1
   },
   {
    "fieldname": "shift",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Shift",
-   "columns": 2
+   "columns": 2,
+   "read_only": 1
   },
   {
    "fieldname": "late_minutes",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Late Minutes",
-   "columns": 1
+   "columns": 1,
+   "read_only": 1
   },
   {
    "fieldname": "deduction",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Deduction",
-   "columns": 2
+   "columns": 2,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
