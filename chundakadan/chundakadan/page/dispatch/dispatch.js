@@ -213,11 +213,14 @@ class DispatchBoard {
 					},
 				];
 			case "not_delivered":
-				return [invoice, customer, mobile, remarks, expected];
+				return [invoice, customer, mobile, transporter, remarks, expected];
 			default:
+				// who carried it is the first thing asked when a delivery is
+				// questioned later, so it stays on screen after delivery too
 				return [
 					invoice,
 					customer,
+					transporter,
 					{ label: __("Status"), html: (r) => dsp_esc(r.dispatch_status) },
 					{ label: __("Confirmed On"), html: (r) => dsp_esc(r.delivery_confirmed_on ? frappe.datetime.str_to_user(r.delivery_confirmed_on) : "") },
 					{ label: __("Confirmed By"), html: (r) => dsp_esc(r.delivery_confirmed_by) },
