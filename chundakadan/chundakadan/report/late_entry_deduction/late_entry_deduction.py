@@ -10,82 +10,101 @@ Salary per employee (component "Late Arrival Deduction") for HR to submit.
 
 See design: [[chundakadan-late-entry-deduction]].
 """
+
 import json
 from datetime import timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, get_last_day
+from frappe.utils import flt, get_last_day, getdate
 
-DAYS_IN_MONTH = 30          # chundakadan payroll_basis = Fixed 30 Days
+DAYS_IN_MONTH = 30  # chundakadan payroll_basis = Fixed 30 Days
 LATE_COMPONENT = "Late Arrival Deduction"
 
 
 def execute(filters=None):
-    filters = frappe._dict(filters or {})
-    return get_columns(), get_data(filters)
+	filters = frappe._dict(filters or {})
+	return get_columns(), get_data(filters)
 
 
 def get_columns():
-    return [
-        {"label": _("Employee"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 130},
-        {"label": _("Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 190},
-        {"label": _("Present Days"), "fieldname": "present_days", "fieldtype": "Int", "width": 110},
-        {"label": _("Late Days"), "fieldname": "late_days", "fieldtype": "Int", "width": 95},
-        {"label": _("Total Late Minutes"), "fieldname": "total_late_minutes", "fieldtype": "Int", "width": 145},
-        {"label": _("Base"), "fieldname": "base", "fieldtype": "Currency", "width": 110},
-        {"label": _("Deduction Amount"), "fieldname": "deduction_amount", "fieldtype": "Currency", "width": 150},
-    ]
+	return [
+		{
+			"label": _("Employee"),
+			"fieldname": "employee",
+			"fieldtype": "Link",
+			"options": "Employee",
+			"width": 130,
+		},
+		{"label": _("Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 190},
+		{"label": _("Present Days"), "fieldname": "present_days", "fieldtype": "Int", "width": 110},
+		{"label": _("Late Days"), "fieldname": "late_days", "fieldtype": "Int", "width": 95},
+		{
+			"label": _("Total Late Minutes"),
+			"fieldname": "total_late_minutes",
+			"fieldtype": "Int",
+			"width": 145,
+		},
+		{"label": _("Base"), "fieldname": "base", "fieldtype": "Currency", "width": 110},
+		{
+			"label": _("Deduction Amount"),
+			"fieldname": "deduction_amount",
+			"fieldtype": "Currency",
+			"width": 150,
+		},
+	]
 
 
 def _grace_and_duration():
-    """{shift_name: (grace_minutes, duration_minutes)} from Shift Type."""
-    out = {}
-    for s in frappe.get_all("Shift Type", fields=["name", "start_time", "end_time", "late_entry_grace_period"]):
-        dur = 0
-        if s.start_time is not None and s.end_time is not None:
-            dur = (s.end_time.total_seconds() - s.start_time.total_seconds()) / 60.0
-            if dur < 0:  # overnight shift
-                dur += 24 * 60
-        out[s.name] = (int(s.late_entry_grace_period or 0), dur)
-    return out
+	"""{shift_name: (grace_minutes, duration_minutes)} from Shift Type."""
+	out = {}
+	for s in frappe.get_all(
+		"Shift Type", fields=["name", "start_time", "end_time", "late_entry_grace_period"]
+	):
+		dur = 0
+		if s.start_time is not None and s.end_time is not None:
+			dur = (s.end_time.total_seconds() - s.start_time.total_seconds()) / 60.0
+			if dur < 0:  # overnight shift
+				dur += 24 * 60
+		out[s.name] = (int(s.late_entry_grace_period or 0), dur)
+	return out
 
 
 def _base_map(to_date, employee=None):
-    """Latest submitted SSA base per employee effective on/before to_date."""
-    cond = "and employee = %(emp)s" if employee else ""
-    rows = frappe.db.sql(
-        f"""
+	"""Latest submitted SSA base per employee effective on/before to_date."""
+	cond = "and employee = %(emp)s" if employee else ""
+	rows = frappe.db.sql(
+		f"""
         select employee, base
         from `tabSalary Structure Assignment`
         where docstatus = 1 and from_date <= %(to)s {cond}
         order by employee, from_date desc, creation desc
         """,
-        {"to": to_date, "emp": employee},
-        as_dict=True,
-    )
-    base = {}
-    for r in rows:                       # first row per employee wins (ordered desc)
-        base.setdefault(r.employee, flt(r.base))
-    return base
+		{"to": to_date, "emp": employee},
+		as_dict=True,
+	)
+	base = {}
+	for r in rows:  # first row per employee wins (ordered desc)
+		base.setdefault(r.employee, flt(r.base))
+	return base
 
 
 def _late_rows(filters):
-    """First IN check-in per employee per day within the period, with shift info."""
-    from_dt = getdate(filters.from_date)
-    to_dt = getdate(filters.to_date)
-    conds = ["ec.time >= %(from)s", "ec.time < %(to)s"]
-    params = {"from": f"{from_dt} 00:00:00", "to": f"{to_dt} 23:59:59"}
-    if filters.get("employee"):
-        conds.append("ec.employee = %(employee)s")
-        params["employee"] = filters.employee
-    if filters.get("shift"):
-        conds.append("ec.shift = %(shift)s")
-        params["shift"] = filters.shift
-    where = " and ".join(conds)
-    # earliest IN per employee/day; ignore rows with no resolved shift start
-    return frappe.db.sql(
-        f"""
+	"""First IN check-in per employee per day within the period, with shift info."""
+	from_dt = getdate(filters.from_date)
+	to_dt = getdate(filters.to_date)
+	conds = ["ec.time >= %(from)s", "ec.time < %(to)s"]
+	params = {"from": f"{from_dt} 00:00:00", "to": f"{to_dt} 23:59:59"}
+	if filters.get("employee"):
+		conds.append("ec.employee = %(employee)s")
+		params["employee"] = filters.employee
+	if filters.get("shift"):
+		conds.append("ec.shift = %(shift)s")
+		params["shift"] = filters.shift
+	where = " and ".join(conds)
+	# earliest IN per employee/day; ignore rows with no resolved shift start
+	return frappe.db.sql(
+		f"""
         select ec.employee, date(ec.time) as dt, min(ec.time) as first_in,
                ec.shift, ec.shift_start, ec.shift_end
         from `tabEmployee Checkin` ec
@@ -94,174 +113,194 @@ def _late_rows(filters):
           and ec.shift_start is not null
         group by ec.employee, date(ec.time), ec.shift, ec.shift_start, ec.shift_end
         """,
-        params,
-        as_dict=True,
-    )
+		params,
+		as_dict=True,
+	)
 
 
 def compute_late_days(employee, from_date, to_date):
-    """Per-day late-entry breakdown for ONE employee over a period.
+	"""Per-day late-entry breakdown for ONE employee over a period.
 
-    Returns a list of dicts: {date, check_in, shift, late_minutes, per_minute,
-    deduction}. Shared by both the report and the on-form "Fetch Late Arrival
-    Deduction" button so the math has a single source of truth.
-    """
-    shift_info = _grace_and_duration()
-    base = _base_map(getdate(to_date), employee).get(employee, 0.0)
-    rows = _late_rows(frappe._dict({"from_date": from_date, "to_date": to_date, "employee": employee}))
+	Returns a list of dicts: {date, check_in, shift, late_minutes, per_minute,
+	deduction}. Shared by both the report and the on-form "Fetch Late Arrival
+	Deduction" button so the math has a single source of truth.
+	"""
+	shift_info = _grace_and_duration()
+	base = _base_map(getdate(to_date), employee).get(employee, 0.0)
+	rows = _late_rows(frappe._dict({"from_date": from_date, "to_date": to_date, "employee": employee}))
 
-    out = []
-    for r in rows:
-        grace, dur_from_type = shift_info.get(r.shift, (0, 0))
-        deadline = r.shift_start + timedelta(minutes=grace)
-        late_min = int(max(0.0, (r.first_in - deadline).total_seconds()) // 60)
-        if late_min <= 0:
-            continue
-        dur = 0.0
-        if r.shift_end:
-            dur = (r.shift_end - r.shift_start).total_seconds() / 60.0
-        if dur <= 0:
-            dur = dur_from_type
-        per_min = (base / DAYS_IN_MONTH) / dur if dur > 0 else 0.0
-        out.append({
-            "date": r.dt,
-            "check_in": r.first_in,
-            "shift": r.shift,
-            "late_minutes": late_min,
-            "per_minute": round(per_min, 4),
-            "deduction": round(late_min * per_min, 2),
-        })
-    out.sort(key=lambda d: d["date"])
-    return out
+	out = []
+	for r in rows:
+		grace, dur_from_type = shift_info.get(r.shift, (0, 0))
+		deadline = r.shift_start + timedelta(minutes=grace)
+		late_min = int(max(0.0, (r.first_in - deadline).total_seconds()) // 60)
+		if late_min <= 0:
+			continue
+		dur = 0.0
+		if r.shift_end:
+			dur = (r.shift_end - r.shift_start).total_seconds() / 60.0
+		if dur <= 0:
+			dur = dur_from_type
+		per_min = (base / DAYS_IN_MONTH) / dur if dur > 0 else 0.0
+		out.append(
+			{
+				"date": r.dt,
+				"check_in": r.first_in,
+				"shift": r.shift,
+				"late_minutes": late_min,
+				"per_minute": round(per_min, 4),
+				"deduction": round(late_min * per_min, 2),
+			}
+		)
+	out.sort(key=lambda d: d["date"])
+	return out
 
 
 @frappe.whitelist()
 def get_late_entries_for_month(employee, payroll_date):
-    """On-form button: late-entry breakdown for the employee for the whole
-    month containing payroll_date. Returns rows + rounded total for the child
-    table + Amount field on Additional Salary."""
-    from frappe.utils import get_first_day, get_last_day
-    if not employee or not payroll_date:
-        frappe.throw(_("Employee and Payroll Date are required."))
-    pdate = getdate(payroll_date)
-    from_date = get_first_day(pdate)
-    to_date = get_last_day(pdate)
-    days = compute_late_days(employee, from_date, to_date)
-    total_minutes = sum(d["late_minutes"] for d in days)
-    total = round(sum(d["deduction"] for d in days))
-    return {
-        "rows": days,
-        "late_days": len(days),
-        "total_minutes": total_minutes,
-        "total": total,
-        "from_date": str(from_date),
-        "to_date": str(to_date),
-    }
+	"""On-form button: late-entry breakdown for the employee for the whole
+	month containing payroll_date. Returns rows + rounded total for the child
+	table + Amount field on Additional Salary."""
+	from frappe.utils import get_first_day, get_last_day
+
+	if not employee or not payroll_date:
+		frappe.throw(_("Employee and Payroll Date are required."))
+	pdate = getdate(payroll_date)
+	from_date = get_first_day(pdate)
+	to_date = get_last_day(pdate)
+	days = compute_late_days(employee, from_date, to_date)
+	total_minutes = sum(d["late_minutes"] for d in days)
+	total = round(sum(d["deduction"] for d in days))
+	return {
+		"rows": days,
+		"late_days": len(days),
+		"total_minutes": total_minutes,
+		"total": total,
+		"from_date": str(from_date),
+		"to_date": str(to_date),
+	}
 
 
 def get_data(filters):
-    if not filters.get("from_date") or not filters.get("to_date"):
-        frappe.throw(_("Please select From Date and To Date."))
+	if not filters.get("from_date") or not filters.get("to_date"):
+		frappe.throw(_("Please select From Date and To Date."))
 
-    shift_info = _grace_and_duration()
-    base_map = _base_map(getdate(filters.to_date), filters.get("employee"))
-    rows = _late_rows(filters)
+	shift_info = _grace_and_duration()
+	base_map = _base_map(getdate(filters.to_date), filters.get("employee"))
+	rows = _late_rows(filters)
 
-    agg = {}
-    for r in rows:
-        grace, dur_from_type = shift_info.get(r.shift, (0, 0))
-        deadline = r.shift_start + timedelta(minutes=grace)
-        late_min = int(max(0.0, (r.first_in - deadline).total_seconds()) // 60)
+	agg = {}
+	for r in rows:
+		grace, dur_from_type = shift_info.get(r.shift, (0, 0))
+		deadline = r.shift_start + timedelta(minutes=grace)
+		late_min = int(max(0.0, (r.first_in - deadline).total_seconds()) // 60)
 
-        # duration: prefer the checkin's own shift window, else the Shift Type's
-        dur = 0.0
-        if r.shift_end:
-            dur = (r.shift_end - r.shift_start).total_seconds() / 60.0
-        if dur <= 0:
-            dur = dur_from_type
-        base = base_map.get(r.employee, 0.0)
-        per_min = (base / DAYS_IN_MONTH) / dur if dur > 0 else 0.0
+		# duration: prefer the checkin's own shift window, else the Shift Type's
+		dur = 0.0
+		if r.shift_end:
+			dur = (r.shift_end - r.shift_start).total_seconds() / 60.0
+		if dur <= 0:
+			dur = dur_from_type
+		base = base_map.get(r.employee, 0.0)
+		per_min = (base / DAYS_IN_MONTH) / dur if dur > 0 else 0.0
 
-        a = agg.setdefault(r.employee, {"present_days": 0, "late_days": 0,
-                                        "total_late_minutes": 0, "deduction": 0.0})
-        a["present_days"] += 1
-        if late_min > 0:
-            a["late_days"] += 1
-            a["total_late_minutes"] += late_min
-            a["deduction"] += late_min * per_min
+		a = agg.setdefault(
+			r.employee, {"present_days": 0, "late_days": 0, "total_late_minutes": 0, "deduction": 0.0}
+		)
+		a["present_days"] += 1
+		if late_min > 0:
+			a["late_days"] += 1
+			a["total_late_minutes"] += late_min
+			a["deduction"] += late_min * per_min
 
-    names = {e.name: e.employee_name for e in frappe.get_all(
-        "Employee", filters={"name": ["in", list(agg.keys())]} if agg else {"name": ["in", [""]]},
-        fields=["name", "employee_name"])}
+	names = {
+		e.name: e.employee_name
+		for e in frappe.get_all(
+			"Employee",
+			filters={"name": ["in", list(agg.keys())]} if agg else {"name": ["in", [""]]},
+			fields=["name", "employee_name"],
+		)
+	}
 
-    data = []
-    for emp, a in agg.items():
-        if not a["total_late_minutes"]:
-            continue  # only show employees who were actually late
-        data.append({
-            "employee": emp,
-            "employee_name": names.get(emp, emp),
-            "present_days": a["present_days"],
-            "late_days": a["late_days"],
-            "total_late_minutes": a["total_late_minutes"],
-            "base": base_map.get(emp, 0.0),
-            "deduction_amount": round(a["deduction"]),   # nearest rupee
-        })
-    data.sort(key=lambda d: d["deduction_amount"], reverse=True)
-    return data
+	data = []
+	for emp, a in agg.items():
+		if not a["total_late_minutes"]:
+			continue  # only show employees who were actually late
+		data.append(
+			{
+				"employee": emp,
+				"employee_name": names.get(emp, emp),
+				"present_days": a["present_days"],
+				"late_days": a["late_days"],
+				"total_late_minutes": a["total_late_minutes"],
+				"base": base_map.get(emp, 0.0),
+				"deduction_amount": round(a["deduction"]),  # nearest rupee
+			}
+		)
+	data.sort(key=lambda d: d["deduction_amount"], reverse=True)
+	return data
 
 
 @frappe.whitelist()
 def create_additional_salary(rows, from_date, to_date, payroll_date=None, company=None):
-    """Post one DRAFT Additional Salary (Late Arrival Deduction) per row.
+	"""Post one DRAFT Additional Salary (Late Arrival Deduction) per row.
 
-    Idempotent: an existing DRAFT for the same employee + component + period
-    (ref = the period end payroll_date) is replaced so re-running updates the
-    amount. Never touches a submitted Additional Salary.
-    """
-    if isinstance(rows, str):
-        rows = json.loads(rows)
-    if not frappe.db.exists("Salary Component", LATE_COMPONENT):
-        frappe.throw(_("Salary Component '{0}' not found.").format(LATE_COMPONENT))
+	Idempotent: an existing DRAFT for the same employee + component + period
+	(ref = the period end payroll_date) is replaced so re-running updates the
+	amount. Never touches a submitted Additional Salary.
+	"""
+	if isinstance(rows, str):
+		rows = json.loads(rows)
+	if not frappe.db.exists("Salary Component", LATE_COMPONENT):
+		frappe.throw(_("Salary Component '{0}' not found.").format(LATE_COMPONENT))
 
-    pdate = getdate(payroll_date) if payroll_date else get_last_day(getdate(to_date))
-    result = {"created": 0, "replaced": 0, "skipped": 0, "failed": 0, "errors": [], "docs": []}
+	pdate = getdate(payroll_date) if payroll_date else get_last_day(getdate(to_date))
+	result = {"created": 0, "replaced": 0, "skipped": 0, "failed": 0, "errors": [], "docs": []}
 
-    for row in rows:
-        try:
-            emp = row.get("employee")
-            amount = flt(row.get("deduction_amount") or row.get("amount") or 0)
-            if not emp or amount <= 0:
-                result["skipped"] += 1
-                continue
-            emp_doc = frappe.get_doc("Employee", emp)
-            comp = company or emp_doc.company
+	for row in rows:
+		try:
+			emp = row.get("employee")
+			amount = flt(row.get("deduction_amount") or row.get("amount") or 0)
+			if not emp or amount <= 0:
+				result["skipped"] += 1
+				continue
+			emp_doc = frappe.get_doc("Employee", emp)
+			comp = company or emp_doc.company
 
-            existing = frappe.get_all("Additional Salary", filters={
-                "employee": emp, "salary_component": LATE_COMPONENT,
-                "payroll_date": pdate, "docstatus": 0,
-            }, pluck="name")
-            for name in existing:
-                frappe.delete_doc("Additional Salary", name, ignore_permissions=True)
+			existing = frappe.get_all(
+				"Additional Salary",
+				filters={
+					"employee": emp,
+					"salary_component": LATE_COMPONENT,
+					"payroll_date": pdate,
+					"docstatus": 0,
+				},
+				pluck="name",
+			)
+			for name in existing:
+				frappe.delete_doc("Additional Salary", name, ignore_permissions=True)
 
-            doc = frappe.get_doc({
-                "doctype": "Additional Salary",
-                "employee": emp,
-                "employee_name": emp_doc.employee_name,
-                "company": comp,
-                "salary_component": LATE_COMPONENT,
-                "amount": amount,
-                "payroll_date": pdate,
-                "overwrite_salary_structure_amount": 0,
-                "custom_reason": _("Late entry deduction {0} to {1}: {2} late min").format(
-                    getdate(from_date), getdate(to_date), row.get("total_late_minutes") or ""),
-            })
-            doc.insert()          # DRAFT — HR submits before payroll
-            result["replaced" if existing else "created"] += 1
-            result["docs"].append(doc.name)
-        except Exception as e:
-            result["failed"] += 1
-            result["errors"].append(f"{row.get('employee')}: {str(e)[:120]}")
+			doc = frappe.get_doc(
+				{
+					"doctype": "Additional Salary",
+					"employee": emp,
+					"employee_name": emp_doc.employee_name,
+					"company": comp,
+					"salary_component": LATE_COMPONENT,
+					"amount": amount,
+					"payroll_date": pdate,
+					"overwrite_salary_structure_amount": 0,
+					"custom_reason": _("Late entry deduction {0} to {1}: {2} late min").format(
+						getdate(from_date), getdate(to_date), row.get("total_late_minutes") or ""
+					),
+				}
+			)
+			doc.insert()  # DRAFT — HR submits before payroll
+			result["replaced" if existing else "created"] += 1
+			result["docs"].append(doc.name)
+		except Exception as e:
+			result["failed"] += 1
+			result["errors"].append(f"{row.get('employee')}: {str(e)[:120]}")
 
-    frappe.db.commit()
-    return result
+	frappe.db.commit()
+	return result

@@ -1,7 +1,11 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from chundakadan.doc_events.purchase_invoice_discount import DOCTYPE, PROPERTIES, ensure_purchase_invoice_discount_columns
+from chundakadan.doc_events.purchase_invoice_discount import (
+	DOCTYPE,
+	PROPERTIES,
+	ensure_purchase_invoice_discount_columns,
+)
 
 
 class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
@@ -27,14 +31,19 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		frappe.clear_cache(doctype="Purchase Invoice")
 		meta = frappe.get_meta(DOCTYPE)
 		listed = [f for f in meta.fields if f.in_list_view and not f.hidden]
-		self.assertLessEqual(sum(f.columns or 1 for f in listed), 10, [(f.fieldname, f.columns) for f in listed])
+		self.assertLessEqual(
+			sum(f.columns or 1 for f in listed), 10, [(f.fieldname, f.columns) for f in listed]
+		)
 		for fieldname in PROPERTIES:
 			self.assertIn(fieldname, [f.fieldname for f in listed])
 
 	def test_idempotent(self):
 		ensure_purchase_invoice_discount_columns()
 		ensure_purchase_invoice_discount_columns()
-		count = frappe.db.count("Property Setter", {"doc_type": DOCTYPE, "field_name": "discount_percentage", "property": "in_list_view"})
+		count = frappe.db.count(
+			"Property Setter",
+			{"doc_type": DOCTYPE, "field_name": "discount_percentage", "property": "in_list_view"},
+		)
 		self.assertEqual(count, 1)
 
 	def test_server_keeps_discount_values(self):
@@ -43,8 +52,19 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		pi.company = company
 		pi.currency = frappe.get_cached_value("Company", company, "default_currency")
 		pi.conversion_rate = 1
-		pi.append("items", {"item_code": "_x", "qty": 240, "price_list_rate": 170, "discount_percentage": 57, "rate": 0, "conversion_factor": 1})
+		pi.append(
+			"items",
+			{
+				"item_code": "_x",
+				"qty": 240,
+				"price_list_rate": 170,
+				"discount_percentage": 57,
+				"rate": 0,
+				"conversion_factor": 1,
+			},
+		)
 		from erpnext.controllers.taxes_and_totals import calculate_taxes_and_totals
+
 		calculate_taxes_and_totals(pi)
 		row = pi.items[0]
 		self.assertAlmostEqual(row.rate, 73.10, places=2)
@@ -53,7 +73,7 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 
 	# qty (pcs), list price, discount %, discount amount, rate, amount
 	# — the supplier bill for PI-CA-26-0003 (CAPRI), which bills per packet
-	SHEET = [
+	SHEET = [  # noqa: RUF012
 		(48000, 0.85, 57, 0.4845, 0.3655, 17544.00),
 		(31200, 1.64, 57, 0.9348, 0.7052, 22002.24),
 		(15600, 2.29, 57, 1.3053, 0.9847, 15361.32),
@@ -70,7 +90,17 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		pi.currency = frappe.get_cached_value("Company", pi.company, "default_currency")
 		pi.conversion_rate = 1
 		for qty, list_price, pct, *_ in self.SHEET:
-			pi.append("items", {"item_code": "_x", "qty": qty, "price_list_rate": list_price, "discount_percentage": pct, "rate": 0, "conversion_factor": 1})
+			pi.append(
+				"items",
+				{
+					"item_code": "_x",
+					"qty": qty,
+					"price_list_rate": list_price,
+					"discount_percentage": pct,
+					"rate": 0,
+					"conversion_factor": 1,
+				},
+			)
 		calculate_taxes_and_totals(pi)
 		return pi
 
@@ -78,7 +108,7 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		ensure_purchase_invoice_discount_columns()
 		frappe.clear_cache(doctype="Purchase Invoice")
 		pi = self._sheet_invoice()
-		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET):
+		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET, strict=False):  # noqa: B007
 			self.assertAlmostEqual(row.discount_amount, disc, places=4, msg=qty)
 			self.assertAlmostEqual(row.rate, rate, places=4, msg=qty)
 			self.assertAlmostEqual(row.amount, amount, places=2, msg=qty)
@@ -91,4 +121,3 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		self.assertEqual(meta.get_field("rate").precision, "4")
 		self.assertFalse(meta.get_field("amount").precision)
 		self.assertFalse(meta.get_field("net_amount").precision)
-

@@ -15,13 +15,17 @@ COMPANY = "Chundakadan Agencies"
 class SummaryCase(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		self.company = frappe.db.get_value("Company", COMPANY, "name") or frappe.db.get_value("Company", {}, "name")
+		self.company = frappe.db.get_value("Company", COMPANY, "name") or frappe.db.get_value(
+			"Company", {}, "name"
+		)
 		if not self.company:
 			self.skipTest("no company on this site")
 
 	def _run(self, **extra):
 		filters = {
-			"company": self.company, "from_date": add_days(today(), -365), "to_date": today(),
+			"company": self.company,
+			"from_date": add_days(today(), -365),
+			"to_date": today(),
 		}
 		filters.update(extra)
 		return execute(filters)
@@ -125,16 +129,12 @@ class TestTheNumbers(SummaryCase):
 			  and party_type = 'Customer' and posting_date between %s and %s""",
 			(self.company, add_days(today(), -365), today()),
 		)[0][0]
-		self.assertAlmostEqual(
-			sum(flt(r["collection"]) for r in data), flt(expected or 0), places=2
-		)
+		self.assertAlmostEqual(sum(flt(r["collection"]) for r in data), flt(expected or 0), places=2)
 
 	def test_balance_is_sales_less_collection_on_every_row(self):
 		_columns, data = self._run()
 		for row in data:
-			self.assertAlmostEqual(
-				flt(row["balance"]), flt(row["sales"]) - flt(row["collection"]), places=2
-			)
+			self.assertAlmostEqual(flt(row["balance"]), flt(row["sales"]) - flt(row["collection"]), places=2)
 
 	def test_grouping_by_brand_totals_the_lines(self):
 		"""A brand row sums its own lines, tax included.
@@ -150,9 +150,7 @@ class TestTheNumbers(SummaryCase):
 			where si.docstatus = 1 and si.company = %s and si.posting_date between %s and %s""",
 			(self.company, add_days(today(), -365), today()),
 		)[0][0]
-		self.assertAlmostEqual(
-			sum(flt(r["sales"]) for r in by_brand), flt(expected), places=2
-		)
+		self.assertAlmostEqual(sum(flt(r["sales"]) for r in by_brand), flt(expected), places=2)
 
 	def test_brand_and_person_differ_only_by_the_invoice_level_charges(self):
 		_columns, by_person = self._run()
@@ -193,8 +191,9 @@ class TestTheNumbers(SummaryCase):
 
 	def test_filtering_by_sales_person_narrows_it(self):
 		person = frappe.db.get_value(
-			"Sales Invoice", {"docstatus": 1, "company": self.company,
-			                  "custom_sales_person": ["not in", ["", None]]}, "custom_sales_person"
+			"Sales Invoice",
+			{"docstatus": 1, "company": self.company, "custom_sales_person": ["not in", ["", None]]},
+			"custom_sales_person",
 		)
 		if not person:
 			self.skipTest("no invoice carries a sales person")

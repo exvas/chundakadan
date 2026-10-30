@@ -103,7 +103,7 @@ from frappe.model.document import Document
 
 
 class DisplayType(Document):
-    pass
+	pass
 ```
 
 - [ ] **Step 3: Create `Display Service Center` DocType JSON**
@@ -135,7 +135,7 @@ from frappe.model.document import Document
 
 
 class DisplayServiceCenter(Document):
-    pass
+	pass
 ```
 
 - [ ] **Step 4: Create the two Roles (if absent) + Customer Groups + Naming Rules via a bench console one-off**
@@ -147,10 +147,19 @@ cd ~/frappe-bench-15-india && bench --site erp.chundakadan.in console
 Paste (single lines; the roles Display Manager + Warehouse User must exist before the DocType JSONs referencing them migrate cleanly):
 ```python
 for r in ["Display Manager", "Warehouse User"]:
-    (not frappe.db.exists("Role", r)) and frappe.get_doc({"doctype":"Role","role_name":r,"desk_access":1}).insert(ignore_permissions=True)
+	(not frappe.db.exists("Role", r)) and frappe.get_doc(
+		{"doctype": "Role", "role_name": r, "desk_access": 1}
+	).insert(ignore_permissions=True)
 
 for g in ["Dealer", "Retail Outlet"]:
-    (not frappe.db.exists("Customer Group", g)) and frappe.get_doc({"doctype":"Customer Group","customer_group_name":g,"parent_customer_group":frappe.db.get_value("Customer Group",{"is_group":1},"name"),"is_group":0}).insert(ignore_permissions=True)
+	(not frappe.db.exists("Customer Group", g)) and frappe.get_doc(
+		{
+			"doctype": "Customer Group",
+			"customer_group_name": g,
+			"parent_customer_group": frappe.db.get_value("Customer Group", {"is_group": 1}, "name"),
+			"is_group": 0,
+		}
+	).insert(ignore_permissions=True)
 
 frappe.db.commit()
 ```
@@ -199,24 +208,33 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestDisplayUnit(FrappeTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        if not frappe.db.exists("Display Type", "Cooler"):
-            frappe.get_doc({"doctype": "Display Type", "type_name": "Cooler"}).insert()
-        if not frappe.db.exists("Supplier", "_Test Display Supplier"):
-            frappe.get_doc({"doctype": "Supplier", "supplier_name": "_Test Display Supplier",
-                            "supplier_group": frappe.db.get_value("Supplier Group", {"is_group": 0}, "name")}).insert()
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		if not frappe.db.exists("Display Type", "Cooler"):
+			frappe.get_doc({"doctype": "Display Type", "type_name": "Cooler"}).insert()
+		if not frappe.db.exists("Supplier", "_Test Display Supplier"):
+			frappe.get_doc(
+				{
+					"doctype": "Supplier",
+					"supplier_name": "_Test Display Supplier",
+					"supplier_group": frappe.db.get_value("Supplier Group", {"is_group": 0}, "name"),
+				}
+			).insert()
 
-    def test_new_unit_defaults(self):
-        unit = frappe.get_doc({
-            "doctype": "Display Unit", "supplier": "_Test Display Supplier",
-            "display_type": "Cooler", "description": "Chest cooler",
-        }).insert()
-        self.assertEqual(unit.current_status, "At Supplier")
-        self.assertEqual(unit.current_location_type, "Supplier")
-        self.assertEqual(unit.barcode, unit.name)
-        self.assertTrue(unit.name.startswith("DISP-"))
+	def test_new_unit_defaults(self):
+		unit = frappe.get_doc(
+			{
+				"doctype": "Display Unit",
+				"supplier": "_Test Display Supplier",
+				"display_type": "Cooler",
+				"description": "Chest cooler",
+			}
+		).insert()
+		self.assertEqual(unit.current_status, "At Supplier")
+		self.assertEqual(unit.current_location_type, "Supplier")
+		self.assertEqual(unit.barcode, unit.name)
+		self.assertTrue(unit.name.startswith("DISP-"))
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -284,29 +302,30 @@ import frappe
 from frappe.model.document import Document
 
 LOCATION_DOCTYPE = {
-    "Warehouse": "Warehouse Rack",
-    "Customer": "Customer", "Dealer": "Customer", "Retail Outlet": "Customer",
-    "Service Center": "Display Service Center",
-    "Supplier": "Supplier",
+	"Warehouse": "Warehouse Rack",
+	"Customer": "Customer",
+	"Dealer": "Customer",
+	"Retail Outlet": "Customer",
+	"Service Center": "Display Service Center",
+	"Supplier": "Supplier",
 }
 
 
 class DisplayUnit(Document):
-    def before_insert(self):
-        if not self.current_status:
-            self.current_status = "At Supplier"
-            self.current_location_type = "Supplier"
-            self.current_location = self.supplier
-        self._sync_location_doctype()
+	def before_insert(self):
+		if not self.current_status:
+			self.current_status = "At Supplier"
+			self.current_location_type = "Supplier"
+			self.current_location = self.supplier
+		self._sync_location_doctype()
 
-    def after_insert(self):
-        if self.barcode != self.name:
-            frappe.db.set_value("Display Unit", self.name, "barcode", self.name,
-                                update_modified=False)
-            self.barcode = self.name
+	def after_insert(self):
+		if self.barcode != self.name:
+			frappe.db.set_value("Display Unit", self.name, "barcode", self.name, update_modified=False)
+			self.barcode = self.name
 
-    def _sync_location_doctype(self):
-        self.current_location_doctype = LOCATION_DOCTYPE.get(self.current_location_type)
+	def _sync_location_doctype(self):
+		self.current_location_doctype = LOCATION_DOCTYPE.get(self.current_location_type)
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
@@ -357,7 +376,7 @@ from frappe.model.document import Document
 
 
 class DisplayMovementPhoto(Document):
-    pass
+	pass
 ```
 
 - [ ] **Step 2: Create the `Display Movement` JSON (submittable)**
@@ -451,39 +470,41 @@ git commit -m "feat(display): Display Movement submittable ledger schema + photo
 import unittest
 import frappe
 from chundakadan.chundakadan.display_tracking.transitions import (
-    resolve_transition, TRANSITIONS, LOCATION_DOCTYPE,
+	resolve_transition,
+	TRANSITIONS,
+	LOCATION_DOCTYPE,
 )
 
 
 class TestTransitions(unittest.TestCase):
-    def test_receive_from_at_supplier(self):
-        t = resolve_transition("Receive at Warehouse", "At Supplier")
-        self.assertEqual(t["to_status"], "In Warehouse")
-        self.assertEqual(t["to_location_type"], "Warehouse")
+	def test_receive_from_at_supplier(self):
+		t = resolve_transition("Receive at Warehouse", "At Supplier")
+		self.assertEqual(t["to_status"], "In Warehouse")
+		self.assertEqual(t["to_location_type"], "Warehouse")
 
-    def test_install_sets_installed(self):
-        t = resolve_transition("Install at Customer", "In Warehouse")
-        self.assertEqual(t["to_status"], "Installed at Customer")
-        self.assertIn("customer", t["requires"])
-        self.assertIn("expected_return_date", t["requires"])
+	def test_install_sets_installed(self):
+		t = resolve_transition("Install at Customer", "In Warehouse")
+		self.assertEqual(t["to_status"], "Installed at Customer")
+		self.assertIn("customer", t["requires"])
+		self.assertIn("expected_return_date", t["requires"])
 
-    def test_return_to_warehouse_sets_returned(self):
-        t = resolve_transition("Return to Warehouse", "Installed at Customer")
-        self.assertEqual(t["to_status"], "Returned")
+	def test_return_to_warehouse_sets_returned(self):
+		t = resolve_transition("Return to Warehouse", "Installed at Customer")
+		self.assertEqual(t["to_status"], "Returned")
 
-    def test_dispatch_leaves_location_unchanged(self):
-        t = resolve_transition("Dispatch", "In Warehouse")
-        self.assertEqual(t["to_status"], "In Transit")
-        self.assertIsNone(t["to_location_type"])
+	def test_dispatch_leaves_location_unchanged(self):
+		t = resolve_transition("Dispatch", "In Warehouse")
+		self.assertEqual(t["to_status"], "In Transit")
+		self.assertIsNone(t["to_location_type"])
 
-    def test_illegal_transition_raises(self):
-        with self.assertRaises(frappe.ValidationError):
-            resolve_transition("Reserve", "Installed at Customer")
+	def test_illegal_transition_raises(self):
+		with self.assertRaises(frappe.ValidationError):
+			resolve_transition("Reserve", "Installed at Customer")
 
-    def test_location_doctype_map(self):
-        self.assertEqual(LOCATION_DOCTYPE["Warehouse"], "Warehouse Rack")
-        self.assertEqual(LOCATION_DOCTYPE["Dealer"], "Customer")
-        self.assertEqual(LOCATION_DOCTYPE["Service Center"], "Display Service Center")
+	def test_location_doctype_map(self):
+		self.assertEqual(LOCATION_DOCTYPE["Warehouse"], "Warehouse Rack")
+		self.assertEqual(LOCATION_DOCTYPE["Dealer"], "Customer")
+		self.assertEqual(LOCATION_DOCTYPE["Service Center"], "Display Service Center")
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -498,51 +519,97 @@ import frappe
 from frappe import _
 
 LOCATION_DOCTYPE = {
-    "Warehouse": "Warehouse Rack",
-    "Customer": "Customer", "Dealer": "Customer", "Retail Outlet": "Customer",
-    "Service Center": "Display Service Center",
-    "Supplier": "Supplier",
+	"Warehouse": "Warehouse Rack",
+	"Customer": "Customer",
+	"Dealer": "Customer",
+	"Retail Outlet": "Customer",
+	"Service Center": "Display Service Center",
+	"Supplier": "Supplier",
 }
 
 # to_location_type = None  → leave the unit's location unchanged
 TRANSITIONS = {
-    "Receive at Warehouse": {"to_status": "In Warehouse", "to_location_type": "Warehouse",
-        "allowed_from": {"At Supplier", "In Transit", "Under Repair"}, "requires": ["to_location"]},
-    "Reserve": {"to_status": "Reserved", "to_location_type": "Warehouse",
-        "allowed_from": {"In Warehouse", "Returned"}, "requires": []},
-    "Dispatch": {"to_status": "In Transit", "to_location_type": None,
-        "allowed_from": {"In Warehouse", "Reserved", "Returned"}, "requires": []},
-    "Install at Customer": {"to_status": "Installed at Customer", "to_location_type": "Customer",
-        "allowed_from": {"In Transit", "In Warehouse", "Reserved", "Returned"},
-        "requires": ["customer", "expected_return_date"]},
-    "Transfer": {"to_status": "Installed at Customer", "to_location_type": "Customer",
-        "allowed_from": {"Installed at Customer"},
-        "requires": ["customer", "expected_return_date"]},
-    "Return to Warehouse": {"to_status": "Returned", "to_location_type": "Warehouse",
-        "allowed_from": {"Installed at Customer", "In Transit", "Under Repair"}, "requires": ["to_location"]},
-    "Send to Repair": {"to_status": "Under Repair", "to_location_type": "Service Center",
-        "allowed_from": {"In Warehouse", "Returned", "Installed at Customer", "Damaged"},
-        "requires": ["to_location"]},
-    "Return from Repair": {"to_status": "In Warehouse", "to_location_type": "Warehouse",
-        "allowed_from": {"Under Repair"}, "requires": ["to_location"]},
-    "Mark Damaged": {"to_status": "Damaged", "to_location_type": None,
-        "allowed_from": None, "requires": ["reason"]},   # None = any status
-    "Mark Missing": {"to_status": "Missing", "to_location_type": None,
-        "allowed_from": None, "requires": ["reason"]},
-    "Return to Supplier": {"to_status": "Returned to Supplier", "to_location_type": "Supplier",
-        "allowed_from": {"In Warehouse", "Returned", "Damaged", "Missing", "Under Repair"}, "requires": []},
+	"Receive at Warehouse": {
+		"to_status": "In Warehouse",
+		"to_location_type": "Warehouse",
+		"allowed_from": {"At Supplier", "In Transit", "Under Repair"},
+		"requires": ["to_location"],
+	},
+	"Reserve": {
+		"to_status": "Reserved",
+		"to_location_type": "Warehouse",
+		"allowed_from": {"In Warehouse", "Returned"},
+		"requires": [],
+	},
+	"Dispatch": {
+		"to_status": "In Transit",
+		"to_location_type": None,
+		"allowed_from": {"In Warehouse", "Reserved", "Returned"},
+		"requires": [],
+	},
+	"Install at Customer": {
+		"to_status": "Installed at Customer",
+		"to_location_type": "Customer",
+		"allowed_from": {"In Transit", "In Warehouse", "Reserved", "Returned"},
+		"requires": ["customer", "expected_return_date"],
+	},
+	"Transfer": {
+		"to_status": "Installed at Customer",
+		"to_location_type": "Customer",
+		"allowed_from": {"Installed at Customer"},
+		"requires": ["customer", "expected_return_date"],
+	},
+	"Return to Warehouse": {
+		"to_status": "Returned",
+		"to_location_type": "Warehouse",
+		"allowed_from": {"Installed at Customer", "In Transit", "Under Repair"},
+		"requires": ["to_location"],
+	},
+	"Send to Repair": {
+		"to_status": "Under Repair",
+		"to_location_type": "Service Center",
+		"allowed_from": {"In Warehouse", "Returned", "Installed at Customer", "Damaged"},
+		"requires": ["to_location"],
+	},
+	"Return from Repair": {
+		"to_status": "In Warehouse",
+		"to_location_type": "Warehouse",
+		"allowed_from": {"Under Repair"},
+		"requires": ["to_location"],
+	},
+	"Mark Damaged": {
+		"to_status": "Damaged",
+		"to_location_type": None,
+		"allowed_from": None,
+		"requires": ["reason"],
+	},  # None = any status
+	"Mark Missing": {
+		"to_status": "Missing",
+		"to_location_type": None,
+		"allowed_from": None,
+		"requires": ["reason"],
+	},
+	"Return to Supplier": {
+		"to_status": "Returned to Supplier",
+		"to_location_type": "Supplier",
+		"allowed_from": {"In Warehouse", "Returned", "Damaged", "Missing", "Under Repair"},
+		"requires": [],
+	},
 }
 
 
 def resolve_transition(movement_type, from_status):
-    t = TRANSITIONS.get(movement_type)
-    if not t:
-        frappe.throw(_("Unknown movement type: {0}").format(movement_type))
-    allowed = t["allowed_from"]
-    if allowed is not None and from_status not in allowed:
-        frappe.throw(_("Cannot '{0}' a unit that is '{1}'. Allowed only from: {2}.").format(
-            movement_type, from_status, ", ".join(sorted(allowed))))
-    return t
+	t = TRANSITIONS.get(movement_type)
+	if not t:
+		frappe.throw(_("Unknown movement type: {0}").format(movement_type))
+	allowed = t["allowed_from"]
+	if allowed is not None and from_status not in allowed:
+		frappe.throw(
+			_("Cannot '{0}' a unit that is '{1}'. Allowed only from: {2}.").format(
+				movement_type, from_status, ", ".join(sorted(allowed))
+			)
+		)
+	return t
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -578,67 +645,85 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestDisplayMovement(FrappeTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        if not frappe.db.exists("Display Type", "Rack"):
-            frappe.get_doc({"doctype": "Display Type", "type_name": "Rack"}).insert()
-        if not frappe.db.exists("Supplier", "_Test Display Supplier"):
-            frappe.get_doc({"doctype": "Supplier", "supplier_name": "_Test Display Supplier",
-                "supplier_group": frappe.db.get_value("Supplier Group", {"is_group": 0}, "name")}).insert()
-        if not frappe.db.exists("Customer", "_Test Display Customer"):
-            frappe.get_doc({"doctype": "Customer", "customer_name": "_Test Display Customer",
-                "customer_group": frappe.db.get_value("Customer Group", {"is_group": 0}, "name"),
-                "territory": frappe.db.get_value("Territory", {"is_group": 0}, "name")}).insert()
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		if not frappe.db.exists("Display Type", "Rack"):
+			frappe.get_doc({"doctype": "Display Type", "type_name": "Rack"}).insert()
+		if not frappe.db.exists("Supplier", "_Test Display Supplier"):
+			frappe.get_doc(
+				{
+					"doctype": "Supplier",
+					"supplier_name": "_Test Display Supplier",
+					"supplier_group": frappe.db.get_value("Supplier Group", {"is_group": 0}, "name"),
+				}
+			).insert()
+		if not frappe.db.exists("Customer", "_Test Display Customer"):
+			frappe.get_doc(
+				{
+					"doctype": "Customer",
+					"customer_name": "_Test Display Customer",
+					"customer_group": frappe.db.get_value("Customer Group", {"is_group": 0}, "name"),
+					"territory": frappe.db.get_value("Territory", {"is_group": 0}, "name"),
+				}
+			).insert()
 
-    def _unit(self):
-        return frappe.get_doc({"doctype": "Display Unit", "supplier": "_Test Display Supplier",
-                               "display_type": "Rack"}).insert()
+	def _unit(self):
+		return frappe.get_doc(
+			{"doctype": "Display Unit", "supplier": "_Test Display Supplier", "display_type": "Rack"}
+		).insert()
 
-    def _move(self, unit, mtype, **kw):
-        m = frappe.get_doc({"doctype": "Display Movement", "display_unit": unit.name,
-                            "movement_type": mtype, **kw})
-        m.insert()
-        m.submit()
-        return m
+	def _move(self, unit, mtype, **kw):
+		m = frappe.get_doc(
+			{"doctype": "Display Movement", "display_unit": unit.name, "movement_type": mtype, **kw}
+		)
+		m.insert()
+		m.submit()
+		return m
 
-    def test_receive_updates_unit(self):
-        u = self._unit()
-        self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
-        u.reload()
-        self.assertEqual(u.current_status, "In Warehouse")
-        self.assertEqual(u.current_location_type, "Warehouse")
+	def test_receive_updates_unit(self):
+		u = self._unit()
+		self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
+		u.reload()
+		self.assertEqual(u.current_status, "In Warehouse")
+		self.assertEqual(u.current_location_type, "Warehouse")
 
-    def test_install_requires_customer(self):
-        u = self._unit()
-        self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
-        with self.assertRaises(frappe.ValidationError):
-            self._move(u, "Install at Customer")  # missing customer + expected_return_date
+	def test_install_requires_customer(self):
+		u = self._unit()
+		self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
+		with self.assertRaises(frappe.ValidationError):
+			self._move(u, "Install at Customer")  # missing customer + expected_return_date
 
-    def test_full_install_flow(self):
-        u = self._unit()
-        self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
-        self._move(u, "Install at Customer", customer="_Test Display Customer",
-                   expected_return_date="2027-01-01", to_location_type="Customer",
-                   to_location="_Test Display Customer")
-        u.reload()
-        self.assertEqual(u.current_status, "Installed at Customer")
-        self.assertEqual(u.current_customer, "_Test Display Customer")
-        self.assertEqual(str(u.expected_return_date), "2027-01-01")
+	def test_full_install_flow(self):
+		u = self._unit()
+		self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
+		self._move(
+			u,
+			"Install at Customer",
+			customer="_Test Display Customer",
+			expected_return_date="2027-01-01",
+			to_location_type="Customer",
+			to_location="_Test Display Customer",
+		)
+		u.reload()
+		self.assertEqual(u.current_status, "Installed at Customer")
+		self.assertEqual(u.current_customer, "_Test Display Customer")
+		self.assertEqual(str(u.expected_return_date), "2027-01-01")
 
-    def test_illegal_move_blocked(self):
-        u = self._unit()  # At Supplier
-        with self.assertRaises(frappe.ValidationError):
-            self._move(u, "Reserve")  # not allowed from At Supplier
+	def test_illegal_move_blocked(self):
+		u = self._unit()  # At Supplier
+		with self.assertRaises(frappe.ValidationError):
+			self._move(u, "Reserve")  # not allowed from At Supplier
 
-    def test_cancel_recomputes_previous_state(self):
-        u = self._unit()
-        self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
-        m2 = self._move(u, "Reserve")
-        u.reload(); self.assertEqual(u.current_status, "Reserved")
-        m2.cancel()
-        u.reload()
-        self.assertEqual(u.current_status, "In Warehouse")
+	def test_cancel_recomputes_previous_state(self):
+		u = self._unit()
+		self._move(u, "Receive at Warehouse", to_location_type="Warehouse")
+		m2 = self._move(u, "Reserve")
+		u.reload()
+		self.assertEqual(u.current_status, "Reserved")
+		m2.cancel()
+		u.reload()
+		self.assertEqual(u.current_status, "In Warehouse")
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -654,89 +739,110 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from chundakadan.chundakadan.display_tracking.transitions import (
-    resolve_transition, LOCATION_DOCTYPE,
+	resolve_transition,
+	LOCATION_DOCTYPE,
 )
 
 # Fields copied from a movement onto the Display Unit cache on submit.
 _CACHE_FIELDS = [
-    "current_status", "current_location_type", "current_location",
-    "current_custodian", "current_customer", "customer_branch",
-    "contact_person", "expected_return_date",
+	"current_status",
+	"current_location_type",
+	"current_location",
+	"current_custodian",
+	"current_customer",
+	"customer_branch",
+	"contact_person",
+	"expected_return_date",
 ]
 
 
 class DisplayMovement(Document):
-    def validate(self):
-        unit = frappe.get_doc("Display Unit", self.display_unit)
-        # snapshot the "from" side from the unit's current cache
-        self.from_status = unit.current_status
-        self.from_location_type = unit.current_location_type
-        self.from_location = unit.current_location
-        self.from_location_doctype = LOCATION_DOCTYPE.get(unit.current_location_type)
-        if not self.user:
-            self.user = frappe.session.user
+	def validate(self):
+		unit = frappe.get_doc("Display Unit", self.display_unit)
+		# snapshot the "from" side from the unit's current cache
+		self.from_status = unit.current_status
+		self.from_location_type = unit.current_location_type
+		self.from_location = unit.current_location
+		self.from_location_doctype = LOCATION_DOCTYPE.get(unit.current_location_type)
+		if not self.user:
+			self.user = frappe.session.user
 
-        t = resolve_transition(self.movement_type, unit.current_status)
-        self.to_status = t["to_status"]
-        # location: None means "unchanged"; else default to the transition's type
-        if t["to_location_type"] is None:
-            self.to_location_type = unit.current_location_type
-            if not self.to_location:
-                self.to_location = unit.current_location
-        elif not self.to_location_type:
-            self.to_location_type = t["to_location_type"]
-        self.to_location_doctype = LOCATION_DOCTYPE.get(self.to_location_type)
+		t = resolve_transition(self.movement_type, unit.current_status)
+		self.to_status = t["to_status"]
+		# location: None means "unchanged"; else default to the transition's type
+		if t["to_location_type"] is None:
+			self.to_location_type = unit.current_location_type
+			if not self.to_location:
+				self.to_location = unit.current_location
+		elif not self.to_location_type:
+			self.to_location_type = t["to_location_type"]
+		self.to_location_doctype = LOCATION_DOCTYPE.get(self.to_location_type)
 
-        for f in t["requires"]:
-            if not self.get(f):
-                frappe.throw(_("'{0}' is required for movement '{1}'.").format(
-                    self.meta.get_label(f), self.movement_type))
+		for f in t["requires"]:
+			if not self.get(f):
+				frappe.throw(
+					_("'{0}' is required for movement '{1}'.").format(
+						self.meta.get_label(f), self.movement_type
+					)
+				)
 
-    def on_submit(self):
-        self._write_unit_state()
+	def on_submit(self):
+		self._write_unit_state()
 
-    def on_cancel(self):
-        if "Display Manager" not in frappe.get_roles(frappe.session.user):
-            frappe.throw(_("Only a Display Manager may cancel a movement. "
-                           "Log a reversing movement instead."))
-        self._recompute_unit_from_history()
+	def on_cancel(self):
+		if "Display Manager" not in frappe.get_roles(frappe.session.user):
+			frappe.throw(_("Only a Display Manager may cancel a movement. Log a reversing movement instead."))
+		self._recompute_unit_from_history()
 
-    # -- helpers ---------------------------------------------------------
-    def _write_unit_state(self):
-        vals = {
-            "current_status": self.to_status,
-            "current_location_type": self.to_location_type,
-            "current_location": self.to_location,
-            "current_location_doctype": LOCATION_DOCTYPE.get(self.to_location_type),
-            "current_custodian": self.custodian,
-            "current_customer": self.customer,
-            "customer_branch": self.customer_branch,
-            "contact_person": self.contact_person,
-            "expected_return_date": self.expected_return_date,
-            "last_movement": self.name,
-            "last_movement_on": self.movement_datetime,
-        }
-        if self.movement_type in ("Install at Customer", "Transfer"):
-            vals["delivery_date"] = frappe.utils.getdate(self.movement_datetime)
-        frappe.db.set_value("Display Unit", self.display_unit, vals)
+	# -- helpers ---------------------------------------------------------
+	def _write_unit_state(self):
+		vals = {
+			"current_status": self.to_status,
+			"current_location_type": self.to_location_type,
+			"current_location": self.to_location,
+			"current_location_doctype": LOCATION_DOCTYPE.get(self.to_location_type),
+			"current_custodian": self.custodian,
+			"current_customer": self.customer,
+			"customer_branch": self.customer_branch,
+			"contact_person": self.contact_person,
+			"expected_return_date": self.expected_return_date,
+			"last_movement": self.name,
+			"last_movement_on": self.movement_datetime,
+		}
+		if self.movement_type in ("Install at Customer", "Transfer"):
+			vals["delivery_date"] = frappe.utils.getdate(self.movement_datetime)
+		frappe.db.set_value("Display Unit", self.display_unit, vals)
 
-    def _recompute_unit_from_history(self):
-        prev = frappe.get_all("Display Movement",
-            filters={"display_unit": self.display_unit, "docstatus": 1,
-                     "name": ["!=", self.name]},
-            order_by="movement_datetime desc, creation desc", limit=1, pluck="name")
-        if prev:
-            frappe.get_doc("Display Movement", prev[0])._write_unit_state()
-        else:
-            # back to registration baseline
-            supplier = frappe.db.get_value("Display Unit", self.display_unit, "supplier")
-            frappe.db.set_value("Display Unit", self.display_unit, {
-                "current_status": "At Supplier", "current_location_type": "Supplier",
-                "current_location": supplier, "current_location_doctype": "Supplier",
-                "current_custodian": None, "current_customer": None,
-                "customer_branch": None, "contact_person": None,
-                "expected_return_date": None, "last_movement": None, "last_movement_on": None,
-            })
+	def _recompute_unit_from_history(self):
+		prev = frappe.get_all(
+			"Display Movement",
+			filters={"display_unit": self.display_unit, "docstatus": 1, "name": ["!=", self.name]},
+			order_by="movement_datetime desc, creation desc",
+			limit=1,
+			pluck="name",
+		)
+		if prev:
+			frappe.get_doc("Display Movement", prev[0])._write_unit_state()
+		else:
+			# back to registration baseline
+			supplier = frappe.db.get_value("Display Unit", self.display_unit, "supplier")
+			frappe.db.set_value(
+				"Display Unit",
+				self.display_unit,
+				{
+					"current_status": "At Supplier",
+					"current_location_type": "Supplier",
+					"current_location": supplier,
+					"current_location_doctype": "Supplier",
+					"current_custodian": None,
+					"current_customer": None,
+					"customer_branch": None,
+					"contact_person": None,
+					"expected_return_date": None,
+					"last_movement": None,
+					"last_movement_on": None,
+				},
+			)
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -820,14 +926,20 @@ Reload; open the `Display View` workspace. Confirm it appears at sidebar positio
 ```python
 import frappe
 
-TYPES = ["Display Rack", "Display Shelf", "Display Stand", "Cooler",
-         "Branding Material", "Promotional Display"]
+TYPES = [
+	"Display Rack",
+	"Display Shelf",
+	"Display Stand",
+	"Cooler",
+	"Branding Material",
+	"Promotional Display",
+]
 
 
 def execute():
-    for t in TYPES:
-        if not frappe.db.exists("Display Type", t):
-            frappe.get_doc({"doctype": "Display Type", "type_name": t}).insert(ignore_permissions=True)
+	for t in TYPES:
+		if not frappe.db.exists("Display Type", t):
+			frappe.get_doc({"doctype": "Display Type", "type_name": t}).insert(ignore_permissions=True)
 ```
 
 - [ ] **Step 2: Register the patch**
@@ -872,12 +984,15 @@ Create **Document Naming Rule** records: `Display Unit` → `DISP-.YYYY.-.#####`
 In `chundakadan/chundakadan/hooks.py`, add (or extend an existing `fixtures = [...]`):
 ```python
 fixtures = [
-    {"dt": "Workspace", "filters": [["name", "=", "Display View"]]},
-    {"dt": "Number Card", "filters": [["module", "=", "Display Tracking"]]},
-    {"dt": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
-    {"dt": "Document Naming Rule", "filters": [["document_type", "in", ["Display Unit", "Display Movement"]]]},
-    {"dt": "Role", "filters": [["name", "in", ["Display Manager", "Warehouse User"]]]},
-    {"dt": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
+	{"dt": "Workspace", "filters": [["name", "=", "Display View"]]},
+	{"dt": "Number Card", "filters": [["module", "=", "Display Tracking"]]},
+	{"dt": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
+	{
+		"dt": "Document Naming Rule",
+		"filters": [["document_type", "in", ["Display Unit", "Display Movement"]]],
+	},
+	{"dt": "Role", "filters": [["name", "in", ["Display Manager", "Warehouse User"]]]},
+	{"dt": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
 ]
 ```
 (If `fixtures` already exists, merge these entries in.)

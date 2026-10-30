@@ -35,5 +35,8 @@ class TestItemBrandMandatory(FrappeTestCase):
 		ensure_item_brand_mandatory()
 		ensure_item_brand_mandatory()
 		self.assertEqual(
-			frappe.db.count("Property Setter", {"doc_type": "Item", "field_name": "brand", "property": "reqd"}), 1
+			frappe.db.count(
+				"Property Setter", {"doc_type": "Item", "field_name": "brand", "property": "reqd"}
+			),
+			1,
 		)

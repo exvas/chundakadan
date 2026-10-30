@@ -22,9 +22,15 @@ SALES_DEPT = "Sales& Marketing - CA"
 class TestSalesChain(unittest.TestCase):
 	def test_the_designations_from_the_client_table(self):
 		for designation in (
-			"Business Development Executive", "Senior Business Development Executive",
-			"Business Development Co-ordinator", "Brand Co-ordinator", "Area Sales Manager",
-			"Sales Officer", "Marketing Specialist", "Dispatch Coordinator", "Sales Executive",
+			"Business Development Executive",
+			"Senior Business Development Executive",
+			"Business Development Co-ordinator",
+			"Brand Co-ordinator",
+			"Area Sales Manager",
+			"Sales Officer",
+			"Marketing Specialist",
+			"Dispatch Coordinator",
+			"Sales Executive",
 		):
 			self.assertEqual(role_sequence_for(designation, SALES_DEPT), SALES, designation)
 
@@ -48,20 +54,14 @@ class TestNobodyApprovesTheirOwnLeave(unittest.TestCase):
 			self.assertEqual(role_sequence_for(designation, SALES_DEPT), HR_GM, designation)
 
 	def test_the_accounts_manager_skips_their_own_chain(self):
-		self.assertEqual(
-			role_sequence_for("Accounts Manager", "Finance & Procurement - CA"), HR_GM
-		)
+		self.assertEqual(role_sequence_for("Accounts Manager", "Finance & Procurement - CA"), HR_GM)
 
 	def test_the_gm_is_signed_off_by_hr_alone(self):
-		self.assertEqual(
-			role_sequence_for("General Manager", "General Manager - CA"), ["HR Leave Approver"]
-		)
+		self.assertEqual(role_sequence_for("General Manager", "General Manager - CA"), ["HR Leave Approver"])
 
 	def test_hr_staff_go_straight_to_the_gm(self):
 		for designation in ("HR Associate", "Administration Co-ordinator", "HR Assistant"):
-			self.assertEqual(
-				role_sequence_for(designation, "HR - CA"), ["GM Leave Approver"], designation
-			)
+			self.assertEqual(role_sequence_for(designation, "HR - CA"), ["GM Leave Approver"], designation)
 
 
 class TestAccountsChain(unittest.TestCase):
@@ -141,37 +141,43 @@ class TestOnePersonSignsALeaveOnce(FrappeTestCase):
 		return doc
 
 	def test_the_stand_in_signs_once(self):
-		doc = self._flow({
-			"Sales HOD Leave Approver": "razeel@test.com",
-			"HR Leave Approver": "hr@test.com",
-			"GM Leave Approver": "razeel@test.com",
-		})
-		self.assertEqual(
-			[r.approver for r in doc.approval_flow], ["razeel@test.com", "hr@test.com"]
+		doc = self._flow(
+			{
+				"Sales HOD Leave Approver": "razeel@test.com",
+				"HR Leave Approver": "hr@test.com",
+				"GM Leave Approver": "razeel@test.com",
+			}
 		)
+		self.assertEqual([r.approver for r in doc.approval_flow], ["razeel@test.com", "hr@test.com"])
 
 	def test_the_step_kept_is_the_first(self):
-		doc = self._flow({
-			"Sales HOD Leave Approver": "razeel@test.com",
-			"HR Leave Approver": "hr@test.com",
-			"GM Leave Approver": "razeel@test.com",
-		})
+		doc = self._flow(
+			{
+				"Sales HOD Leave Approver": "razeel@test.com",
+				"HR Leave Approver": "hr@test.com",
+				"GM Leave Approver": "razeel@test.com",
+			}
+		)
 		self.assertEqual(doc.approval_flow[0].approver_role, "Sales HOD Leave Approver")
 
 	def test_three_different_people_all_stay(self):
-		doc = self._flow({
-			"Sales HOD Leave Approver": "sales@test.com",
-			"HR Leave Approver": "hr@test.com",
-			"GM Leave Approver": "gm@test.com",
-		})
+		doc = self._flow(
+			{
+				"Sales HOD Leave Approver": "sales@test.com",
+				"HR Leave Approver": "hr@test.com",
+				"GM Leave Approver": "gm@test.com",
+			}
+		)
 		self.assertEqual(len(doc.approval_flow), 3)
 
 	def test_the_leave_still_starts_with_somebody(self):
-		doc = self._flow({
-			"Sales HOD Leave Approver": "razeel@test.com",
-			"HR Leave Approver": "hr@test.com",
-			"GM Leave Approver": "razeel@test.com",
-		})
+		doc = self._flow(
+			{
+				"Sales HOD Leave Approver": "razeel@test.com",
+				"HR Leave Approver": "hr@test.com",
+				"GM Leave Approver": "razeel@test.com",
+			}
+		)
 		self.assertEqual(doc.current_approver, "razeel@test.com")
 		self.assertEqual(doc.current_approval_index, 0)
 

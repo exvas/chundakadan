@@ -32,10 +32,15 @@ class GrievanceCase(FrappeTestCase):
 
 	def _user(self, email, roles):
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({
-				"doctype": "User", "email": email, "first_name": email.split("@")[0],
-				"send_welcome_email": 0, "roles": [{"role": r} for r in roles],
-			}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": email.split("@")[0],
+					"send_welcome_email": 0,
+					"roles": [{"role": r} for r in roles],
+				}
+			).insert(ignore_permissions=True)
 		else:
 			doc = frappe.get_doc("User", email)
 			doc.set("roles", [{"role": r} for r in roles])
@@ -47,15 +52,25 @@ class GrievanceCase(FrappeTestCase):
 		existing = frappe.db.get_value("Employee", {"user_id": email}, "name")
 		if existing:
 			return existing
-		return frappe.get_doc({
-			"doctype": "Employee", "first_name": "Grievance " + name, "user_id": email,
-			"company": self.company, "date_of_birth": "1995-01-01",
-			"date_of_joining": "2026-01-01", "status": "Active",
-			"gender": frappe.db.get_value("Gender", {}, "name"),
-			"department": frappe.db.get_value("Department", {"is_group": 0}, "name"),
-			"designation": frappe.db.get_value("Designation", {}, "name"),
-			"holiday_list": frappe.db.get_value("Holiday List", {}, "name"),
-		}).insert(ignore_permissions=True).name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Employee",
+					"first_name": "Grievance " + name,
+					"user_id": email,
+					"company": self.company,
+					"date_of_birth": "1995-01-01",
+					"date_of_joining": "2026-01-01",
+					"status": "Active",
+					"gender": frappe.db.get_value("Gender", {}, "name"),
+					"department": frappe.db.get_value("Department", {"is_group": 0}, "name"),
+					"designation": frappe.db.get_value("Designation", {}, "name"),
+					"holiday_list": frappe.db.get_value("Holiday List", {}, "name"),
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
 
 	def _raise(self, as_user=RAISER, **values):
 		frappe.set_user(as_user)
@@ -167,9 +182,7 @@ class TestWhoCanRead(GrievanceCase):
 
 	def test_the_query_condition_shuts_out_a_user_with_no_employee(self):
 		self._user("grievance_nobody2@chundakadan.test", ["Employee"])
-		self.assertEqual(
-			gr.get_permission_query_conditions("grievance_nobody2@chundakadan.test"), "1 = 0"
-		)
+		self.assertEqual(gr.get_permission_query_conditions("grievance_nobody2@chundakadan.test"), "1 = 0")
 
 	def test_the_query_condition_is_empty_for_the_gm(self):
 		self.assertEqual(gr.get_permission_query_conditions(GM), "")
@@ -177,13 +190,13 @@ class TestWhoCanRead(GrievanceCase):
 	def test_the_gm_role_carries_the_permission_on_its_own(self):
 		"""Not borrowed from HR Manager, which the GM may lose one day."""
 		gr.ensure_grievance_permissions()
-		self.assertTrue(frappe.db.exists(
-			"Custom DocPerm", {"parent": "Employee Grievance", "role": GM_ROLE, "read": 1}
-		))
+		self.assertTrue(
+			frappe.db.exists("Custom DocPerm", {"parent": "Employee Grievance", "role": GM_ROLE, "read": 1})
+		)
 
 	def test_granting_it_twice_adds_one_row(self):
 		gr.ensure_grievance_permissions()
 		gr.ensure_grievance_permissions()
-		self.assertEqual(frappe.db.count(
-			"Custom DocPerm", {"parent": "Employee Grievance", "role": GM_ROLE}
-		), 1)
+		self.assertEqual(
+			frappe.db.count("Custom DocPerm", {"parent": "Employee Grievance", "role": GM_ROLE}), 1
+		)

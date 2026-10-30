@@ -3,23 +3,41 @@ frappe.ui.form.on("Post Dated Cheque", {
 	refresh(frm) {
 		if (frm.doc.docstatus === 1 && frm.doc.status === "Collected" && frm.doc.payment_entry) {
 			// the bank sent it back: keep both records, money in and money out
-			frm.add_custom_button(__("Cheque Returned"), () => return_dialog(frm)).addClass("btn-danger");
+			frm.add_custom_button(__("Cheque Returned"), () => return_dialog(frm)).addClass(
+				"btn-danger"
+			);
 		}
 		if (frm.doc.return_payment_entry) {
-			frm.add_custom_button(__("Return Entry"), () => frappe.set_route("Form", "Payment Entry", frm.doc.return_payment_entry), __("View"));
+			frm.add_custom_button(
+				__("Return Entry"),
+				() => frappe.set_route("Form", "Payment Entry", frm.doc.return_payment_entry),
+				__("View")
+			);
 		}
 		if (frm.doc.cheque_bounce) {
-			frm.add_custom_button(__("Cheque Bounce"), () => frappe.set_route("Form", "Cheque Bounce", frm.doc.cheque_bounce), __("View"));
+			frm.add_custom_button(
+				__("Cheque Bounce"),
+				() => frappe.set_route("Form", "Cheque Bounce", frm.doc.cheque_bounce),
+				__("View")
+			);
 		}
 		if (frm.doc.docstatus === 1 && frm.doc.status === "Pending") {
-			frm.add_custom_button(__("Cheque Collected"), () => collect_dialog(frm)).addClass("btn-primary");
+			frm.add_custom_button(__("Cheque Collected"), () => collect_dialog(frm)).addClass(
+				"btn-primary"
+			);
 			frm.add_custom_button(__("Cheque Bounced"), () => bounce_dialog(frm));
 		}
 		if (frm.doc.payment_entry) {
-			frm.add_custom_button(__("Payment Entry"), () => frappe.set_route("Form", "Payment Entry", frm.doc.payment_entry), __("View"));
+			frm.add_custom_button(
+				__("Payment Entry"),
+				() => frappe.set_route("Form", "Payment Entry", frm.doc.payment_entry),
+				__("View")
+			);
 		}
 		if (frm.doc.docstatus === 0) {
-			frm.add_custom_button(__("New Customer Bank Account"), () => new_bank_account_dialog(frm));
+			frm.add_custom_button(__("New Customer Bank Account"), () =>
+				new_bank_account_dialog(frm)
+			);
 		}
 		set_status_indicator(frm);
 	},
@@ -62,14 +80,23 @@ frappe.ui.form.on("Post Dated Cheque Reference", {
 		if (!row.sales_invoice) return;
 		frappe.db.get_value("Sales Invoice", row.sales_invoice, "outstanding_amount").then((r) => {
 			frappe.model.set_value(cdt, cdn, "outstanding_amount", r.message.outstanding_amount);
-			if (!row.allocated_amount) frappe.model.set_value(cdt, cdn, "allocated_amount", r.message.outstanding_amount);
+			if (!row.allocated_amount)
+				frappe.model.set_value(cdt, cdn, "allocated_amount", r.message.outstanding_amount);
 		});
 	},
 });
 
 function set_status_indicator(frm) {
-	const colours = { Draft: "red", Pending: "orange", Collected: "green", Returned: "red", Bounced: "red", Cancelled: "grey" };
-	if (frm.doc.docstatus === 1) frm.page.set_indicator(__(frm.doc.status), colours[frm.doc.status] || "blue");
+	const colours = {
+		Draft: "red",
+		Pending: "orange",
+		Collected: "green",
+		Returned: "red",
+		Bounced: "red",
+		Cancelled: "grey",
+	};
+	if (frm.doc.docstatus === 1)
+		frm.page.set_indicator(__(frm.doc.status), colours[frm.doc.status] || "blue");
 }
 
 function collect_dialog(frm) {
@@ -77,27 +104,84 @@ function collect_dialog(frm) {
 		title: __("Cheque Collected — {0}", [frm.doc.cheque_no]),
 		fields: [
 			{
-				fieldtype: "Link", fieldname: "mode_of_payment", label: __("Mode of Payment"), options: "Mode of Payment", reqd: 1, default: "Cheque",
+				fieldtype: "Link",
+				fieldname: "mode_of_payment",
+				label: __("Mode of Payment"),
+				options: "Mode of Payment",
+				reqd: 1,
+				default: "Cheque",
 				description: __("The Payment Entry banks it into this mode's account"),
 			},
-			{ fieldtype: "Date", fieldname: "posting_date", label: __("Payment Date"), reqd: 1, default: frm.doc.cheque_date },
-			{ fieldtype: "Column Break" },
-			{ fieldtype: "Data", fieldname: "reference_no", label: __("Reference No"), default: frm.doc.cheque_no, reqd: 1 },
-			{ fieldtype: "Date", fieldname: "reference_date", label: __("Reference Date"), default: frm.doc.cheque_date, reqd: 1 },
-			{ fieldtype: "Section Break", label: __("Invoices") },
 			{
-				fieldtype: "HTML", fieldname: "allocation_help",
-				options: `<p class="text-muted small">${__("Allocate against invoices now, or leave it and reconcile later.")}</p>`,
+				fieldtype: "Date",
+				fieldname: "posting_date",
+				label: __("Payment Date"),
+				reqd: 1,
+				default: frm.doc.cheque_date,
+			},
+			{ fieldtype: "Column Break" },
+			{
+				fieldtype: "Data",
+				fieldname: "reference_no",
+				label: __("Reference No"),
+				default: frm.doc.cheque_no,
+				reqd: 1,
 			},
 			{
-				fieldtype: "Table", fieldname: "references", label: __("Outstanding Invoices"),
-				cannot_add_rows: true, in_place_edit: true, data: [],
+				fieldtype: "Date",
+				fieldname: "reference_date",
+				label: __("Reference Date"),
+				default: frm.doc.cheque_date,
+				reqd: 1,
+			},
+			{ fieldtype: "Section Break", label: __("Invoices") },
+			{
+				fieldtype: "HTML",
+				fieldname: "allocation_help",
+				options: `<p class="text-muted small">${__(
+					"Allocate against invoices now, or leave it and reconcile later."
+				)}</p>`,
+			},
+			{
+				fieldtype: "Table",
+				fieldname: "references",
+				label: __("Outstanding Invoices"),
+				cannot_add_rows: true,
+				in_place_edit: true,
+				data: [],
 				get_data: () => dialog.invoice_rows || [],
 				fields: [
-					{ fieldtype: "Data", fieldname: "sales_invoice", label: __("Invoice"), read_only: 1, in_list_view: 1, columns: 3 },
-					{ fieldtype: "Date", fieldname: "posting_date", label: __("Date"), read_only: 1, in_list_view: 1, columns: 2 },
-					{ fieldtype: "Currency", fieldname: "outstanding_amount", label: __("Outstanding"), read_only: 1, in_list_view: 1, columns: 3 },
-					{ fieldtype: "Currency", fieldname: "allocated_amount", label: __("Allocate"), in_list_view: 1, columns: 3 },
+					{
+						fieldtype: "Data",
+						fieldname: "sales_invoice",
+						label: __("Invoice"),
+						read_only: 1,
+						in_list_view: 1,
+						columns: 3,
+					},
+					{
+						fieldtype: "Date",
+						fieldname: "posting_date",
+						label: __("Date"),
+						read_only: 1,
+						in_list_view: 1,
+						columns: 2,
+					},
+					{
+						fieldtype: "Currency",
+						fieldname: "outstanding_amount",
+						label: __("Outstanding"),
+						read_only: 1,
+						in_list_view: 1,
+						columns: 3,
+					},
+					{
+						fieldtype: "Currency",
+						fieldname: "allocated_amount",
+						label: __("Allocate"),
+						in_list_view: 1,
+						columns: 3,
+					},
 				],
 			},
 			{ fieldtype: "Section Break" },
@@ -107,18 +191,28 @@ function collect_dialog(frm) {
 		primary_action: (values) => {
 			const references = (values.references || [])
 				.filter((row) => flt(row.allocated_amount) > 0)
-				.map((row) => ({ sales_invoice: row.sales_invoice, allocated_amount: flt(row.allocated_amount) }));
+				.map((row) => ({
+					sales_invoice: row.sales_invoice,
+					allocated_amount: flt(row.allocated_amount),
+				}));
 			dialog.hide();
-			frappe.call({
-				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.collect",
-				args: Object.assign({ cheque: frm.doc.name }, values, { references: JSON.stringify(references) }),
-				freeze: true,
-				freeze_message: __("Creating Payment Entry..."),
-			}).then((r) => {
-				if (!r.message) return;
-				frappe.show_alert({ message: __("Payment Entry {0} created", [r.message.payment_entry]), indicator: "green" });
-				frm.reload_doc();
-			});
+			frappe
+				.call({
+					method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.collect",
+					args: Object.assign({ cheque: frm.doc.name }, values, {
+						references: JSON.stringify(references),
+					}),
+					freeze: true,
+					freeze_message: __("Creating Payment Entry..."),
+				})
+				.then((r) => {
+					if (!r.message) return;
+					frappe.show_alert({
+						message: __("Payment Entry {0} created", [r.message.payment_entry]),
+						indicator: "green",
+					});
+					frm.reload_doc();
+				});
 		},
 	});
 	dialog.show();
@@ -129,10 +223,13 @@ function collect_dialog(frm) {
 // first — the user can change or clear any of it.
 function load_outstanding_invoices(dialog, frm) {
 	frappe
-		.xcall("chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.outstanding_invoices", {
-			customer: frm.doc.customer,
-			company: frm.doc.company,
-		})
+		.xcall(
+			"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.outstanding_invoices",
+			{
+				customer: frm.doc.customer,
+				company: frm.doc.company,
+			}
+		)
 		.then((invoices) => {
 			const already = {};
 			(frm.doc.references || []).forEach((row) => {
@@ -141,7 +238,10 @@ function load_outstanding_invoices(dialog, frm) {
 			let left = flt(frm.doc.amount);
 			dialog.invoice_rows = (invoices || []).map((invoice) => {
 				const preset = already[invoice.sales_invoice];
-				const allocate = preset !== undefined ? preset : Math.min(left, flt(invoice.outstanding_amount));
+				const allocate =
+					preset !== undefined
+						? preset
+						: Math.min(left, flt(invoice.outstanding_amount));
 				left = Math.max(0, left - allocate);
 				return {
 					sales_invoice: invoice.sales_invoice,
@@ -159,18 +259,33 @@ function return_dialog(frm) {
 	const dialog = new frappe.ui.Dialog({
 		title: __("Cheque Returned — {0}", [frm.doc.cheque_no]),
 		fields: [
-			{ fieldtype: "Date", fieldname: "return_date", label: __("Return Date"), reqd: 1, default: frappe.datetime.get_today() },
-			{ fieldtype: "Currency", fieldname: "bank_charge", label: __("Bank Charge"), default: 0 },
+			{
+				fieldtype: "Date",
+				fieldname: "return_date",
+				label: __("Return Date"),
+				reqd: 1,
+				default: frappe.datetime.get_today(),
+			},
+			{
+				fieldtype: "Currency",
+				fieldname: "bank_charge",
+				label: __("Bank Charge"),
+				default: 0,
+			},
 			{ fieldtype: "Column Break" },
 			{
-				fieldtype: "Link", fieldname: "bank_charges_account", label: __("Bank Charges Account"), options: "Account",
+				fieldtype: "Link",
+				fieldname: "bank_charges_account",
+				label: __("Bank Charges Account"),
+				options: "Account",
 				depends_on: "eval:doc.bank_charge > 0",
 				get_query: () => ({ filters: { company: frm.doc.company, is_group: 0 } }),
 			},
 			{ fieldtype: "Section Break" },
 			{ fieldtype: "Small Text", fieldname: "reason", label: __("Reason"), reqd: 1 },
 			{
-				fieldtype: "HTML", fieldname: "help",
+				fieldtype: "HTML",
+				fieldname: "help",
 				options: `<p class="text-muted small">${__(
 					"The original Payment Entry stays as it is; a second entry takes the money back out and the customer owes it again."
 				)}</p>`,
@@ -179,16 +294,21 @@ function return_dialog(frm) {
 		primary_action_label: __("Record Return"),
 		primary_action: (values) => {
 			dialog.hide();
-			frappe.call({
-				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.mark_returned",
-				args: Object.assign({ cheque: frm.doc.name }, values),
-				freeze: true,
-				freeze_message: __("Recording the return..."),
-			}).then((r) => {
-				if (!r.message) return;
-				frappe.show_alert({ message: __("Return entry {0} created", [r.message.return_payment_entry]), indicator: "orange" });
-				frm.reload_doc();
-			});
+			frappe
+				.call({
+					method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.mark_returned",
+					args: Object.assign({ cheque: frm.doc.name }, values),
+					freeze: true,
+					freeze_message: __("Recording the return..."),
+				})
+				.then((r) => {
+					if (!r.message) return;
+					frappe.show_alert({
+						message: __("Return entry {0} created", [r.message.return_payment_entry]),
+						indicator: "orange",
+					});
+					frm.reload_doc();
+				});
 		},
 	});
 	dialog.show();
@@ -201,11 +321,13 @@ function bounce_dialog(frm) {
 		primary_action_label: __("Mark Bounced"),
 		primary_action: (values) => {
 			dialog.hide();
-			frappe.call({
-				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.mark_bounced",
-				args: { cheque: frm.doc.name, reason: values.reason },
-				freeze: true,
-			}).then(() => frm.reload_doc());
+			frappe
+				.call({
+					method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.mark_bounced",
+					args: { cheque: frm.doc.name, reason: values.reason },
+					freeze: true,
+				})
+				.then(() => frm.reload_doc());
 		},
 	});
 	dialog.show();
@@ -219,8 +341,20 @@ function new_bank_account_dialog(frm) {
 	const dialog = new frappe.ui.Dialog({
 		title: __("New Bank Account — {0}", [frm.doc.customer_name || frm.doc.customer]),
 		fields: [
-			{ fieldtype: "Autocomplete", fieldname: "bank", label: __("Bank"), reqd: 1, options: [], description: __("Type the bank name; a new one is created if it does not exist") },
-			{ fieldtype: "Data", fieldname: "account_name", label: __("Account Name"), default: frm.doc.customer_name || frm.doc.customer },
+			{
+				fieldtype: "Autocomplete",
+				fieldname: "bank",
+				label: __("Bank"),
+				reqd: 1,
+				options: [],
+				description: __("Type the bank name; a new one is created if it does not exist"),
+			},
+			{
+				fieldtype: "Data",
+				fieldname: "account_name",
+				label: __("Account Name"),
+				default: frm.doc.customer_name || frm.doc.customer,
+			},
 			{ fieldtype: "Column Break" },
 			{ fieldtype: "Data", fieldname: "bank_account_no", label: __("Account No") },
 			{ fieldtype: "Data", fieldname: "ifsc", label: __("IFSC") },
@@ -228,24 +362,34 @@ function new_bank_account_dialog(frm) {
 		],
 		primary_action_label: __("Create"),
 		primary_action: (values) => {
-			frappe.call({
-				method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.create_customer_bank_account",
-				args: Object.assign({ customer: frm.doc.customer }, values),
-				freeze: true,
-			}).then((r) => {
-				if (!r.message) return;
-				dialog.hide();
-				frm.set_value("bank_account", r.message.name);
-				frappe.show_alert({
-					message: r.message.created ? __("Bank Account {0} created", [r.message.name]) : __("Using existing Bank Account {0}", [r.message.name]),
-					indicator: "green",
+			frappe
+				.call({
+					method: "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.create_customer_bank_account",
+					args: Object.assign({ customer: frm.doc.customer }, values),
+					freeze: true,
+				})
+				.then((r) => {
+					if (!r.message) return;
+					dialog.hide();
+					frm.set_value("bank_account", r.message.name);
+					frappe.show_alert({
+						message: r.message.created
+							? __("Bank Account {0} created", [r.message.name])
+							: __("Using existing Bank Account {0}", [r.message.name]),
+						indicator: "green",
+					});
 				});
-			});
 		},
 	});
 	dialog.show();
 	// suggest the banks already on file, without leaving this form
-	frappe.db.get_list("Bank", { fields: ["name"], limit: 200, order_by: "name asc" }).then((banks) => {
-		dialog.set_df_property("bank", "options", (banks || []).map((b) => b.name));
-	});
+	frappe.db
+		.get_list("Bank", { fields: ["name"], limit: 200, order_by: "name asc" })
+		.then((banks) => {
+			dialog.set_df_property(
+				"bank",
+				"options",
+				(banks || []).map((b) => b.name)
+			);
+		});
 }

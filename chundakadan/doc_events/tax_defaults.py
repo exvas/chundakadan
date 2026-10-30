@@ -29,25 +29,28 @@ _TAX_CATEGORY = "In-State"
 
 
 def apply_item_defaults(doc, method=None):
-    """before_insert on Item."""
-    # 1. Top-level Tax Template link
-    if not doc.get("custom_tax_template"):
-        if frappe.db.exists("Tax Template", _TAX_TEMPLATE):
-            doc.custom_tax_template = _TAX_TEMPLATE
+	"""before_insert on Item."""
+	# 1. Top-level Tax Template link
+	if not doc.get("custom_tax_template"):
+		if frappe.db.exists("Tax Template", _TAX_TEMPLATE):
+			doc.custom_tax_template = _TAX_TEMPLATE
 
-    # 2. Item Tax child row — only add if no row exists at all (don't
-    # second-guess a user who deliberately set up multi-rate taxes).
-    if not doc.get("taxes") and frappe.db.exists("Item Tax Template", _ITEM_TAX_TEMPLATE):
-        doc.append("taxes", {
-            "item_tax_template": _ITEM_TAX_TEMPLATE,
-            "tax_category": _TAX_CATEGORY if frappe.db.exists("Tax Category", _TAX_CATEGORY) else None,
-            "minimum_net_rate": 0,
-            "maximum_net_rate": 0,
-        })
+	# 2. Item Tax child row — only add if no row exists at all (don't
+	# second-guess a user who deliberately set up multi-rate taxes).
+	if not doc.get("taxes") and frappe.db.exists("Item Tax Template", _ITEM_TAX_TEMPLATE):
+		doc.append(
+			"taxes",
+			{
+				"item_tax_template": _ITEM_TAX_TEMPLATE,
+				"tax_category": _TAX_CATEGORY if frappe.db.exists("Tax Category", _TAX_CATEGORY) else None,
+				"minimum_net_rate": 0,
+				"maximum_net_rate": 0,
+			},
+		)
 
 
 def apply_customer_defaults(doc, method=None):
-    """before_insert on Customer."""
-    if not doc.get("tax_category"):
-        if frappe.db.exists("Tax Category", _TAX_CATEGORY):
-            doc.tax_category = _TAX_CATEGORY
+	"""before_insert on Customer."""
+	if not doc.get("tax_category"):
+		if frappe.db.exists("Tax Category", _TAX_CATEGORY):
+			doc.tax_category = _TAX_CATEGORY

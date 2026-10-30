@@ -36,8 +36,7 @@ def install():
 			try:
 				frappe.cache.hdel("session", self.sid)
 				frappe.logger("chundakadan").warning(
-					"session_healing: dropped corrupt cached session %s... (no user key); "
-					"falling back to DB",
+					"session_healing: dropped corrupt cached session %s... (no user key); falling back to DB",
 					str(self.sid)[:12],
 				)
 			except Exception:

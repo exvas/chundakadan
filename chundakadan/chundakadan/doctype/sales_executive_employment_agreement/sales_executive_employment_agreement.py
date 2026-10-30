@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, getdate, today, add_days, date_diff
+from frappe.utils import add_days, date_diff, flt, getdate, today
 
 
 class SalesExecutiveEmploymentAgreement(Document):
@@ -12,35 +12,37 @@ class SalesExecutiveEmploymentAgreement(Document):
 		self.validate_dates()
 		self.validate_targets()
 		self.update_status()
-	
+
 	def on_submit(self):
 		self.status = "Active"
 		self.create_performance_tracking()
-	
+
 	def on_cancel(self):
 		self.status = "Cancelled"
-	
+
 	def validate_dates(self):
 		"""Validate start and end dates"""
 		if self.start_date and self.end_date:
 			if getdate(self.end_date) < getdate(self.start_date):
 				frappe.throw(_("End Date cannot be before Start Date"))
-	
+
 	def validate_targets(self):
 		"""Validate performance targets"""
 		if flt(self.cash_collection_amount) < 0:
 			frappe.throw(_("Cash Collection Target cannot be negative"))
-		
+
 		if flt(self.sales_target_penalty_70) < 0 or flt(self.sales_target_penalty_70) > 100:
 			frappe.throw(_("Sales Target Percentage must be between 0 and 100"))
-		
+
 		# Set default penalties
 		if not self.cash_target_penalty:
-			self.cash_target_penalty = "Failure to meet this target will result in a salary deduction, as outlined in Section 4."
-		
+			self.cash_target_penalty = (
+				"Failure to meet this target will result in a salary deduction, as outlined in Section 4."
+			)
+
 		if not self.sales_target_penalty_below_70:
 			self.sales_target_penalty_below_70 = "Failure to achieve at least 70% of the sales target will be considered unsatisfactory and may lead to corrective action or review by the Employer."
-	
+
 	def update_status(self):
 		"""Update status based on dates and docstatus"""
 		if self.docstatus == 0:
@@ -52,7 +54,7 @@ class SalesExecutiveEmploymentAgreement(Document):
 				current_date = getdate(today())
 				start = getdate(self.start_date)
 				end = getdate(self.end_date)
-				
+
 				if current_date < start:
 					self.status = "Active"
 				elif current_date > end:
@@ -61,12 +63,12 @@ class SalesExecutiveEmploymentAgreement(Document):
 					self.status = "Active"
 			else:
 				self.status = "Active"
-	
+
 	def create_performance_tracking(self):
 		"""Create monthly performance tracking records"""
 		# This can be extended to create monthly performance review documents
 		pass
-	
+
 	@frappe.whitelist()
 	def get_performance_summary(self, from_date=None, to_date=None):
 		"""Get performance summary for the sales executive"""
@@ -74,7 +76,7 @@ class SalesExecutiveEmploymentAgreement(Document):
 			from_date = self.start_date or today()
 		if not to_date:
 			to_date = today()
-		
+
 		# This can be extended to fetch actual sales data
 		summary = {
 			"employee": self.employee_name,
@@ -83,10 +85,10 @@ class SalesExecutiveEmploymentAgreement(Document):
 				"cash_collection": self.cash_collection_amount,
 				"sales_target": self.sales_target_penalty_70,
 				"min_leads": self.min_new_leads_per_month,
-				"min_demos": self.min_demos_per_month
-			}
+				"min_demos": self.min_demos_per_month,
+			},
 		}
-		
+
 		return summary
 
 

@@ -19,10 +19,10 @@ it in Returned so the employee can fix it and send it again.
 from __future__ import annotations
 
 import frappe
-
-from chundakadan.utils.fields import field_changed
 from frappe import _
 from frappe.utils import now
+
+from chundakadan.utils.fields import field_changed
 
 ROLE_GM = "GM Leave Approver"
 ADMIN_ROLES = ("Administrator", "System Manager")
@@ -71,15 +71,15 @@ def user_for_role(role: str) -> str | None:
 	"""An enabled user holding the role, preferring one with an active
 	Employee record."""
 	holders = frappe.get_all(
-		"Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent",
+		"Has Role",
+		filters={"role": role, "parenttype": "User"},
+		pluck="parent",
 		ignore_permissions=True,
 	)
 	holders = [h for h in holders if h not in ("Administrator", "Guest")]
 	if not holders:
 		return None
-	enabled = frappe.get_all(
-		"User", filters={"name": ["in", holders], "enabled": 1}, pluck="name"
-	)
+	enabled = frappe.get_all("User", filters={"name": ["in", holders], "enabled": 1}, pluck="name")
 	for email in enabled:
 		if frappe.db.exists("Employee", {"user_id": email, "status": "Active"}):
 			return email
@@ -124,10 +124,7 @@ def departments_for_role(role: str) -> list[str]:
 	Built from the same matching `hod_role_for_department` uses, so a
 	department can never be routed to one HOD and shown to another.
 	"""
-	return [
-		d for d in frappe.get_all("Department", pluck="name")
-		if hod_role_for_department(d) == role
-	]
+	return [d for d in frappe.get_all("Department", pluck="name") if hod_role_for_department(d) == role]
 
 
 def oversees_departments(user: str | None = None) -> list[str]:
@@ -177,9 +174,7 @@ def can_act_now(doc, user: str | None = None) -> bool:
 
 def _ensure_can_act(doc):
 	if not can_act_now(doc):
-		raise frappe.PermissionError(
-			_("It is not your turn on {0}").format(doc.name)
-		)
+		raise frappe.PermissionError(_("It is not your turn on {0}").format(doc.name))
 
 
 # --------------------------------------------------------------------------
@@ -273,14 +268,12 @@ def _guard_remarks(doc):
 		return
 	idx = int(doc.get("current_approval_index") or 0)
 	mine = REMARK_FIELD.get(idx) if doc.custom_approval_status in (STATUS_PENDING, STATUS_PARTIAL) else None
-	for step, field in REMARK_FIELD.items():
+	for step, field in REMARK_FIELD.items():  # noqa: B007
 		if not field_changed("Daily Work Summary", doc, before, field):
 			continue
 		if field != mine or not can_act_now(doc):
 			frappe.throw(
-				_("Only the approver at that step may write {0}").format(
-					doc.meta.get_label(field)
-				),
+				_("Only the approver at that step may write {0}").format(doc.meta.get_label(field)),
 				frappe.PermissionError,
 			)
 
@@ -333,9 +326,14 @@ def send_for_remarks(docname: str):
 		frappe.throw(_("Add at least one task before sending."))
 	_build_flow(doc)
 	doc.save(ignore_permissions=True)
-	_notify(doc.current_approver, _("Work summary to review"),
-	        "{0} — {1}".format(doc.employee_name or doc.employee, frappe.format(doc.work_date, {"fieldtype": "Date"})),
-	        doc.name)
+	_notify(
+		doc.current_approver,
+		_("Work summary to review"),
+		"{0} — {1}".format(  # noqa: UP030
+			doc.employee_name or doc.employee, frappe.format(doc.work_date, {"fieldtype": "Date"})
+		),
+		doc.name,
+	)
 	return {"status": doc.custom_approval_status, "current_approver": doc.current_approver}
 
 
@@ -377,15 +375,19 @@ def add_remarks(docname: str, remarks: str | None = None):
 			doc.current_approver = None
 			doc.submit()
 			target = employee_user(doc)
-			title, body = _("Work summary closed"), _("The GM has closed your summary for {0}").format(doc.work_date)
+			title, body = (
+				_("Work summary closed"),
+				_("The GM has closed your summary for {0}").format(doc.work_date),
+			)
 		else:
 			doc.current_approval_index = idx + 1
 			doc.current_approver = flow[idx + 1].approver
 			doc.custom_approval_status = STATUS_PARTIAL
 			doc.save(ignore_permissions=True)
 			target = doc.current_approver
-			title, body = _("Work summary to review"), "{0} — {1}".format(
-				doc.employee_name or doc.employee, doc.work_date
+			title, body = (
+				_("Work summary to review"),
+				"{0} — {1}".format(doc.employee_name or doc.employee, doc.work_date),  # noqa: UP030
 			)
 	finally:
 		frappe.set_user(original)
@@ -446,8 +448,16 @@ def team_summaries(scope: str = "waiting", limit: int = 50):
 	return frappe.get_all(
 		"Daily Work Summary",
 		filters=filters,
-		fields=["name", "employee", "employee_name", "work_date", "department",
-		        "custom_approval_status", "current_approver", "current_approval_index"],
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"work_date",
+			"department",
+			"custom_approval_status",
+			"current_approver",
+			"current_approval_index",
+		],
 		order_by="work_date desc, modified desc",
 		limit_page_length=int(limit or 50),
 		ignore_permissions=True,
@@ -463,21 +473,27 @@ def add_comment(docname: str, comment: str | None = None):
 	time, without signing anything.
 	"""
 	doc = frappe.get_doc("Daily Work Summary", docname)
-	if not (sees_everything() or can_act_now(doc) or is_owner(doc)
-	        or (doc.department and doc.department in oversees_departments())):
+	if not (
+		sees_everything()
+		or can_act_now(doc)
+		or is_owner(doc)
+		or (doc.department and doc.department in oversees_departments())
+	):
 		raise frappe.PermissionError(_("You cannot comment on {0}").format(docname))
 	comment = (comment or "").strip()
 	if not comment:
 		frappe.throw(_("Write something before posting."))
-	entry = frappe.get_doc({
-		"doctype": "Comment",
-		"comment_type": "Comment",
-		"reference_doctype": "Daily Work Summary",
-		"reference_name": docname,
-		"content": comment,
-		"comment_email": frappe.session.user,
-		"comment_by": frappe.db.get_value("User", frappe.session.user, "full_name"),
-	})
+	entry = frappe.get_doc(
+		{
+			"doctype": "Comment",
+			"comment_type": "Comment",
+			"reference_doctype": "Daily Work Summary",
+			"reference_name": docname,
+			"content": comment,
+			"comment_email": frappe.session.user,
+			"comment_by": frappe.db.get_value("User", frappe.session.user, "full_name"),
+		}
+	)
 	entry.flags.ignore_permissions = True
 	entry.insert()
 	_notify(employee_user(doc), _("Comment on your work summary"), comment, docname)
@@ -492,8 +508,11 @@ def comments(docname: str):
 		raise frappe.PermissionError(_("You cannot read {0}").format(docname))
 	return frappe.get_all(
 		"Comment",
-		filters={"reference_doctype": "Daily Work Summary", "reference_name": docname,
-		         "comment_type": "Comment"},
+		filters={
+			"reference_doctype": "Daily Work Summary",
+			"reference_name": docname,
+			"comment_type": "Comment",
+		},
 		fields=["name", "comment_by", "comment_email", "content", "creation"],
 		order_by="creation asc",
 	)
@@ -507,8 +526,16 @@ def waiting_on_me():
 	names = frappe.get_all(
 		"Daily Work Summary",
 		filters={"docstatus": 0, "custom_approval_status": ["in", [STATUS_PENDING, STATUS_PARTIAL]]},
-		fields=["name", "employee", "employee_name", "work_date", "department",
-		        "custom_approval_status", "current_approver", "current_approval_index"],
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"work_date",
+			"department",
+			"custom_approval_status",
+			"current_approver",
+			"current_approval_index",
+		],
 		order_by="work_date desc",
 		ignore_permissions=True,
 	)
@@ -559,8 +586,7 @@ def get_permission_query_conditions(user=None):
 	clauses = [
 		f"`tabDaily Work Summary`.owner = {safe}",
 		f"`tabDaily Work Summary`.current_approver = {safe}",
-		f"`tabDaily Work Summary`.employee in "
-		f"(select name from `tabEmployee` where user_id = {safe})",
+		f"`tabDaily Work Summary`.employee in (select name from `tabEmployee` where user_id = {safe})",
 		f"exists (select 1 from `tabChundakadan Approval Detail` af "
 		f"where af.parent = `tabDaily Work Summary`.name and af.approver = {safe})",
 	]
@@ -618,9 +644,7 @@ def _is_holiday(employee: str, day) -> bool:
 		holiday_list = frappe.db.get_value("Company", company, "default_holiday_list")
 	if not holiday_list:
 		return False
-	return bool(
-		frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": getdate(day)})
-	)
+	return bool(frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": getdate(day)}))
 
 
 def _on_leave(employee: str, day) -> bool:

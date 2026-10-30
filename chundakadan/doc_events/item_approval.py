@@ -11,7 +11,6 @@ from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now
 
-from chundakadan.utils.fields import field_changed
 from chundakadan.chundakadan.api.item_approval import (
 	APPROVED,
 	PENDING,
@@ -20,6 +19,7 @@ from chundakadan.chundakadan.api.item_approval import (
 	is_approver,
 	is_enabled,
 )
+from chundakadan.utils.fields import field_changed
 
 #: fields only the approver may move
 GUARDED_FIELDS = (
@@ -97,10 +97,7 @@ def _skip():
 	Pending items.
 	"""
 	return bool(
-		frappe.flags.in_import
-		or frappe.flags.in_migrate
-		or frappe.flags.in_install
-		or frappe.flags.in_patch
+		frappe.flags.in_import or frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_patch
 	)
 
 
@@ -159,7 +156,7 @@ def notify_approvers(doc, method=None):
 	from chundakadan.utils import push
 
 	title = _("New Item needs approval")
-	body = "{0} — {1}".format(doc.name, doc.item_name or "")
+	body = "{0} — {1}".format(doc.name, doc.item_name or "")  # noqa: UP030
 	try:
 		push.send_to_users(users, title, body, {"route": "/item_approvals", "name": doc.name})
 	except Exception:

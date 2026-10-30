@@ -10,162 +10,180 @@
 console.log("Exit Interview Form JS V24 STARTING");
 
 frappe.ui.form.on("Exit Interview Form", {
-    onload: function (frm) {
-        console.log("Exit Interview Form: Loaded");
-    },
+	onload: function (frm) {
+		console.log("Exit Interview Form: Loaded");
+	},
 
-    refresh: function (frm) {
-        console.log("Exit Interview Form: Refreshing. DocStatus:", frm.doc.docstatus);
+	refresh: function (frm) {
+		console.log("Exit Interview Form: Refreshing. DocStatus:", frm.doc.docstatus);
 
-        // Ensure survey data is loaded when form is refreshed
-        const load_data = () => {
-            if (!frm.doc.survey_data) {
-                console.log("No survey data found to load.");
-                return;
-            }
+		// Ensure survey data is loaded when form is refreshed
+		const load_data = () => {
+			if (!frm.doc.survey_data) {
+				console.log("No survey data found to load.");
+				return;
+			}
 
-            try {
-                const data = JSON.parse(frm.doc.survey_data);
-                console.log("Loading survey data to HTML fields:", data);
+			try {
+				const data = JSON.parse(frm.doc.survey_data);
+				console.log("Loading survey data to HTML fields:", data);
 
-                // 1. Load Checkboxes
-                if (data.checkboxes) {
-                    Object.keys(data.checkboxes).forEach(id => {
-                        // Match by ID or Label text
-                        let $cb = $(`input[type="checkbox"]#${id}`);
-                        if ($cb.length === 0) {
-                            // Try matching by label text if ID not found (for recommend section)
-                            $('.recommend-options label').each(function () {
-                                if ($(this).text().trim() === id) {
-                                    $(this).find('input').prop('checked', data.checkboxes[id]);
-                                }
-                            });
-                        } else {
-                            $cb.prop('checked', data.checkboxes[id]);
-                        }
-                    });
-                }
+				// 1. Load Checkboxes
+				if (data.checkboxes) {
+					Object.keys(data.checkboxes).forEach((id) => {
+						// Match by ID or Label text
+						let $cb = $(`input[type="checkbox"]#${id}`);
+						if ($cb.length === 0) {
+							// Try matching by label text if ID not found (for recommend section)
+							$(".recommend-options label").each(function () {
+								if ($(this).text().trim() === id) {
+									$(this).find("input").prop("checked", data.checkboxes[id]);
+								}
+							});
+						} else {
+							$cb.prop("checked", data.checkboxes[id]);
+						}
+					});
+				}
 
-                // 2. Load Radio Buttons (Rating Tables)
-                if (data.radios) {
-                    Object.keys(data.radios).forEach(key => {
-                        const [section, name, val] = key.split('|');
-                        $(`[data-fieldname="${section}"] input[name="${name}"][value="${val}"]`).prop('checked', true);
-                    });
-                }
+				// 2. Load Radio Buttons (Rating Tables)
+				if (data.radios) {
+					Object.keys(data.radios).forEach((key) => {
+						const [section, name, val] = key.split("|");
+						$(
+							`[data-fieldname="${section}"] input[name="${name}"][value="${val}"]`
+						).prop("checked", true);
+					});
+				}
 
-                // 3. Load Text Inputs/Textareas
-                if (data.inputs) {
-                    Object.keys(data.inputs).forEach(selector => {
-                        $(selector).val(data.inputs[selector]);
-                    });
-                }
-            } catch (e) {
-                console.error("Critical: Error parsing survey data", e);
-            }
-        };
+				// 3. Load Text Inputs/Textareas
+				if (data.inputs) {
+					Object.keys(data.inputs).forEach((selector) => {
+						$(selector).val(data.inputs[selector]);
+					});
+				}
+			} catch (e) {
+				console.error("Critical: Error parsing survey data", e);
+			}
+		};
 
-        // Initialize values for radio buttons if they don't have them
-        $('.q-section table').each(function () {
-            $(this).find('tr').each(function () {
-                $(this).find('.rating-cell').each(function (i) {
-                    // 5, 4, 3, 2, 1, N/A(0)
-                    const val = (5 - i).toString();
-                    if (val < 0) return; // ignore extra cells
-                    $(this).find('input[type="radio"]').attr('value', i === 5 ? '0' : val);
-                });
-            });
-        });
+		// Initialize values for radio buttons if they don't have them
+		$(".q-section table").each(function () {
+			$(this)
+				.find("tr")
+				.each(function () {
+					$(this)
+						.find(".rating-cell")
+						.each(function (i) {
+							// 5, 4, 3, 2, 1, N/A(0)
+							const val = (5 - i).toString();
+							if (val < 0) return; // ignore extra cells
+							$(this)
+								.find('input[type="radio"]')
+								.attr("value", i === 5 ? "0" : val);
+						});
+				});
+		});
 
-        // Use a short timeout to ensure the HTML fields are fully rendered in the DOM
-        setTimeout(() => {
-            load_data();
+		// Use a short timeout to ensure the HTML fields are fully rendered in the DOM
+		setTimeout(() => {
+			load_data();
 
-            // Handle recommend-options checkboxes as radio buttons
-            $('.recommend-options input[type="checkbox"]').on('click', function () {
-                if ($(this).is(':checked')) {
-                    $('.recommend-options input[type="checkbox"]').not(this).prop('checked', false);
-                }
-            });
-        }, 300);
+			// Handle recommend-options checkboxes as radio buttons
+			$('.recommend-options input[type="checkbox"]').on("click", function () {
+				if ($(this).is(":checked")) {
+					$('.recommend-options input[type="checkbox"]')
+						.not(this)
+						.prop("checked", false);
+				}
+			});
+		}, 300);
 
-        // Apply read-only state if document is submitted
-        if (frm.doc.docstatus === 1) {
-            console.log("Document is submitted. Disabling HTML survey fields.");
-            $('.exit-survey-container input, .q-section input, .q-section textarea, .recommend-section input').prop('disabled', true);
-        }
-    },
+		// Apply read-only state if document is submitted
+		if (frm.doc.docstatus === 1) {
+			console.log("Document is submitted. Disabling HTML survey fields.");
+			$(
+				".exit-survey-container input, .q-section input, .q-section textarea, .recommend-section input"
+			).prop("disabled", true);
+		}
+	},
 
-    before_save: function (frm) {
-        console.log("Capturing survey data before save...");
-        const survey_data = {
-            checkboxes: {},
-            radios: {},
-            inputs: {}
-        };
+	before_save: function (frm) {
+		console.log("Capturing survey data before save...");
+		const survey_data = {
+			checkboxes: {},
+			radios: {},
+			inputs: {},
+		};
 
-        // Capture all checkboxes
-        $('.exit-cb, .recommend-options input[type="checkbox"]').each(function () {
-            const id = $(this).attr('id') || $(this).parent().text().trim();
-            survey_data.checkboxes[id] = $(this).is(':checked');
-        });
+		// Capture all checkboxes
+		$('.exit-cb, .recommend-options input[type="checkbox"]').each(function () {
+			const id = $(this).attr("id") || $(this).parent().text().trim();
+			survey_data.checkboxes[id] = $(this).is(":checked");
+		});
 
-        // Capture all radio buttons
-        $('.q-section').each(function () {
-            const section = $(this).closest('[data-fieldname]').data('fieldname');
-            $(this).find('input[type="radio"]:checked').each(function () {
-                const name = $(this).attr('name');
-                const val = $(this).attr('value');
-                survey_data.radios[`${section}|${name}|${val}`] = true;
-            });
-        });
+		// Capture all radio buttons
+		$(".q-section").each(function () {
+			const section = $(this).closest("[data-fieldname]").data("fieldname");
+			$(this)
+				.find('input[type="radio"]:checked')
+				.each(function () {
+					const name = $(this).attr("name");
+					const val = $(this).attr("value");
+					survey_data.radios[`${section}|${name}|${val}`] = true;
+				});
+		});
 
-        // Capture textareas and inputs within specific sections
-        $('.others-underline, .q-section textarea, .reason-input').each(function () {
-            const section = $(this).closest('[data-fieldname]').data('fieldname');
-            const type = $(this).is('textarea') ? 'textarea' : 'input';
-            const selector = `[data-fieldname="${section}"] ${type}`;
-            survey_data.inputs[selector] = $(this).val();
-        });
+		// Capture textareas and inputs within specific sections
+		$(".others-underline, .q-section textarea, .reason-input").each(function () {
+			const section = $(this).closest("[data-fieldname]").data("fieldname");
+			const type = $(this).is("textarea") ? "textarea" : "input";
+			const selector = `[data-fieldname="${section}"] ${type}`;
+			survey_data.inputs[selector] = $(this).val();
+		});
 
-        console.log("Survey data captured:", survey_data);
-        frm.set_value('survey_data', JSON.stringify(survey_data));
-    },
+		console.log("Survey data captured:", survey_data);
+		frm.set_value("survey_data", JSON.stringify(survey_data));
+	},
 
-    // AUTOMATIC FETCHING Logic for Employee Details
-    custom_id_nos: function (frm) {
-        if (!frm.doc.custom_id_nos) {
-            frm.set_value({
-                'name1': '',
-                'department': '',
-                'position': '',
-                'hire_date': '',
-                'separation_date': ''
-            });
-            return;
-        }
+	// AUTOMATIC FETCHING Logic for Employee Details
+	custom_id_nos: function (frm) {
+		if (!frm.doc.custom_id_nos) {
+			frm.set_value({
+				name1: "",
+				department: "",
+				position: "",
+				hire_date: "",
+				separation_date: "",
+			});
+			return;
+		}
 
-        console.log("Exit Form: Fetching details for", frm.doc.custom_id_nos);
-        // frappe.show_alert({message: __('Fetching Employee Details...'), indicator: 'blue'});
+		console.log("Exit Form: Fetching details for", frm.doc.custom_id_nos);
+		// frappe.show_alert({message: __('Fetching Employee Details...'), indicator: 'blue'});
 
-        frappe.db.get_value('Employee', frm.doc.custom_id_nos, 
-            ['employee_name', 'department', 'designation', 'date_of_joining', 'relieving_date'], (r) => {
-            if (r) {
-                console.log("Employee Data Object:", r);
-                
-                // Set primary fields
-                frm.set_value({
-                    'name1': r.employee_name || '',
-                    'department': r.department || '',
-                    'position': r.designation || '',
-                    'hire_date': r.date_of_joining || '',
-                    'separation_date': r.relieving_date || ''
-                });
+		frappe.db.get_value(
+			"Employee",
+			frm.doc.custom_id_nos,
+			["employee_name", "department", "designation", "date_of_joining", "relieving_date"],
+			(r) => {
+				if (r) {
+					console.log("Employee Data Object:", r);
 
-                // frappe.show_alert({ message: __('Employee details populated'), indicator: 'green' });
-            } else {
-                console.log("No data found for employee:", frm.doc.custom_id_nos);
-            }
-        });
-    }
+					// Set primary fields
+					frm.set_value({
+						name1: r.employee_name || "",
+						department: r.department || "",
+						position: r.designation || "",
+						hire_date: r.date_of_joining || "",
+						separation_date: r.relieving_date || "",
+					});
+
+					// frappe.show_alert({ message: __('Employee details populated'), indicator: 'green' });
+				} else {
+					console.log("No data found for employee:", frm.doc.custom_id_nos);
+				}
+			}
+		);
+	},
 });

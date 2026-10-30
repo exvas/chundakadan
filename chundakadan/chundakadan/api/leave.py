@@ -6,387 +6,401 @@ from frappe import _
 
 
 def _caller_can_act_on(doc):
-    """Return True if the calling user is authorised to approve / reject
-    the current step of `doc`.
+	"""Return True if the calling user is authorised to approve / reject
+	the current step of `doc`.
 
-    STRICT policy (tightened 2026-06-12 after the Bindu-as-Sales-HOD
-    incident on HR-LAP-2026-00194):
+	STRICT policy (tightened 2026-06-12 after the Bindu-as-Sales-HOD
+	incident on HR-LAP-2026-00194):
 
-      The role attached to the CURRENT step is the ultimate authority.
-      No caller can act on a step whose role they don't hold, even if
-      they're the designated Employee.leave_approver or happen to
-      match the resolved current_approver email.
+	  The role attached to the CURRENT step is the ultimate authority.
+	  No caller can act on a step whose role they don't hold, even if
+	  they're the designated Employee.leave_approver or happen to
+	  match the resolved current_approver email.
 
-      Allowed if:
-        1. caller is Administrator
-        2. caller holds the role of approval_flow[current_approval_index]
+	  Allowed if:
+	    1. caller is Administrator
+	    2. caller holds the role of approval_flow[current_approval_index]
 
-    Before this change, condition (3) "caller == doc.leave_approver"
-    was a free pass — letting anyone designated as the per-employee
-    leave_approver approve EVERY step regardless of role. That's how
-    Bindu (HR Leave Approver only) was able to approve a Sales HOD
-    step on Beeran Ashraf's leave: she was his Employee.leave_approver,
-    and the old gate ignored role mismatch.
+	Before this change, condition (3) "caller == doc.leave_approver"
+	was a free pass — letting anyone designated as the per-employee
+	leave_approver approve EVERY step regardless of role. That's how
+	Bindu (HR Leave Approver only) was able to approve a Sales HOD
+	step on Beeran Ashraf's leave: she was his Employee.leave_approver,
+	and the old gate ignored role mismatch.
 
-    The widened-role behaviour (Bindu can approve a step assigned to
-    another GM Leave Approver holder, since she's in the role) is
-    preserved by condition (2): any role-holder may approve, not just
-    the resolved current_approver.
+	The widened-role behaviour (Bindu can approve a step assigned to
+	another GM Leave Approver holder, since she's in the role) is
+	preserved by condition (2): any role-holder may approve, not just
+	the resolved current_approver.
 
-    Edge case — empty chain: if approval_flow is missing or the step
-    row has no role label, fall back to the original tight check
-    (caller == current_approver). This shouldn't happen in normal
-    operation; the chain-integrity hook regenerates empty chains on
-    every save.
-    """
-    user = frappe.session.user
-    if user == "Administrator":
-        return True
+	Edge case — empty chain: if approval_flow is missing or the step
+	row has no role label, fall back to the original tight check
+	(caller == current_approver). This shouldn't happen in normal
+	operation; the chain-integrity hook regenerates empty chains on
+	every save.
+	"""
+	user = frappe.session.user
+	if user == "Administrator":
+		return True
 
-    idx = doc.current_approval_index or 0
-    if not (doc.approval_flow and 0 <= idx < len(doc.approval_flow)):
-        # No chain rows — fall back to the strict-original gate
-        return bool(doc.current_approver and user == doc.current_approver)
+	idx = doc.current_approval_index or 0
+	if not (doc.approval_flow and 0 <= idx < len(doc.approval_flow)):
+		# No chain rows — fall back to the strict-original gate
+		return bool(doc.current_approver and user == doc.current_approver)
 
-    step_role = doc.approval_flow[idx].approver_role
-    if not step_role:
-        # Chain row has no role label — defensive fallback
-        return bool(doc.current_approver and user == doc.current_approver)
+	step_role = doc.approval_flow[idx].approver_role
+	if not step_role:
+		# Chain row has no role label — defensive fallback
+		return bool(doc.current_approver and user == doc.current_approver)
 
-    # AUTHORITY: caller must hold the role of THIS step.
-    # No leave_approver-field bypass. No current_approver-match bypass.
-    return step_role in frappe.get_roles(user)
+	# AUTHORITY: caller must hold the role of THIS step.
+	# No leave_approver-field bypass. No current_approver-match bypass.
+	return step_role in frappe.get_roles(user)
 
 
 def get_approver_by_role(role):
-    """
-    Helper function to dynamically fetch the approver user based on the custom role.
-    It resolves the enabled User assigned to the specified Role.
-    If multiple users exist, it prefers the one linked to an active Employee record.
+	"""
+	Helper function to dynamically fetch the approver user based on the custom role.
+	It resolves the enabled User assigned to the specified Role.
+	If multiple users exist, it prefers the one linked to an active Employee record.
 
-    Args:
-        role (str): The custom role name (e.g. 'Sales HOD Leave Approver')
+	Args:
+	    role (str): The custom role name (e.g. 'Sales HOD Leave Approver')
 
-    Returns:
-        str: Email (user_id) of the matched approver user, or None
+	Returns:
+	    str: Email (user_id) of the matched approver user, or None
 
-    NOTE: `ignore_permissions=True` is REQUIRED on the get_all call. Without
-    it, when an end user without HR Manager / System Manager role triggers
-    this (e.g. Arjun applying for his own leave) the query runs under their
-    session and returns 0 Has Role rows — they can't see other users' role
-    assignments. The chain build then throws "Could not locate an active
-    user with the role X" misleadingly. Bug hit 2026-06-03 with Arjun
-    (marketing@chundakadan.in). Same applies to any caller who isn't a
-    privileged user — including every Sales Executive applying for leave.
-    """
-    users = frappe.get_all(
-        "Has Role",
-        filters={"role": role},
-        fields=["parent"],
-        ignore_permissions=True,
-    )
-    if not users:
-        return None
-        
-    # 1. Prefer active employees with enabled users
-    for u in users:
-        user_id = u.parent
-        if frappe.db.get_value("User", user_id, "enabled"):
-            # Check if user is linked to an active employee
-            employee_exists = frappe.db.exists(
-                "Employee",
-                {"user_id": user_id, "status": "Active"}
-            )
-            if employee_exists:
-                return user_id
-                
-    # 2. Fallback to the first enabled user
-    for u in users:
-        user_id = u.parent
-        if frappe.db.get_value("User", user_id, "enabled"):
-            return user_id
-            
-    return None
+	NOTE: `ignore_permissions=True` is REQUIRED on the get_all call. Without
+	it, when an end user without HR Manager / System Manager role triggers
+	this (e.g. Arjun applying for his own leave) the query runs under their
+	session and returns 0 Has Role rows — they can't see other users' role
+	assignments. The chain build then throws "Could not locate an active
+	user with the role X" misleadingly. Bug hit 2026-06-03 with Arjun
+	(marketing@chundakadan.in). Same applies to any caller who isn't a
+	privileged user — including every Sales Executive applying for leave.
+	"""
+	users = frappe.get_all(
+		"Has Role",
+		filters={"role": role},
+		fields=["parent"],
+		ignore_permissions=True,
+	)
+	if not users:
+		return None
+
+	# 1. Prefer active employees with enabled users
+	for u in users:
+		user_id = u.parent
+		if frappe.db.get_value("User", user_id, "enabled"):
+			# Check if user is linked to an active employee
+			employee_exists = frappe.db.exists("Employee", {"user_id": user_id, "status": "Active"})
+			if employee_exists:
+				return user_id
+
+	# 2. Fallback to the first enabled user
+	for u in users:
+		user_id = u.parent
+		if frappe.db.get_value("User", user_id, "enabled"):
+			return user_id
+
+	return None
 
 
 def _chain_for_department(department):
-    """Fallback chain for a designation the table does not name.
+	"""Fallback chain for a designation the table does not name.
 
-    Sales and marketing staff go through their HOD first; accounts, finance
-    and purchase staff through the Accounts Manager. Everyone else keeps the
-    plain HR -> GM chain, per the client's sheet.
-    """
-    name = (department or "").lower()
-    if "sales" in name or "marketing" in name:
-        return ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
-    if "account" in name or "finance" in name or "procurement" in name or "purchase" in name:
-        return ["Accounts Manager Leave Approver", "HR Leave Approver", "GM Leave Approver"]
-    return ["HR Leave Approver", "GM Leave Approver"]
+	Sales and marketing staff go through their HOD first; accounts, finance
+	and purchase staff through the Accounts Manager. Everyone else keeps the
+	plain HR -> GM chain, per the client's sheet.
+	"""
+	name = (department or "").lower()
+	if "sales" in name or "marketing" in name:
+		return ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+	if "account" in name or "finance" in name or "procurement" in name or "purchase" in name:
+		return ["Accounts Manager Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+	return ["HR Leave Approver", "GM Leave Approver"]
 
 
 def role_sequence_for(designation, department=None):
-    """Which roles must sign this person's leave, in order.
+	"""Which roles must sign this person's leave, in order.
 
-    Split out of generate_approval_flow so the routing can be checked
-    without a database -- it is the part that goes wrong, and it went
-    unnoticed until a live application showed the wrong chain.
-    """
-    role_sequence = []
+	Split out of generate_approval_flow so the routing can be checked
+	without a database -- it is the part that goes wrong, and it went
+	unnoticed until a live application showed the wrong chain.
+	"""
+	role_sequence = []
 
-    # === 2026-09-10: routing per the client's 50-designation Leave Approval
-    # table. Approver POSITIONS in that table map to the 4 existing roles:
-    #   "Sales & Marketing Manager / Deputy Manager" -> Sales HOD Leave Approver
-    #   "Administration Co-ordinator / HR Associate" -> HR Leave Approver
-    #   "Accounts Manager"                            -> Accounts Manager Leave Approver
-    #   "General Manager"                             -> GM Leave Approver
-    # A person's own approver-level is skipped so nobody self-approves (Sales &
-    # Marketing / Deputy Mgr, Accounts Mgr and GM fall to the shorter chains).
+	# === 2026-09-10: routing per the client's 50-designation Leave Approval
+	# table. Approver POSITIONS in that table map to the 4 existing roles:
+	#   "Sales & Marketing Manager / Deputy Manager" -> Sales HOD Leave Approver
+	#   "Administration Co-ordinator / HR Associate" -> HR Leave Approver
+	#   "Accounts Manager"                            -> Accounts Manager Leave Approver
+	#   "General Manager"                             -> GM Leave Approver
+	# A person's own approver-level is skipped so nobody self-approves (Sales &
+	# Marketing / Deputy Mgr, Accounts Mgr and GM fall to the shorter chains).
 
-    # Sales chain: Sales HOD -> HR -> GM  (table rows 1-15, 45, 46)
-    SALES_CHAIN = (
-        "Business Development Executive", "Senior Business Development Manager",
-        "Business Development Manager", "Senior Business Development Executive",
-        "Senior Business Development Co-ordinator", "Area Sales Manager",
-        "Business Development Co-ordinator", "Senior Sales Officer", "Sales Officer",
-        "Senior Brand Co-ordinator", "Brand Co-ordinator", "Senior Brand Manager",
-        "Brand Manager", "Senior Dispatch Co-ordinator", "Dispatch Co-ordinator",
-        "Marketing Specialist", "Product Manager",
-        # 2026-09-29: live staff held these and were falling through to the
-        # HR -> GM fallback, skipping their own HOD. Fathima Rasla K
-        # (Customer Relations Executive) is the one that surfaced it.
-        "Customer Relations Executive", "Sales Co-ordinator", "Sales Coordinator",
-        "Senior Area Sales Manager",
-        # legacy / current spellings kept so existing staff don't break
-        "Sales Executive", "BDE", "Dispatch Coordinator",
-    )
-    # Accounts chain: Accounts Mgr -> HR -> GM  (table rows 22-28)
-    ACCOUNTS_CHAIN = (
-        "Senior Accountant", "Chief Accountant", "Accountant",
-        "Senior Purchaser", "Purchaser", "Senior Billing Executive",
-        "Billing Executive", "Billing Staff",
-        # legacy
-        "Purchase Coordinator",
-    )
-    # HR staff + Administration Co-ordinator: their OWN leave skips the HR step
-    # (they ARE the HR approver) -> GM only  (table rows 18, 19)
-    GM_ONLY = (
-        "HR Associate", "Administration Co-ordinator", "Administration Coordinator",
-        "HR Coordinator", "Coordinator", "HR Assistant",
-    )
+	# Sales chain: Sales HOD -> HR -> GM  (table rows 1-15, 45, 46)
+	SALES_CHAIN = (
+		"Business Development Executive",
+		"Senior Business Development Manager",
+		"Business Development Manager",
+		"Senior Business Development Executive",
+		"Senior Business Development Co-ordinator",
+		"Area Sales Manager",
+		"Business Development Co-ordinator",
+		"Senior Sales Officer",
+		"Sales Officer",
+		"Senior Brand Co-ordinator",
+		"Brand Co-ordinator",
+		"Senior Brand Manager",
+		"Brand Manager",
+		"Senior Dispatch Co-ordinator",
+		"Dispatch Co-ordinator",
+		"Marketing Specialist",
+		"Product Manager",
+		# 2026-09-29: live staff held these and were falling through to the
+		# HR -> GM fallback, skipping their own HOD. Fathima Rasla K
+		# (Customer Relations Executive) is the one that surfaced it.
+		"Customer Relations Executive",
+		"Sales Co-ordinator",
+		"Sales Coordinator",
+		"Senior Area Sales Manager",
+		# legacy / current spellings kept so existing staff don't break
+		"Sales Executive",
+		"BDE",
+		"Dispatch Coordinator",
+	)
+	# Accounts chain: Accounts Mgr -> HR -> GM  (table rows 22-28)
+	ACCOUNTS_CHAIN = (
+		"Senior Accountant",
+		"Chief Accountant",
+		"Accountant",
+		"Senior Purchaser",
+		"Purchaser",
+		"Senior Billing Executive",
+		"Billing Executive",
+		"Billing Staff",
+		# legacy
+		"Purchase Coordinator",
+	)
+	# HR staff + Administration Co-ordinator: their OWN leave skips the HR step
+	# (they ARE the HR approver) -> GM only  (table rows 18, 19)
+	GM_ONLY = (
+		"HR Associate",
+		"Administration Co-ordinator",
+		"Administration Coordinator",
+		"HR Coordinator",
+		"Coordinator",
+		"HR Assistant",
+	)
 
-    # The HODs themselves. Their own leave must NOT enter the chain they sign,
-    # so these are matched before the department fallback below and land on
-    # HR -> GM. Without this list the fallback would send the Sales &
-    # Marketing Manager to himself for approval.
-    OWN_CHAIN_HODS = (
-        "Sales & Marketing Manager", "Deputy Sales & Marketing Manager",
-        "Sales and Marketing Manager", "Deputy Sales and Marketing Manager",
-        "Accounts Manager", "Chief Accountant",
-    )
+	# The HODs themselves. Their own leave must NOT enter the chain they sign,
+	# so these are matched before the department fallback below and land on
+	# HR -> GM. Without this list the fallback would send the Sales &
+	# Marketing Manager to himself for approval.
+	OWN_CHAIN_HODS = (
+		"Sales & Marketing Manager",
+		"Deputy Sales & Marketing Manager",
+		"Sales and Marketing Manager",
+		"Deputy Sales and Marketing Manager",
+		"Accounts Manager",
+		"Chief Accountant",
+	)
 
-    if designation in SALES_CHAIN:
-        role_sequence = ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
-    elif designation in ACCOUNTS_CHAIN:
-        role_sequence = ["Accounts Manager Leave Approver", "HR Leave Approver", "GM Leave Approver"]
-    elif designation in GM_ONLY:
-        role_sequence = ["GM Leave Approver"]
-    # GM's own leave: HR signs off only (no self-approval; table row 20 literally
-    # ended at GM = self, which we avoid).
-    elif designation == "General Manager":
-        role_sequence = ["HR Leave Approver"]
-    # An HOD signs this chain, so their own leave skips it.
-    elif designation in OWN_CHAIN_HODS:
-        role_sequence = ["HR Leave Approver", "GM Leave Approver"]
-    else:
-        # DEPARTMENT SAFETY NET (2026-09-29). The designation table came from
-        # the client's 50-row sheet, so any title added later fell through to
-        # HR -> GM and quietly skipped the person's own HOD. The rule the
-        # client actually states is "everyone under Marketing goes to the SM
-        # or DM first", so fall back on the department rather than on HR.
-        #
-        # Floor, Dispatch, Housekeeping and Retail deliberately stay on
-        # HR -> GM, which is what the client's sheet says for those rows.
-        role_sequence = _chain_for_department(department)
-    return role_sequence
+	if designation in SALES_CHAIN:
+		role_sequence = ["Sales HOD Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+	elif designation in ACCOUNTS_CHAIN:
+		role_sequence = ["Accounts Manager Leave Approver", "HR Leave Approver", "GM Leave Approver"]
+	elif designation in GM_ONLY:
+		role_sequence = ["GM Leave Approver"]
+	# GM's own leave: HR signs off only (no self-approval; table row 20 literally
+	# ended at GM = self, which we avoid).
+	elif designation == "General Manager":
+		role_sequence = ["HR Leave Approver"]
+	# An HOD signs this chain, so their own leave skips it.
+	elif designation in OWN_CHAIN_HODS:
+		role_sequence = ["HR Leave Approver", "GM Leave Approver"]
+	else:
+		# DEPARTMENT SAFETY NET (2026-09-29). The designation table came from
+		# the client's 50-row sheet, so any title added later fell through to
+		# HR -> GM and quietly skipped the person's own HOD. The rule the
+		# client actually states is "everyone under Marketing goes to the SM
+		# or DM first", so fall back on the department rather than on HR.
+		#
+		# Floor, Dispatch, Housekeeping and Retail deliberately stay on
+		# HR -> GM, which is what the client's sheet says for those rows.
+		role_sequence = _chain_for_department(department)
+	return role_sequence
 
 
 def generate_approval_flow(doc, designation):
-    """
-    Generates the approval sequence based on the employee's designation,
-    populates the child table 'approval_flow', and sets the initial current approver.
+	"""
+	Generates the approval sequence based on the employee's designation,
+	populates the child table 'approval_flow', and sets the initial current approver.
 
-    Flow Logic (canonical per Razeel 2026-06-02 spec):
-    - General Manager       : HR  (1 step)
-    - HR Coord./Coord./Asst.: GM  (1 step)
-    - Area Sales Manager / Accounts Manager (HODs themselves): HR -> GM
-    - Sales Executive       : Sales HOD -> HR -> GM
-    - Accountant / Purchaser: Accounts Manager (HOD) -> HR -> GM
-    - Everyone else         : HR -> GM
+	Flow Logic (canonical per Razeel 2026-06-02 spec):
+	- General Manager       : HR  (1 step)
+	- HR Coord./Coord./Asst.: GM  (1 step)
+	- Area Sales Manager / Accounts Manager (HODs themselves): HR -> GM
+	- Sales Executive       : Sales HOD -> HR -> GM
+	- Accountant / Purchaser: Accounts Manager (HOD) -> HR -> GM
+	- Everyone else         : HR -> GM
 
-    "Sales HOD Leave Approver" covers BOTH Marketing HOD
-    (marketing@chundakadan.in) and Northern HOD
-    (chundakadannorthasm@gmail.com). Either can approve via the
-    widened _caller_can_act_on policy.
-    """
-    role_sequence = role_sequence_for(
-        designation,
-        doc.get("department")
-        or (frappe.db.get_value("Employee", doc.employee, "department") if doc.get("employee") else None),
-    )
+	"Sales HOD Leave Approver" covers BOTH Marketing HOD
+	(marketing@chundakadan.in) and Northern HOD
+	(chundakadannorthasm@gmail.com). Either can approve via the
+	widened _caller_can_act_on policy.
+	"""
+	role_sequence = role_sequence_for(
+		designation,
+		doc.get("department")
+		or (frappe.db.get_value("Employee", doc.employee, "department") if doc.get("employee") else None),
+	)
 
-    # TRANSACTIONAL: resolve ALL approvers BEFORE touching the doc's
-    # approval_flow. Avoids the corruption pattern where clear-then-
-    # throw left the leave with an empty chain (HR-LAP-2026-00194
-    # incident 2026-06-12).
-    resolved = []
-    for role in role_sequence:
-        approver = get_approver_by_role(role)
-        if not approver:
-            frappe.throw(
-                _("Could not locate an active user with the role '{0}'. "
-                  "Please make sure a user is configured with this role "
-                  "and linked to an active Employee.").format(role)
-            )
-        resolved.append((role, approver))
+	# TRANSACTIONAL: resolve ALL approvers BEFORE touching the doc's
+	# approval_flow. Avoids the corruption pattern where clear-then-
+	# throw left the leave with an empty chain (HR-LAP-2026-00194
+	# incident 2026-06-12).
+	resolved = []
+	for role in role_sequence:
+		approver = get_approver_by_role(role)
+		if not approver:
+			frappe.throw(
+				_(
+					"Could not locate an active user with the role '{0}'. "
+					"Please make sure a user is configured with this role "
+					"and linked to an active Employee."
+				).format(role)
+			)
+		resolved.append((role, approver))
 
-    # All resolved — NOW commit to the doc.
-    # One person signs a leave once: when somebody holds two of the roles
-    # in the sequence -- as happens whenever a manager stands in for a
-    # vacant post above them -- their later step is dropped. Approving
-    # your own approval is no check at all. The step kept is the FIRST,
-    # so the leave still travels as far up the chain as it would have.
-    doc.set("approval_flow", [])
-    already = set()
-    for role, approver in resolved:
-        if approver in already:
-            continue
-        already.add(approver)
-        doc.append("approval_flow", {
-            "approver": approver,
-            "approver_role": role,
-            "status": "Pending"
-        })
-        
-    # Set the initial state
-    if doc.approval_flow:
-        doc.current_approval_index = 0
-        doc.current_approver = doc.approval_flow[0].approver
-        doc.custom_approval_status = "Pending"
-    else:
-        doc.current_approval_index = 0
-        doc.current_approver = None
-        doc.custom_approval_status = "Pending"
+	# All resolved — NOW commit to the doc.
+	# One person signs a leave once: when somebody holds two of the roles
+	# in the sequence -- as happens whenever a manager stands in for a
+	# vacant post above them -- their later step is dropped. Approving
+	# your own approval is no check at all. The step kept is the FIRST,
+	# so the leave still travels as far up the chain as it would have.
+	doc.set("approval_flow", [])
+	already = set()
+	for role, approver in resolved:
+		if approver in already:
+			continue
+		already.add(approver)
+		doc.append("approval_flow", {"approver": approver, "approver_role": role, "status": "Pending"})
+
+	# Set the initial state
+	if doc.approval_flow:
+		doc.current_approval_index = 0
+		doc.current_approver = doc.approval_flow[0].approver
+		doc.custom_approval_status = "Pending"
+	else:
+		doc.current_approval_index = 0
+		doc.current_approver = None
+		doc.custom_approval_status = "Pending"
 
 
 def convert_conflicting_attendance_to_on_leave(doc, method=None):
-    """Before HRMS validates the Leave Application, find any Attendance
-    row that would block the save (status in {Present, Work From Home}
-    on a date inside the leave range) and flip it to "On Leave".
+	"""Before HRMS validates the Leave Application, find any Attendance
+	row that would block the save (status in {Present, Work From Home}
+	on a date inside the leave range) and flip it to "On Leave".
 
-    Wired as `before_validate` so this runs BEFORE
-    hrms.../leave_application.validate_attendance — that validator only
-    raises AttendanceAlreadyMarkedError when it finds rows with status
-    "Present" or "Work From Home". By converting them to "On Leave"
-    first, the validator sees no conflict.
+	Wired as `before_validate` so this runs BEFORE
+	hrms.../leave_application.validate_attendance — that validator only
+	raises AttendanceAlreadyMarkedError when it finds rows with status
+	"Present" or "Work From Home". By converting them to "On Leave"
+	first, the validator sees no conflict.
 
-    Why this is preferable to cancelling the Attendance:
-      - audit trail intact — the row stays at docstatus=1
-      - monthly attendance sheet still counts the day (as "On Leave")
-      - leave_application + leave_type are linked back so HR can trace
-        WHY the day became "On Leave"
+	Why this is preferable to cancelling the Attendance:
+	  - audit trail intact — the row stays at docstatus=1
+	  - monthly attendance sheet still counts the day (as "On Leave")
+	  - leave_application + leave_type are linked back so HR can trace
+	    WHY the day became "On Leave"
 
-    Uses frappe.db.set_value to bypass the standard "submitted doc
-    cannot be modified" gate. Safe here because Attendance has no GL
-    impact and the fields we touch (status, leave_application,
-    leave_type) are not financially load-bearing.
-    """
-    if not (doc.employee and doc.from_date and doc.to_date):
-        return
+	Uses frappe.db.set_value to bypass the standard "submitted doc
+	cannot be modified" gate. Safe here because Attendance has no GL
+	impact and the fields we touch (status, leave_application,
+	leave_type) are not financially load-bearing.
+	"""
+	if not (doc.employee and doc.from_date and doc.to_date):
+		return
 
-    conflicts = frappe.get_all(
-        "Attendance",
-        filters={
-            "employee": doc.employee,
-            "attendance_date": ("between", [doc.from_date, doc.to_date]),
-            "status": ("in", ["Present", "Work From Home"]),
-            "docstatus": 1,
-        },
-        fields=["name", "attendance_date"],
-        order_by="attendance_date",
-    )
-    if not conflicts:
-        return
+	conflicts = frappe.get_all(
+		"Attendance",
+		filters={
+			"employee": doc.employee,
+			"attendance_date": ("between", [doc.from_date, doc.to_date]),
+			"status": ("in", ["Present", "Work From Home"]),
+			"docstatus": 1,
+		},
+		fields=["name", "attendance_date"],
+		order_by="attendance_date",
+	)
+	if not conflicts:
+		return
 
-    for att in conflicts:
-        frappe.db.set_value(
-            "Attendance",
-            att["name"],
-            {
-                "status": "On Leave",
-                "leave_application": doc.name or None,
-                "leave_type": doc.leave_type,
-            },
-            update_modified=True,
-        )
+	for att in conflicts:
+		frappe.db.set_value(
+			"Attendance",
+			att["name"],
+			{
+				"status": "On Leave",
+				"leave_application": doc.name or None,
+				"leave_type": doc.leave_type,
+			},
+			update_modified=True,
+		)
 
-    # Surface what we did — HR should know that attendance was changed
-    # implicitly so they can investigate biometric vs leave mismatches.
-    dates = ", ".join(
-        frappe.utils.formatdate(a["attendance_date"]) for a in conflicts
-    )
-    frappe.msgprint(
-        _("Converted {0} existing Attendance row(s) to 'On Leave' for: {1}").format(
-            len(conflicts), dates
-        ),
-        indicator="orange",
-        alert=True,
-    )
+	# Surface what we did — HR should know that attendance was changed
+	# implicitly so they can investigate biometric vs leave mismatches.
+	dates = ", ".join(frappe.utils.formatdate(a["attendance_date"]) for a in conflicts)
+	frappe.msgprint(
+		_("Converted {0} existing Attendance row(s) to 'On Leave' for: {1}").format(len(conflicts), dates),
+		indicator="orange",
+		alert=True,
+	)
 
 
 def validate_leave(doc, method=None):
-    """
-    Hook triggered on validation of Leave Application.
-    - Generates the multi-step approval chain dynamically per designation.
-    - SELF-HEALS corrupted state: if `custom_approval_status` is set but
-      `approval_flow` is empty (the corruption pattern that caused
-      HR-LAP-2026-00194 to render with Bindu in the Sales HOD slot on
-      2026-06-12), regenerate the chain BEFORE save commits — preventing
-      future stale-render incidents.
-    - Enforces supporting-certificate upload when the selected Leave Type
-      has custom_require_certificate flagged (e.g. Sick Leave).
-    """
-    # Enforce the certificate even on submit attempts (docstatus changes)
-    _enforce_certificate_requirement(doc)
+	"""
+	Hook triggered on validation of Leave Application.
+	- Generates the multi-step approval chain dynamically per designation.
+	- SELF-HEALS corrupted state: if `custom_approval_status` is set but
+	  `approval_flow` is empty (the corruption pattern that caused
+	  HR-LAP-2026-00194 to render with Bindu in the Sales HOD slot on
+	  2026-06-12), regenerate the chain BEFORE save commits — preventing
+	  future stale-render incidents.
+	- Enforces supporting-certificate upload when the selected Leave Type
+	  has custom_require_certificate flagged (e.g. Sick Leave).
+	"""
+	# Enforce the certificate even on submit attempts (docstatus changes)
+	_enforce_certificate_requirement(doc)
 
-    # Casual / Compassionate: max 1 per calendar month
-    _enforce_monthly_cap(doc)
+	# Casual / Compassionate: max 1 per calendar month
+	_enforce_monthly_cap(doc)
 
-    # Do not execute the approval flow logic if document is already
-    # submitted or cancelled — the chain was set at draft time.
-    if doc.docstatus > 0:
-        return
+	# Do not execute the approval flow logic if document is already
+	# submitted or cancelled — the chain was set at draft time.
+	if doc.docstatus > 0:
+		return
 
-    if not doc.employee:
-        return
+	if not doc.employee:
+		return
 
-    designation = frappe.db.get_value("Employee", doc.employee, "designation")
+	designation = frappe.db.get_value("Employee", doc.employee, "designation")
 
-    # SELF-HEAL: cas/index set but no chain → regenerate
-    needs_regen = bool(
-        doc.is_new()
-        or not doc.approval_flow
-        or (doc.get("custom_approval_status") and not doc.approval_flow)
-    )
+	# SELF-HEAL: cas/index set but no chain → regenerate
+	needs_regen = bool(
+		doc.is_new() or not doc.approval_flow or (doc.get("custom_approval_status") and not doc.approval_flow)
+	)
 
-    if not needs_regen:
-        # Also handle the employee-change case
-        db_employee = frappe.db.get_value(
-            "Leave Application", doc.name, "employee")
-        if db_employee != doc.employee:
-            needs_regen = True
+	if not needs_regen:
+		# Also handle the employee-change case
+		db_employee = frappe.db.get_value("Leave Application", doc.name, "employee")
+		if db_employee != doc.employee:
+			needs_regen = True
 
-    if needs_regen:
-        generate_approval_flow(doc, designation)
+	if needs_regen:
+		generate_approval_flow(doc, designation)
 
 
 # Leave types capped at one application per calendar month (per HR policy table)
@@ -394,330 +408,339 @@ MONTHLY_CAP_TYPES = {"Casual Leave", "Compassionate Leave"}
 
 
 def _enforce_monthly_cap(doc):
-    """Block a 2nd Casual/Compassionate leave in the same calendar month.
+	"""Block a 2nd Casual/Compassionate leave in the same calendar month.
 
-    Counts any other non-rejected (draft or submitted) application of the same
-    type for this employee whose from_date falls in the same month/year.
-    """
-    if doc.docstatus == 2 or not doc.leave_type or doc.leave_type not in MONTHLY_CAP_TYPES:
-        return
-    if not doc.employee or not doc.from_date:
-        return
-    from frappe.utils import getdate, flt
-    d = getdate(doc.from_date)
-    # Cap by total DAYS per calendar month (not application count), so two
-    # half-days (0.5 + 0.5 = 1.0) are allowed while a 2nd full day is blocked.
-    MAX_DAYS_PER_MONTH = 1.0
-    existing_days = flt(frappe.db.sql(
-        """
+	Counts any other non-rejected (draft or submitted) application of the same
+	type for this employee whose from_date falls in the same month/year.
+	"""
+	if doc.docstatus == 2 or not doc.leave_type or doc.leave_type not in MONTHLY_CAP_TYPES:
+		return
+	if not doc.employee or not doc.from_date:
+		return
+	from frappe.utils import flt, getdate
+
+	d = getdate(doc.from_date)
+	# Cap by total DAYS per calendar month (not application count), so two
+	# half-days (0.5 + 0.5 = 1.0) are allowed while a 2nd full day is blocked.
+	MAX_DAYS_PER_MONTH = 1.0
+	existing_days = flt(
+		frappe.db.sql(
+			"""
         select ifnull(sum(total_leave_days), 0) from `tabLeave Application`
         where employee = %(emp)s and leave_type = %(lt)s
           and name != %(self)s and docstatus < 2
           and ifnull(custom_approval_status, '') != 'Rejected'
           and month(from_date) = %(m)s and year(from_date) = %(y)s
         """,
-        {"emp": doc.employee, "lt": doc.leave_type, "self": doc.name or "new",
-         "m": d.month, "y": d.year},
-    )[0][0])
-    this_days = flt(doc.total_leave_days) or (0.5 if doc.half_day else 1.0)
-    if existing_days + this_days > MAX_DAYS_PER_MONTH + 1e-9:
-        frappe.throw(
-            _("Only {0} day of {1} is allowed per month. {2} already has {3} day(s) "
-              "booked for {4} {5}.").format(
-                MAX_DAYS_PER_MONTH, doc.leave_type, doc.employee_name or doc.employee,
-                existing_days, d.strftime("%B"), d.year),
-            title=_("Monthly Leave Limit"),
-        )
+			{"emp": doc.employee, "lt": doc.leave_type, "self": doc.name or "new", "m": d.month, "y": d.year},
+		)[0][0]
+	)
+	this_days = flt(doc.total_leave_days) or (0.5 if doc.half_day else 1.0)
+	if existing_days + this_days > MAX_DAYS_PER_MONTH + 1e-9:
+		frappe.throw(
+			_(
+				"Only {0} day of {1} is allowed per month. {2} already has {3} day(s) booked for {4} {5}."
+			).format(
+				MAX_DAYS_PER_MONTH,
+				doc.leave_type,
+				doc.employee_name or doc.employee,
+				existing_days,
+				d.strftime("%B"),
+				d.year,
+			),
+			title=_("Monthly Leave Limit"),
+		)
 
 
 def _enforce_certificate_requirement(doc):
-    """Block save when the selected Leave Type has
-    `custom_require_certificate` ON and no `custom_medical_certificate`
-    file is attached. Applies to drafts AND submit attempts.
-    """
-    if not doc.leave_type:
-        return
-    require = frappe.db.get_value(
-        "Leave Type", doc.leave_type, "custom_require_certificate"
-    )
-    if not require:
-        return
-    if not (doc.get("custom_medical_certificate") or "").strip():
-        frappe.throw(
-            _(
-                "{0} requires a supporting certificate. "
-                "Please attach a medical certificate or proof document before submitting."
-            ).format(doc.leave_type),
-            title=_("Certificate Required"),
-        )
+	"""Block save when the selected Leave Type has
+	`custom_require_certificate` ON and no `custom_medical_certificate`
+	file is attached. Applies to drafts AND submit attempts.
+	"""
+	if not doc.leave_type:
+		return
+	require = frappe.db.get_value("Leave Type", doc.leave_type, "custom_require_certificate")
+	if not require:
+		return
+	if not (doc.get("custom_medical_certificate") or "").strip():
+		frappe.throw(
+			_(
+				"{0} requires a supporting certificate. "
+				"Please attach a medical certificate or proof document before submitting."
+			).format(doc.leave_type),
+			title=_("Certificate Required"),
+		)
 
 
 @frappe.whitelist()
 def approve_leave(docname):
-    """
-    Whitelisted API method to approve the current level of leave application.
-    Marks the current approver row as Approved, updates the approved_on timestamp,
-    and forwards to the next approver or finalizes the document submission.
-    """
-    # Load the document
-    doc = frappe.get_doc("Leave Application", docname)
-    current_user = frappe.session.user
+	"""
+	Whitelisted API method to approve the current level of leave application.
+	Marks the current approver row as Approved, updates the approved_on timestamp,
+	and forwards to the next approver or finalizes the document submission.
+	"""
+	# Load the document
+	doc = frappe.get_doc("Leave Application", docname)
+	current_user = frappe.session.user
 
-    # Security Validation — see _caller_can_act_on docstring for policy.
-    if not _caller_can_act_on(doc):
-        frappe.throw(
-            _("You are not authorized to approve this leave application. Current approver is: {0}").format(doc.current_approver)
-        )
+	# Security Validation — see _caller_can_act_on docstring for policy.
+	if not _caller_can_act_on(doc):
+		frappe.throw(
+			_("You are not authorized to approve this leave application. Current approver is: {0}").format(
+				doc.current_approver
+			)
+		)
 
-    if doc.custom_approval_status in ["Approved", "Rejected"]:
-        frappe.throw(
-            _("This leave application has already been processed (Status: {0}).").format(doc.custom_approval_status)
-        )
+	if doc.custom_approval_status in ["Approved", "Rejected"]:
+		frappe.throw(
+			_("This leave application has already been processed (Status: {0}).").format(
+				doc.custom_approval_status
+			)
+		)
 
-    idx = doc.current_approval_index
-    if not doc.approval_flow or idx >= len(doc.approval_flow):
-        frappe.throw(_("The approval flow is empty or current index is out of bounds."))
+	idx = doc.current_approval_index
+	if not doc.approval_flow or idx >= len(doc.approval_flow):
+		frappe.throw(_("The approval flow is empty or current index is out of bounds."))
 
-    # Mark the current row approved. Record the actual acting user — the
-    # row.approver may have been resolved to a different person at chain
-    # creation time, but the audit trail should reflect who really clicked.
-    row = doc.approval_flow[idx]
-    row.status = "Approved"
-    row.approved_on = frappe.utils.now_datetime()
-    if current_user != row.approver:
-        row.approver = current_user
-    
-    # Advance to the next level
-    next_idx = idx + 1
-    doc.flags.ignore_permissions = True
+	# Mark the current row approved. Record the actual acting user — the
+	# row.approver may have been resolved to a different person at chain
+	# creation time, but the audit trail should reflect who really clicked.
+	row = doc.approval_flow[idx]
+	row.status = "Approved"
+	row.approved_on = frappe.utils.now_datetime()
+	if current_user != row.approver:
+		row.approver = current_user
 
-    # HRMS's validate_leave_access (called inside validate_balance_leaves
-    # on save/submit) checks both:
-    #   1. `frappe.session.user IN (employee_user, leave_approver)` —
-    #      reads Employee.leave_approver (NOT the Leave App field).
-    #   2. `frappe.has_permission("Employee", "read", employee)` — any
-    #      HOD lacks this unless they hold HR User/Manager role.
-    # Frappe's has_permission does NOT respect frappe.flags.ignore_
-    # permissions in v15, so the only reliable bypass is to temporarily
-    # switch session.user to Administrator for the save/submit block.
-    # Safe because _caller_can_act_on has ALREADY authorised the
-    # original caller. We stamp row.approver = current_user above, so
-    # the audit trail is preserved.
-    #
-    # DRAFT-only: rotate doc.leave_approver to acting user so the
-    # standard ERPNext field stays in sync. SKIPPED on submitted (legacy)
-    # docs because leave_approver doesn't have allow_on_submit=1 — would
-    # throw "Cannot Update After Submit". The Administrator switch below
-    # is what actually bypasses the HRMS validator; this rotation is just
-    # cosmetic.
-    if doc.docstatus == 0:
-        doc.leave_approver = current_user
+	# Advance to the next level
+	next_idx = idx + 1
+	doc.flags.ignore_permissions = True
 
-    original_user = frappe.session.user
-    saved_flag = frappe.flags.ignore_permissions
-    try:
-        frappe.set_user("Administrator")
-        frappe.flags.ignore_permissions = True
-        if next_idx < len(doc.approval_flow):
-            # Intermediate step: just route, do NOT submit. The doc stays
-            # at docstatus=0 (Draft) so leave balance isn't consumed until
-            # the final approver acts.
-            doc.current_approval_index = next_idx
-            doc.current_approver = doc.approval_flow[next_idx].approver
-            doc.custom_approval_status = "Partially Approved"
-            if doc.docstatus == 0:
-                doc.save()
-            else:
-                # Backward compatibility: 44 historical leaves are already
-                # submitted (created before this draft-while-pending flow).
-                # Save in place — the allow_on_submit flag on chain fields
-                # makes this legal.
-                doc.save()
-            frappe.msgprint(
-                _("Leave Application partially approved and routed to {0}.").format(doc.current_approver),
-                indicator="blue",
-            )
-        else:
-            # Final approval: lock the doc by submitting. Standard ERPNext
-            # validators (leave balance, overlap, etc.) fire here.
-            doc.custom_approval_status = "Approved"
-            doc.current_approver = None
-            doc.status = "Approved"
-            if doc.docstatus == 0:
-                doc.submit()
-                msg = _("Leave Application fully approved and submitted!")
-            else:
-                # Doc was already submitted in a previous flow version — just
-                # save the final status updates. allow_on_submit makes this OK.
-                doc.flags.ignore_validate = True
-                doc.save()
-                msg = _("Leave Application fully approved!")
-            frappe.msgprint(msg, indicator="green")
-        next_approver_email_for_email = (
-            doc.current_approver if next_idx < len(doc.approval_flow) else None
-        )
-        send_approved_for_email = next_idx >= len(doc.approval_flow)
-    finally:
-        frappe.set_user(original_user)
-        frappe.flags.ignore_permissions = saved_flag
+	# HRMS's validate_leave_access (called inside validate_balance_leaves
+	# on save/submit) checks both:
+	#   1. `frappe.session.user IN (employee_user, leave_approver)` —
+	#      reads Employee.leave_approver (NOT the Leave App field).
+	#   2. `frappe.has_permission("Employee", "read", employee)` — any
+	#      HOD lacks this unless they hold HR User/Manager role.
+	# Frappe's has_permission does NOT respect frappe.flags.ignore_
+	# permissions in v15, so the only reliable bypass is to temporarily
+	# switch session.user to Administrator for the save/submit block.
+	# Safe because _caller_can_act_on has ALREADY authorised the
+	# original caller. We stamp row.approver = current_user above, so
+	# the audit trail is preserved.
+	#
+	# DRAFT-only: rotate doc.leave_approver to acting user so the
+	# standard ERPNext field stays in sync. SKIPPED on submitted (legacy)
+	# docs because leave_approver doesn't have allow_on_submit=1 — would
+	# throw "Cannot Update After Submit". The Administrator switch below
+	# is what actually bypasses the HRMS validator; this rotation is just
+	# cosmetic.
+	if doc.docstatus == 0:
+		doc.leave_approver = current_user
 
-    try:
-        from chundakadan.chundakadan.api import approval_email
-        if send_approved_for_email:
-            approval_email.notify_approved(doc)
-        elif next_approver_email_for_email:
-            approval_email.notify_advanced(doc, next_approver_email_for_email)
-    except Exception as e:
-        frappe.log_error(f"approval_email after approve_leave failed: {e}",
-                         "approval_email")
+	original_user = frappe.session.user
+	saved_flag = frappe.flags.ignore_permissions
+	try:
+		frappe.set_user("Administrator")
+		frappe.flags.ignore_permissions = True
+		if next_idx < len(doc.approval_flow):
+			# Intermediate step: just route, do NOT submit. The doc stays
+			# at docstatus=0 (Draft) so leave balance isn't consumed until
+			# the final approver acts.
+			doc.current_approval_index = next_idx
+			doc.current_approver = doc.approval_flow[next_idx].approver
+			doc.custom_approval_status = "Partially Approved"
+			if doc.docstatus == 0:
+				doc.save()
+			else:
+				# Backward compatibility: 44 historical leaves are already
+				# submitted (created before this draft-while-pending flow).
+				# Save in place — the allow_on_submit flag on chain fields
+				# makes this legal.
+				doc.save()
+			frappe.msgprint(
+				_("Leave Application partially approved and routed to {0}.").format(doc.current_approver),
+				indicator="blue",
+			)
+		else:
+			# Final approval: lock the doc by submitting. Standard ERPNext
+			# validators (leave balance, overlap, etc.) fire here.
+			doc.custom_approval_status = "Approved"
+			doc.current_approver = None
+			doc.status = "Approved"
+			if doc.docstatus == 0:
+				doc.submit()
+				msg = _("Leave Application fully approved and submitted!")
+			else:
+				# Doc was already submitted in a previous flow version — just
+				# save the final status updates. allow_on_submit makes this OK.
+				doc.flags.ignore_validate = True
+				doc.save()
+				msg = _("Leave Application fully approved!")
+			frappe.msgprint(msg, indicator="green")
+		next_approver_email_for_email = doc.current_approver if next_idx < len(doc.approval_flow) else None
+		send_approved_for_email = next_idx >= len(doc.approval_flow)
+	finally:
+		frappe.set_user(original_user)
+		frappe.flags.ignore_permissions = saved_flag
 
-    return {"success": True}
+	try:
+		from chundakadan.chundakadan.api import approval_email
+
+		if send_approved_for_email:
+			approval_email.notify_approved(doc)
+		elif next_approver_email_for_email:
+			approval_email.notify_advanced(doc, next_approver_email_for_email)
+	except Exception as e:
+		frappe.log_error(f"approval_email after approve_leave failed: {e}", "approval_email")
+
+	return {"success": True}
 
 
 @frappe.whitelist()
 def reject_leave(docname, remarks=None):
-    """
-    Whitelisted API method to reject the leave application.
-    Marks the current level as Rejected, updates status, and stops the flow.
-    """
-    doc = frappe.get_doc("Leave Application", docname)
-    current_user = frappe.session.user
+	"""
+	Whitelisted API method to reject the leave application.
+	Marks the current level as Rejected, updates status, and stops the flow.
+	"""
+	doc = frappe.get_doc("Leave Application", docname)
+	current_user = frappe.session.user
 
-    # Security Validation — see _caller_can_act_on docstring for policy.
-    if not _caller_can_act_on(doc):
-        frappe.throw(
-            _("You are not authorized to reject this leave application. Current approver is: {0}").format(doc.current_approver)
-        )
+	# Security Validation — see _caller_can_act_on docstring for policy.
+	if not _caller_can_act_on(doc):
+		frappe.throw(
+			_("You are not authorized to reject this leave application. Current approver is: {0}").format(
+				doc.current_approver
+			)
+		)
 
-    if doc.custom_approval_status in ["Approved", "Rejected"]:
-        frappe.throw(
-            _("This leave application has already been processed (Status: {0}).").format(doc.custom_approval_status)
-        )
+	if doc.custom_approval_status in ["Approved", "Rejected"]:
+		frappe.throw(
+			_("This leave application has already been processed (Status: {0}).").format(
+				doc.custom_approval_status
+			)
+		)
 
-    idx = doc.current_approval_index
-    if not doc.approval_flow or idx >= len(doc.approval_flow):
-        frappe.throw(_("The approval flow is empty or current index is out of bounds."))
+	idx = doc.current_approval_index
+	if not doc.approval_flow or idx >= len(doc.approval_flow):
+		frappe.throw(_("The approval flow is empty or current index is out of bounds."))
 
-    # Mark the current row rejected and stamp the real acting user.
-    row = doc.approval_flow[idx]
-    row.status = "Rejected"
-    row.approved_on = frappe.utils.now_datetime()
-    if current_user != row.approver:
-        row.approver = current_user
-    if remarks:
-        row.remarks = remarks
+	# Mark the current row rejected and stamp the real acting user.
+	row = doc.approval_flow[idx]
+	row.status = "Rejected"
+	row.approved_on = frappe.utils.now_datetime()
+	if current_user != row.approver:
+		row.approver = current_user
+	if remarks:
+		row.remarks = remarks
 
-    # HRMS validate_leave_access tolerance — see approve_leave for why.
-    # DRAFT-only rotation: leave_approver isn't allow_on_submit=1, so
-    # writing it on a legacy submitted doc throws "Cannot Update After
-    # Submit". Administrator switch below is what actually bypasses the
-    # validator; this is just cosmetic alignment of the standard field.
-    if doc.docstatus == 0:
-        doc.leave_approver = current_user
-    doc.flags.ignore_permissions = True
+	# HRMS validate_leave_access tolerance — see approve_leave for why.
+	# DRAFT-only rotation: leave_approver isn't allow_on_submit=1, so
+	# writing it on a legacy submitted doc throws "Cannot Update After
+	# Submit". Administrator switch below is what actually bypasses the
+	# validator; this is just cosmetic alignment of the standard field.
+	if doc.docstatus == 0:
+		doc.leave_approver = current_user
+	doc.flags.ignore_permissions = True
 
-    # Finalize rejection. Rejected leaves do NOT consume leave balance,
-    # so we don't submit — the doc stays at Draft with status=Rejected
-    # (or stays at docstatus=1 if it was a legacy already-submitted doc).
-    doc.custom_approval_status = "Rejected"
-    doc.status = "Rejected"
-    doc.current_approver = None
+	# Finalize rejection. Rejected leaves do NOT consume leave balance,
+	# so we don't submit — the doc stays at Draft with status=Rejected
+	# (or stays at docstatus=1 if it was a legacy already-submitted doc).
+	doc.custom_approval_status = "Rejected"
+	doc.status = "Rejected"
+	doc.current_approver = None
 
-    # Temporarily run as Administrator so HRMS's validate_leave_access
-    # passes (it does an independent Employee read perm check that
-    # frappe.flags.ignore_permissions doesn't bypass in v15). Our
-    # _caller_can_act_on has already authorised the original caller.
-    original_user = frappe.session.user
-    saved_flag = frappe.flags.ignore_permissions
-    try:
-        frappe.set_user("Administrator")
-        frappe.flags.ignore_permissions = True
-        doc.save()
-    finally:
-        frappe.set_user(original_user)
-        frappe.flags.ignore_permissions = saved_flag
+	# Temporarily run as Administrator so HRMS's validate_leave_access
+	# passes (it does an independent Employee read perm check that
+	# frappe.flags.ignore_permissions doesn't bypass in v15). Our
+	# _caller_can_act_on has already authorised the original caller.
+	original_user = frappe.session.user
+	saved_flag = frappe.flags.ignore_permissions
+	try:
+		frappe.set_user("Administrator")
+		frappe.flags.ignore_permissions = True
+		doc.save()
+	finally:
+		frappe.set_user(original_user)
+		frappe.flags.ignore_permissions = saved_flag
 
-    try:
-        from chundakadan.chundakadan.api import approval_email
-        approval_email.notify_rejected(doc, remarks=remarks)
-    except Exception as e:
-        frappe.log_error(f"approval_email after reject_leave failed: {e}",
-                         "approval_email")
+	try:
+		from chundakadan.chundakadan.api import approval_email
 
-    frappe.msgprint(
-        _("Leave Application has been rejected."),
-        indicator="red"
-    )
+		approval_email.notify_rejected(doc, remarks=remarks)
+	except Exception as e:
+		frappe.log_error(f"approval_email after reject_leave failed: {e}", "approval_email")
 
-    return {"success": True}
+	frappe.msgprint(_("Leave Application has been rejected."), indicator="red")
+
+	return {"success": True}
 
 
 def get_permission_query_conditions(user=None):
-    """List-view filter for Leave Application.
+	"""List-view filter for Leave Application.
 
-    A user can list a leave if ANY of:
-      1. they are owner/applicant
-      2. they are the resolved current_approver
-      3. they are doc.leave_approver (standard ERPNext field)
-      4. they hold the role of ANY step in approval_flow (past, present, or
-         future) — lets a HOD see leaves heading their way before their
-         step becomes current
+	A user can list a leave if ANY of:
+	  1. they are owner/applicant
+	  2. they are the resolved current_approver
+	  3. they are doc.leave_approver (standard ERPNext field)
+	  4. they hold the role of ANY step in approval_flow (past, present, or
+	     future) — lets a HOD see leaves heading their way before their
+	     step becomes current
 
-    Admin / System Manager / HR Manager bypass the filter entirely.
-    """
-    if not user:
-        user = frappe.session.user
+	Admin / System Manager / HR Manager bypass the filter entirely.
+	"""
+	if not user:
+		user = frappe.session.user
 
-    roles = frappe.get_roles(user)
-    if user == "Administrator" or "System Manager" in roles or "HR Manager" in roles:
-        return ""
+	roles = frappe.get_roles(user)
+	if user == "Administrator" or "System Manager" in roles or "HR Manager" in roles:
+		return ""
 
-    # Build the EXISTS clause that matches "any approval_flow row whose
-    # approver_role is in this user's roles". Empty roles list would yield
-    # an invalid SQL IN () — sentinel keeps the SQL valid but never matches.
-    role_list = roles or ["__noroles__"]
-    role_in_sql = ", ".join(frappe.db.escape(r) for r in role_list)
-    user_q = frappe.db.escape(user)
+	# Build the EXISTS clause that matches "any approval_flow row whose
+	# approver_role is in this user's roles". Empty roles list would yield
+	# an invalid SQL IN () — sentinel keeps the SQL valid but never matches.
+	role_list = roles or ["__noroles__"]
+	role_in_sql = ", ".join(frappe.db.escape(r) for r in role_list)
+	user_q = frappe.db.escape(user)
 
-    return (
-        f"(`tabLeave Application`.owner = {user_q} "
-        f"OR `tabLeave Application`.current_approver = {user_q} "
-        f"OR `tabLeave Application`.leave_approver = {user_q} "
-        f"OR EXISTS ("
-        f"  SELECT 1 FROM `tabLeave Approval Detail` flow "
-        f"  WHERE flow.parent = `tabLeave Application`.name "
-        f"    AND flow.parenttype = 'Leave Application' "
-        f"    AND flow.approver_role IN ({role_in_sql})"
-        f"))"
-    )
+	return (
+		f"(`tabLeave Application`.owner = {user_q} "
+		f"OR `tabLeave Application`.current_approver = {user_q} "
+		f"OR `tabLeave Application`.leave_approver = {user_q} "
+		f"OR EXISTS ("
+		f"  SELECT 1 FROM `tabLeave Approval Detail` flow "
+		f"  WHERE flow.parent = `tabLeave Application`.name "
+		f"    AND flow.parenttype = 'Leave Application' "
+		f"    AND flow.approver_role IN ({role_in_sql})"
+		f"))"
+	)
 
 
 def has_permission(doc, ptype="read", user=None):
-    """Document-level permission. Mirrors get_permission_query_conditions
-    so list view + form view agree on who can see a leave.
-    """
-    if not user:
-        user = frappe.session.user
+	"""Document-level permission. Mirrors get_permission_query_conditions
+	so list view + form view agree on who can see a leave.
+	"""
+	if not user:
+		user = frappe.session.user
 
-    roles = frappe.get_roles(user)
-    if user == "Administrator" or "System Manager" in roles or "HR Manager" in roles:
-        return True
+	roles = frappe.get_roles(user)
+	if user == "Administrator" or "System Manager" in roles or "HR Manager" in roles:
+		return True
 
-    if doc.owner == user:
-        return True
-    if doc.current_approver and doc.current_approver == user:
-        return True
-    if doc.get("leave_approver") and doc.leave_approver == user:
-        return True
+	if doc.owner == user:
+		return True
+	if doc.current_approver and doc.current_approver == user:
+		return True
+	if doc.get("leave_approver") and doc.leave_approver == user:
+		return True
 
-    # Holds the role of ANY step (past, current, or future)
-    for row in getattr(doc, "approval_flow", []) or []:
-        if row.approver == user:
-            return True
-        if row.approver_role and row.approver_role in roles:
-            return True
+	# Holds the role of ANY step (past, current, or future)
+	for row in getattr(doc, "approval_flow", []) or []:
+		if row.approver == user:
+			return True
+		if row.approver_role and row.approver_role in roles:
+			return True
 
-    return False
+	return False
 
 
 # ---------------------------------------------------------------------------
@@ -732,149 +755,151 @@ import datetime
 
 
 def _today():
-    return frappe.utils.getdate(frappe.utils.nowdate())
+	return frappe.utils.getdate(frappe.utils.nowdate())
 
 
 def _allocation_window(run_date):
-    """Return (from_date, to_date) for the allocation period: the run date
-    of THIS year through the day before next year's run date."""
-    today = _today()
-    if isinstance(run_date, str):
-        run_date = frappe.utils.getdate(run_date)
-    start = datetime.date(today.year, run_date.month, run_date.day)
-    # If today is before this year's run-date, the window already started
-    # last year. Shouldn't happen on the cron path, but keep it safe.
-    if today < start:
-        start = datetime.date(today.year - 1, run_date.month, run_date.day)
-    end = datetime.date(start.year + 1, start.month, start.day) - datetime.timedelta(days=1)
-    return start, end
+	"""Return (from_date, to_date) for the allocation period: the run date
+	of THIS year through the day before next year's run date."""
+	today = _today()
+	if isinstance(run_date, str):
+		run_date = frappe.utils.getdate(run_date)
+	start = datetime.date(today.year, run_date.month, run_date.day)
+	# If today is before this year's run-date, the window already started
+	# last year. Shouldn't happen on the cron path, but keep it safe.
+	if today < start:
+		start = datetime.date(today.year - 1, run_date.month, run_date.day)
+	end = datetime.date(start.year + 1, start.month, start.day) - datetime.timedelta(days=1)
+	return start, end
 
 
 def _create_allocation(employee, leave_type, days, from_date, to_date):
-    """Create one Leave Allocation. Returns the new doc's name or None
-    when skipped (already allocated for the window). carry_forward is
-    taken from the Leave Type's own is_carry_forward flag — that's the
-    standard ERPNext source of truth, mirroring how Leave Policy
-    Assignment behaves."""
-    existing = frappe.db.exists(
-        "Leave Allocation",
-        {
-            "employee": employee,
-            "leave_type": leave_type,
-            "from_date": ["<=", to_date],
-            "to_date": [">=", from_date],
-            "docstatus": ["!=", 2],
-        },
-    )
-    if existing:
-        return None
+	"""Create one Leave Allocation. Returns the new doc's name or None
+	when skipped (already allocated for the window). carry_forward is
+	taken from the Leave Type's own is_carry_forward flag — that's the
+	standard ERPNext source of truth, mirroring how Leave Policy
+	Assignment behaves."""
+	existing = frappe.db.exists(
+		"Leave Allocation",
+		{
+			"employee": employee,
+			"leave_type": leave_type,
+			"from_date": ["<=", to_date],
+			"to_date": [">=", from_date],
+			"docstatus": ["!=", 2],
+		},
+	)
+	if existing:
+		return None
 
-    carry = frappe.db.get_value("Leave Type", leave_type, "is_carry_forward") or 0
+	carry = frappe.db.get_value("Leave Type", leave_type, "is_carry_forward") or 0
 
-    alloc = frappe.new_doc("Leave Allocation")
-    alloc.employee = employee
-    alloc.leave_type = leave_type
-    alloc.from_date = from_date
-    alloc.to_date = to_date
-    alloc.new_leaves_allocated = days
-    alloc.carry_forward = 1 if carry else 0
-    alloc.description = "Auto-allocated via Chundakadan Settings annual policy."
-    alloc.insert(ignore_permissions=True)
-    alloc.submit()
-    return alloc.name
+	alloc = frappe.new_doc("Leave Allocation")
+	alloc.employee = employee
+	alloc.leave_type = leave_type
+	alloc.from_date = from_date
+	alloc.to_date = to_date
+	alloc.new_leaves_allocated = days
+	alloc.carry_forward = 1 if carry else 0
+	alloc.description = "Auto-allocated via Chundakadan Settings annual policy."
+	alloc.insert(ignore_permissions=True)
+	alloc.submit()
+	return alloc.name
 
 
 def _get_policy_rows():
-    """Return [(leave_type, annual_allocation), ...] from the standard
-    Leave Policy linked on Chundakadan Settings. Empty list when no
-    policy is linked or it has no rows."""
-    settings = frappe.get_cached_doc("Chundakadan Settings")
-    lp_name = settings.get("annual_leave_policy")
-    if not lp_name:
-        return []
-    if not frappe.db.exists("Leave Policy", lp_name):
-        frappe.throw(_("Chundakadan Settings → Annual Leave Policy points to {0} which doesn't exist.").format(lp_name))
-    lp = frappe.get_cached_doc("Leave Policy", lp_name)
-    return [(d.leave_type, d.annual_allocation) for d in (lp.leave_policy_details or [])]
+	"""Return [(leave_type, annual_allocation), ...] from the standard
+	Leave Policy linked on Chundakadan Settings. Empty list when no
+	policy is linked or it has no rows."""
+	settings = frappe.get_cached_doc("Chundakadan Settings")
+	lp_name = settings.get("annual_leave_policy")
+	if not lp_name:
+		return []
+	if not frappe.db.exists("Leave Policy", lp_name):
+		frappe.throw(
+			_("Chundakadan Settings → Annual Leave Policy points to {0} which doesn't exist.").format(lp_name)
+		)
+	lp = frappe.get_cached_doc("Leave Policy", lp_name)
+	return [(d.leave_type, d.annual_allocation) for d in (lp.leave_policy_details or [])]
 
 
 @frappe.whitelist()
 def allocate_annual_leaves_for_employee(employee):
-    """Allocate annual leaves for ONE employee per the Leave Policy
-    linked on Chundakadan Settings. Idempotent — re-running on the
-    same employee in the same window skips rows already covered."""
-    if not employee:
-        frappe.throw(_("Employee is required"))
+	"""Allocate annual leaves for ONE employee per the Leave Policy
+	linked on Chundakadan Settings. Idempotent — re-running on the
+	same employee in the same window skips rows already covered."""
+	if not employee:
+		frappe.throw(_("Employee is required"))
 
-    rows = _get_policy_rows()
-    if not rows:
-        frappe.throw(_("Chundakadan Settings → Annual Leave Policy is empty or unset."))
+	rows = _get_policy_rows()
+	if not rows:
+		frappe.throw(_("Chundakadan Settings → Annual Leave Policy is empty or unset."))
 
-    settings = frappe.get_cached_doc("Chundakadan Settings")
-    run_date = settings.get("annual_allocation_run_date")
-    if not run_date:
-        today = _today()
-        run_date = datetime.date(today.year, today.month, today.day)
+	settings = frappe.get_cached_doc("Chundakadan Settings")
+	run_date = settings.get("annual_allocation_run_date")
+	if not run_date:
+		today = _today()
+		run_date = datetime.date(today.year, today.month, today.day)
 
-    from_date, to_date = _allocation_window(run_date)
+	from_date, to_date = _allocation_window(run_date)
 
-    created, skipped = [], []
-    for leave_type, days in rows:
-        name = _create_allocation(employee, leave_type, days, from_date, to_date)
-        if name:
-            created.append({"leave_type": leave_type, "allocation": name})
-        else:
-            skipped.append({"leave_type": leave_type, "reason": "already_allocated"})
+	created, skipped = [], []
+	for leave_type, days in rows:
+		name = _create_allocation(employee, leave_type, days, from_date, to_date)
+		if name:
+			created.append({"leave_type": leave_type, "allocation": name})
+		else:
+			skipped.append({"leave_type": leave_type, "reason": "already_allocated"})
 
-    return {
-        "employee": employee,
-        "leave_policy": settings.annual_leave_policy,
-        "from_date": str(from_date),
-        "to_date": str(to_date),
-        "created": created,
-        "skipped": skipped,
-    }
+	return {
+		"employee": employee,
+		"leave_policy": settings.annual_leave_policy,
+		"from_date": str(from_date),
+		"to_date": str(to_date),
+		"created": created,
+		"skipped": skipped,
+	}
 
 
 def auto_allocate_annual_leaves():
-    """Allocate annual leaves for every Active Employee. Called by the
-    daily cron via maybe_auto_allocate (which gates on today's date)."""
-    settings = frappe.get_cached_doc("Chundakadan Settings")
-    if not settings.get("auto_allocate_annual_leaves"):
-        return {"status": "disabled"}
-    if not _get_policy_rows():
-        return {"status": "no_policy"}
+	"""Allocate annual leaves for every Active Employee. Called by the
+	daily cron via maybe_auto_allocate (which gates on today's date)."""
+	settings = frappe.get_cached_doc("Chundakadan Settings")
+	if not settings.get("auto_allocate_annual_leaves"):
+		return {"status": "disabled"}
+	if not _get_policy_rows():
+		return {"status": "no_policy"}
 
-    employees = frappe.get_all("Employee", filters={"status": "Active"}, pluck="name")
-    summary = {"total_employees": len(employees), "created": 0, "skipped": 0, "errors": 0}
-    for emp in employees:
-        try:
-            r = allocate_annual_leaves_for_employee(emp)
-            summary["created"] += len(r["created"])
-            summary["skipped"] += len(r["skipped"])
-        except Exception:
-            summary["errors"] += 1
-            frappe.log_error(
-                frappe.get_traceback(),
-                f"chundakadan.auto_allocate_annual_leaves[{emp}]",
-            )
-    frappe.db.commit()
-    return summary
+	employees = frappe.get_all("Employee", filters={"status": "Active"}, pluck="name")
+	summary = {"total_employees": len(employees), "created": 0, "skipped": 0, "errors": 0}
+	for emp in employees:
+		try:
+			r = allocate_annual_leaves_for_employee(emp)
+			summary["created"] += len(r["created"])
+			summary["skipped"] += len(r["skipped"])
+		except Exception:
+			summary["errors"] += 1
+			frappe.log_error(
+				frappe.get_traceback(),
+				f"chundakadan.auto_allocate_annual_leaves[{emp}]",
+			)
+	frappe.db.commit()
+	return summary
 
 
 def maybe_auto_allocate():
-    """Daily cron entry-point. Fires the bulk allocation only when today's
-    month + day matches Chundakadan Settings.annual_allocation_run_date.
-    Year part of the configured date is ignored — this runs once per year
-    on the configured month+day."""
-    settings = frappe.get_cached_doc("Chundakadan Settings")
-    if not settings.get("auto_allocate_annual_leaves"):
-        return
-    run_date = settings.get("annual_allocation_run_date")
-    if not run_date:
-        return
-    if isinstance(run_date, str):
-        run_date = frappe.utils.getdate(run_date)
-    today = _today()
-    if today.month == run_date.month and today.day == run_date.day:
-        auto_allocate_annual_leaves()
+	"""Daily cron entry-point. Fires the bulk allocation only when today's
+	month + day matches Chundakadan Settings.annual_allocation_run_date.
+	Year part of the configured date is ignored — this runs once per year
+	on the configured month+day."""
+	settings = frappe.get_cached_doc("Chundakadan Settings")
+	if not settings.get("auto_allocate_annual_leaves"):
+		return
+	run_date = settings.get("annual_allocation_run_date")
+	if not run_date:
+		return
+	if isinstance(run_date, str):
+		run_date = frappe.utils.getdate(run_date)
+	today = _today()
+	if today.month == run_date.month and today.day == run_date.day:
+		auto_allocate_annual_leaves()

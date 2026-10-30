@@ -7,177 +7,197 @@
 //   - Auto-fill Paid From / Cost Center / Payable Account from
 //     Chundakadan Settings on a fresh form (paid_from blank case)
 
-frappe.ui.form.on('Office Expense Voucher', {
-    setup(frm) {
-        // Filter Paid From to only Bank / Cash accounts of the selected company
-        frm.set_query('paid_from', () => ({
-            filters: {
-                company: frm.doc.company,
-                is_group: 0,
-                account_type: ['in', ['Bank', 'Cash']],
-                disabled: 0,
-            },
-        }));
-        // Filter Payable Account to non-group Liability accounts on the company,
-        // excluding account_type='Payable' (we don't want party-based ones)
-        frm.set_query('payable_account', () => ({
-            filters: {
-                company: frm.doc.company,
-                is_group: 0,
-                root_type: 'Liability',
-                disabled: 0,
-            },
-        }));
-        // Expense lines: only Expense-type leaf accounts of this company
-        frm.set_query('expense_account', 'items', () => ({
-            filters: {
-                company: frm.doc.company,
-                is_group: 0,
-                root_type: 'Expense',
-                disabled: 0,
-            },
-        }));
-        frm.set_query('cost_center', 'items', () => ({
-            filters: {
-                company: frm.doc.company,
-                is_group: 0,
-                disabled: 0,
-            },
-        }));
-    },
+frappe.ui.form.on("Office Expense Voucher", {
+	setup(frm) {
+		// Filter Paid From to only Bank / Cash accounts of the selected company
+		frm.set_query("paid_from", () => ({
+			filters: {
+				company: frm.doc.company,
+				is_group: 0,
+				account_type: ["in", ["Bank", "Cash"]],
+				disabled: 0,
+			},
+		}));
+		// Filter Payable Account to non-group Liability accounts on the company,
+		// excluding account_type='Payable' (we don't want party-based ones)
+		frm.set_query("payable_account", () => ({
+			filters: {
+				company: frm.doc.company,
+				is_group: 0,
+				root_type: "Liability",
+				disabled: 0,
+			},
+		}));
+		// Expense lines: only Expense-type leaf accounts of this company
+		frm.set_query("expense_account", "items", () => ({
+			filters: {
+				company: frm.doc.company,
+				is_group: 0,
+				root_type: "Expense",
+				disabled: 0,
+			},
+		}));
+		frm.set_query("cost_center", "items", () => ({
+			filters: {
+				company: frm.doc.company,
+				is_group: 0,
+				disabled: 0,
+			},
+		}));
+	},
 
-    onload(frm) {
-        if (frm.is_new() && frm.doc.company) {
-            apply_company_defaults(frm);
-        }
-    },
+	onload(frm) {
+		if (frm.is_new() && frm.doc.company) {
+			apply_company_defaults(frm);
+		}
+	},
 
-    refresh(frm) {
-        // === Shared approval UI (Expense Claim parity) ===
-        oev_update_indicator(frm);
-        oev_hide_standard_submit(frm);
-        oev_add_approve_reject_buttons(frm);
-        oev_override_page_indicator(frm);
-        if (frm.fields_dict.approval_flow) {
-            frm.set_df_property('approval_flow', 'read_only', 1);
-        }
+	refresh(frm) {
+		// === Shared approval UI (Expense Claim parity) ===
+		oev_update_indicator(frm);
+		oev_hide_standard_submit(frm);
+		oev_add_approve_reject_buttons(frm);
+		oev_override_page_indicator(frm);
+		if (frm.fields_dict.approval_flow) {
+			frm.set_df_property("approval_flow", "read_only", 1);
+		}
 
-        // Make Payment button — submitted + still has a balance.
-        // Works for both Unpaid (initial settlement) and Partially Paid
-        // (paying down the remaining balance with another JV).
-        if (frm.doc.docstatus === 1
-            && !frm.doc.paid_from
-            && flt(frm.doc.balance_amount) > 0
-            && ['Unpaid', 'Partially Paid'].includes(frm.doc.status)) {
-            const lbl = frm.doc.status === 'Partially Paid'
-                ? __('Make Payment ({0})', [format_currency(frm.doc.balance_amount, frm.doc.currency || 'INR')])
-                : __('Make Payment');
-            frm.add_custom_button(lbl, function () {
-                make_payment_entry(frm);
-            }, __('Create'));
-            frm.page.set_inner_btn_group_as_primary(__('Create'));
-        }
+		// Make Payment button — submitted + still has a balance.
+		// Works for both Unpaid (initial settlement) and Partially Paid
+		// (paying down the remaining balance with another JV).
+		if (
+			frm.doc.docstatus === 1 &&
+			!frm.doc.paid_from &&
+			flt(frm.doc.balance_amount) > 0 &&
+			["Unpaid", "Partially Paid"].includes(frm.doc.status)
+		) {
+			const lbl =
+				frm.doc.status === "Partially Paid"
+					? __("Make Payment ({0})", [
+							format_currency(frm.doc.balance_amount, frm.doc.currency || "INR"),
+					  ])
+					: __("Make Payment");
+			frm.add_custom_button(
+				lbl,
+				function () {
+					make_payment_entry(frm);
+				},
+				__("Create")
+			);
+			frm.page.set_inner_btn_group_as_primary(__("Create"));
+		}
 
-        // View Ledger button — ERPNext-standard, opens General Ledger
-        // filtered to this voucher (works on submitted + cancelled docs).
-        if (frm.doc.docstatus > 0) {
-            frm.add_custom_button(__('Ledger'), function () {
-                frappe.route_options = {
-                    voucher_no: frm.doc.name,
-                    company: frm.doc.company,
-                    from_date: frm.doc.posting_date,
-                    to_date: frm.doc.posting_date,
-                    group_by: '',
-                    show_cancelled_entries: frm.doc.docstatus === 2,
-                };
-                frappe.set_route('query-report', 'General Ledger');
-            }, __('View'));
-        }
+		// View Ledger button — ERPNext-standard, opens General Ledger
+		// filtered to this voucher (works on submitted + cancelled docs).
+		if (frm.doc.docstatus > 0) {
+			frm.add_custom_button(
+				__("Ledger"),
+				function () {
+					frappe.route_options = {
+						voucher_no: frm.doc.name,
+						company: frm.doc.company,
+						from_date: frm.doc.posting_date,
+						to_date: frm.doc.posting_date,
+						group_by: "",
+						show_cancelled_entries: frm.doc.docstatus === 2,
+					};
+					frappe.set_route("query-report", "General Ledger");
+				},
+				__("View")
+			);
+		}
 
-        recompute_totals(frm);
+		recompute_totals(frm);
+	},
 
-    },
+	company(frm) {
+		if (frm.doc.docstatus !== 0) return;
+		// Clear company-tied fields, then re-apply defaults for the new company
+		frm.set_value("paid_from", null);
+		frm.set_value("payable_account", null);
+		(frm.doc.items || []).forEach((it) => {
+			frappe.model.set_value(it.doctype, it.name, "cost_center", null);
+		});
+		if (frm.doc.company) {
+			apply_company_defaults(frm);
+		}
+	},
 
-    company(frm) {
-        if (frm.doc.docstatus !== 0) return;
-        // Clear company-tied fields, then re-apply defaults for the new company
-        frm.set_value('paid_from', null);
-        frm.set_value('payable_account', null);
-        (frm.doc.items || []).forEach(it => {
-            frappe.model.set_value(it.doctype, it.name, 'cost_center', null);
-        });
-        if (frm.doc.company) {
-            apply_company_defaults(frm);
-        }
-    },
-
-    pay_later(frm) {
-        // Pay Later ticked → clear Paid From (it's ignored anyway).
-        // Unticked → restore default Paid From from company settings.
-        if (frm.doc.pay_later) {
-            frm.set_value('paid_from', null);
-        } else if (!frm.doc.paid_from && frm.doc.company) {
-            apply_company_defaults(frm);
-        }
-    },
-
+	pay_later(frm) {
+		// Pay Later ticked → clear Paid From (it's ignored anyway).
+		// Unticked → restore default Paid From from company settings.
+		if (frm.doc.pay_later) {
+			frm.set_value("paid_from", null);
+		} else if (!frm.doc.paid_from && frm.doc.company) {
+			apply_company_defaults(frm);
+		}
+	},
 });
 
-frappe.ui.form.on('Office Expense Voucher Item', {
-    amount(frm) { recompute_totals(frm); },
-    tax_amount(frm) { recompute_totals(frm); },
-    items_remove(frm) { recompute_totals(frm); },
+frappe.ui.form.on("Office Expense Voucher Item", {
+	amount(frm) {
+		recompute_totals(frm);
+	},
+	tax_amount(frm) {
+		recompute_totals(frm);
+	},
+	items_remove(frm) {
+		recompute_totals(frm);
+	},
 
-    items_add(frm, cdt, cdn) {
-        // Auto-fill the cost center on each new line from
-        // the per-company default (resolved server-side).
-        if (!frm.doc.company) return;
-        const row = locals[cdt][cdn];
-        if (row.cost_center) return;
-        frappe.call({
-            method: 'chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.get_company_defaults',
-            args: { company: frm.doc.company },
-        }).then(r => {
-            const d = (r && r.message) || {};
-            if (d.cost_center && !row.cost_center) {
-                frappe.model.set_value(cdt, cdn, 'cost_center', d.cost_center);
-            }
-        });
-    },
+	items_add(frm, cdt, cdn) {
+		// Auto-fill the cost center on each new line from
+		// the per-company default (resolved server-side).
+		if (!frm.doc.company) return;
+		const row = locals[cdt][cdn];
+		if (row.cost_center) return;
+		frappe
+			.call({
+				method: "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.get_company_defaults",
+				args: { company: frm.doc.company },
+			})
+			.then((r) => {
+				const d = (r && r.message) || {};
+				if (d.cost_center && !row.cost_center) {
+					frappe.model.set_value(cdt, cdn, "cost_center", d.cost_center);
+				}
+			});
+	},
 });
 
 function apply_company_defaults(frm) {
-    frappe.call({
-        method: 'chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.get_company_defaults',
-        args: { company: frm.doc.company },
-    }).then(r => {
-        const d = (r && r.message) || {};
-        if (!frm.doc.paid_from && d.paid_from) {
-            frm.set_value('paid_from', d.paid_from);
-        }
-        if (!frm.doc.payable_account && d.payable_account) {
-            frm.set_value('payable_account', d.payable_account);
-        }
-        if (d.cost_center) {
-            (frm.doc.items || []).forEach(it => {
-                if (!it.cost_center) {
-                    frappe.model.set_value(it.doctype, it.name,
-                        'cost_center', d.cost_center);
-                }
-            });
-        }
-    });
+	frappe
+		.call({
+			method: "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.get_company_defaults",
+			args: { company: frm.doc.company },
+		})
+		.then((r) => {
+			const d = (r && r.message) || {};
+			if (!frm.doc.paid_from && d.paid_from) {
+				frm.set_value("paid_from", d.paid_from);
+			}
+			if (!frm.doc.payable_account && d.payable_account) {
+				frm.set_value("payable_account", d.payable_account);
+			}
+			if (d.cost_center) {
+				(frm.doc.items || []).forEach((it) => {
+					if (!it.cost_center) {
+						frappe.model.set_value(it.doctype, it.name, "cost_center", d.cost_center);
+					}
+				});
+			}
+		});
 }
 
 function recompute_totals(frm) {
-    let subtotal = 0;
-    let line_tax = 0;
-    (frm.doc.items || []).forEach(row => {
-        subtotal += flt(row.amount);
-        line_tax += flt(row.tax_amount);
-    });
-    frm.set_value('subtotal', subtotal);
-    frm.set_value('grand_total', subtotal + line_tax);
+	let subtotal = 0;
+	let line_tax = 0;
+	(frm.doc.items || []).forEach((row) => {
+		subtotal += flt(row.amount);
+		line_tax += flt(row.tax_amount);
+	});
+	frm.set_value("subtotal", subtotal);
+	frm.set_value("grand_total", subtotal + line_tax);
 }
 
 // ============================================================
@@ -187,196 +207,216 @@ function recompute_totals(frm) {
 // ============================================================
 
 function oev_user_can_act(frm) {
-    if (frappe.session.user === 'Administrator') return true;
-    const admin_roles = ['System Manager', 'HR Manager', 'Accounts Manager'];
-    if (admin_roles.some(r => frappe.user_roles.includes(r))) return true;
+	if (frappe.session.user === "Administrator") return true;
+	const admin_roles = ["System Manager", "HR Manager", "Accounts Manager"];
+	if (admin_roles.some((r) => frappe.user_roles.includes(r))) return true;
 
-    if (frm.doc.current_approver === frappe.session.user) return true;
+	if (frm.doc.current_approver === frappe.session.user) return true;
 
-    const idx = cint(frm.doc.current_approval_index);
-    const flow = frm.doc.approval_flow || [];
-    if (idx >= 0 && idx < flow.length) {
-        const row = flow[idx];
-        if (row.approver === frappe.session.user) return true;
-        if (row.approver_role && frappe.user_roles.includes(row.approver_role)) return true;
-    }
-    return false;
+	const idx = cint(frm.doc.current_approval_index);
+	const flow = frm.doc.approval_flow || [];
+	if (idx >= 0 && idx < flow.length) {
+		const row = flow[idx];
+		if (row.approver === frappe.session.user) return true;
+		if (row.approver_role && frappe.user_roles.includes(row.approver_role)) return true;
+	}
+	return false;
 }
 
 function oev_override_page_indicator(frm) {
-    // Two-status page badge — combines workflow + payment lifecycle
-    // (e.g. 'Pending · Draft', 'Approved · Unpaid', 'Approved · Paid')
-    if (frm.is_new()) return;
-    const ws = frm.doc.custom_approval_status;  // workflow
-    const ds = frm.doc.status;                  // document / payment
+	// Two-status page badge — combines workflow + payment lifecycle
+	// (e.g. 'Pending · Draft', 'Approved · Unpaid', 'Approved · Paid')
+	if (frm.is_new()) return;
+	const ws = frm.doc.custom_approval_status; // workflow
+	const ds = frm.doc.status; // document / payment
 
-    // Rejected / Cancelled override everything else
-    if (ws === 'Rejected') {
-        frm.page.set_indicator(__('Rejected'), 'red');
-        return;
-    }
-    if (ds === 'Cancelled') {
-        frm.page.set_indicator(__('Cancelled'), 'gray');
-        return;
-    }
+	// Rejected / Cancelled override everything else
+	if (ws === "Rejected") {
+		frm.page.set_indicator(__("Rejected"), "red");
+		return;
+	}
+	if (ds === "Cancelled") {
+		frm.page.set_indicator(__("Cancelled"), "gray");
+		return;
+	}
 
-    const ds_color = {
-        'Draft':           'red',
-        'Unpaid':          'orange',
-        'Partially Paid':  'orange',
-        'Paid':            'green',
-        'Cancelled':       'gray',
-    }[ds] || 'gray';
+	const ds_color =
+		{
+			Draft: "red",
+			Unpaid: "orange",
+			"Partially Paid": "orange",
+			Paid: "green",
+			Cancelled: "gray",
+		}[ds] || "gray";
 
-    // Pre-submit: lead with workflow status (Pending / Partially Approved)
-    if (frm.doc.docstatus === 0) {
-        const ws_label = ws || 'Draft';
-        const ws_color = ws === 'Approved' ? 'green'
-                       : ws === 'Rejected' ? 'red'
-                       : (ws === 'Pending' || ws === 'Partially Approved') ? 'orange'
-                       : 'red';
-        frm.page.set_indicator(__(ws_label), ws_color);
-        return;
-    }
+	// Pre-submit: lead with workflow status (Pending / Partially Approved)
+	if (frm.doc.docstatus === 0) {
+		const ws_label = ws || "Draft";
+		const ws_color =
+			ws === "Approved"
+				? "green"
+				: ws === "Rejected"
+				? "red"
+				: ws === "Pending" || ws === "Partially Approved"
+				? "orange"
+				: "red";
+		frm.page.set_indicator(__(ws_label), ws_color);
+		return;
+	}
 
-    // Post-submit: show payment status (workflow is implicitly 'Approved')
-    if (frm.page && frm.page.set_indicator) {
-        frm.page.set_indicator(__(ds || 'Approved'), ds_color);
-    }
+	// Post-submit: show payment status (workflow is implicitly 'Approved')
+	if (frm.page && frm.page.set_indicator) {
+		frm.page.set_indicator(__(ds || "Approved"), ds_color);
+	}
 }
 
 function oev_update_indicator(frm) {
-    if (frm.is_new()) return;  // never touch dashboard on new unsaved docs
-    const status = frm.doc.custom_approval_status;
-    if (!status) return;
+	if (frm.is_new()) return; // never touch dashboard on new unsaved docs
+	const status = frm.doc.custom_approval_status;
+	if (!status) return;
 
-    // Clear the prior headline first. set_headline_alert() renders through
-    // frm.layout.show_message() (NOT a .form-dashboard-section), so the old
-    // .closest('.form-dashboard-section') dedupe never matched — and on the
-    // save -> refresh cycle the banner stacked, showing "Approval: Pending"
-    // twice. clear_headline() empties it so we always render exactly one.
-    try {
-        if (frm.dashboard && frm.dashboard.clear_headline) {
-            frm.dashboard.clear_headline();
-        }
-    } catch (e) { /* swallow */ }
+	// Clear the prior headline first. set_headline_alert() renders through
+	// frm.layout.show_message() (NOT a .form-dashboard-section), so the old
+	// .closest('.form-dashboard-section') dedupe never matched — and on the
+	// save -> refresh cycle the banner stacked, showing "Approval: Pending"
+	// twice. clear_headline() empties it so we always render exactly one.
+	try {
+		if (frm.dashboard && frm.dashboard.clear_headline) {
+			frm.dashboard.clear_headline();
+		}
+	} catch (e) {
+		/* swallow */
+	}
 
-    const color_map = {
-        'Pending': 'orange',
-        'Partially Approved': 'orange',
-        'Approved': 'green',
-        'Rejected': 'red',
-    };
-    const color = color_map[status] || 'gray';
-    const is_final = ['Approved', 'Rejected'].includes(status);
-    const tail = (!is_final && frm.doc.current_approver)
-        ? ` — waiting on <b>${frm.doc.current_approver}</b>`
-        : '';
-    // Wrap with our unique class so the next refresh can find + remove it
-    frm.dashboard.set_headline_alert(
-        `<div class="oev-approval-banner indicator ${color}">`
-        + `Approval: ${status}${tail}</div>`
-    );
+	const color_map = {
+		Pending: "orange",
+		"Partially Approved": "orange",
+		Approved: "green",
+		Rejected: "red",
+	};
+	const color = color_map[status] || "gray";
+	const is_final = ["Approved", "Rejected"].includes(status);
+	const tail =
+		!is_final && frm.doc.current_approver
+			? ` — waiting on <b>${frm.doc.current_approver}</b>`
+			: "";
+	// Wrap with our unique class so the next refresh can find + remove it
+	frm.dashboard.set_headline_alert(
+		`<div class="oev-approval-banner indicator ${color}">` + `Approval: ${status}${tail}</div>`
+	);
 }
 
 function oev_hide_standard_submit(frm) {
-    // Hide ONLY the standard Submit button on saved drafts (docstatus=0
-    // + already saved). Never touch the primary button when the doc is
-    // new or unsaved — that's the Save button.
-    if (frm.is_new()) return;
-    if (frm.doc.__unsaved) return;
-    if (frm.doc.docstatus !== 0) return;
-    setTimeout(() => {
-        try {
-            // Only hide if the primary button text is actually "Submit"
-            // Hide with the 'hide' CLASS (not .hide()/inline display:none):
-            // Frappe re-shows the primary via set_primary_action() ->
-            // .removeClass('hide'), which cannot clear an inline display:none.
-            // Using the class lets the button reappear as "Save" the moment
-            // the user edits a saved draft (else it stays hidden until reload).
-            const primary = frm.page && frm.page.btn_primary;
-            if (primary && primary.text().trim() === __('Submit')) {
-                primary.addClass('hide');
-            }
-            frm.page.wrapper.find('.primary-action').filter(function () {
-                return $(this).text().trim() === __('Submit');
-            }).addClass('hide');
-        } catch (e) { /* swallow */ }
-    }, 50);
+	// Hide ONLY the standard Submit button on saved drafts (docstatus=0
+	// + already saved). Never touch the primary button when the doc is
+	// new or unsaved — that's the Save button.
+	if (frm.is_new()) return;
+	if (frm.doc.__unsaved) return;
+	if (frm.doc.docstatus !== 0) return;
+	setTimeout(() => {
+		try {
+			// Only hide if the primary button text is actually "Submit"
+			// Hide with the 'hide' CLASS (not .hide()/inline display:none):
+			// Frappe re-shows the primary via set_primary_action() ->
+			// .removeClass('hide'), which cannot clear an inline display:none.
+			// Using the class lets the button reappear as "Save" the moment
+			// the user edits a saved draft (else it stays hidden until reload).
+			const primary = frm.page && frm.page.btn_primary;
+			if (primary && primary.text().trim() === __("Submit")) {
+				primary.addClass("hide");
+			}
+			frm.page.wrapper
+				.find(".primary-action")
+				.filter(function () {
+					return $(this).text().trim() === __("Submit");
+				})
+				.addClass("hide");
+		} catch (e) {
+			/* swallow */
+		}
+	}, 50);
 }
 
 function oev_add_approve_reject_buttons(frm) {
-    if (frm.is_new()) return;
-    if (frm.doc.docstatus === 2) return;  // Cancelled
-    const status = frm.doc.custom_approval_status;
-    if (status === 'Approved' || status === 'Rejected') return;
-    if (!oev_user_can_act(frm)) return;
-    if (!(frm.doc.approval_flow || []).length) return;
+	if (frm.is_new()) return;
+	if (frm.doc.docstatus === 2) return; // Cancelled
+	const status = frm.doc.custom_approval_status;
+	if (status === "Approved" || status === "Rejected") return;
+	if (!oev_user_can_act(frm)) return;
+	if (!(frm.doc.approval_flow || []).length) return;
 
-    frm.add_custom_button(__('Approve'), function () {
-        frappe.confirm(
-            __('Approve this {0}?', [__(frm.doctype)]),
-            function () {
-                frappe.call({
-                    method: 'chundakadan.chundakadan.api.expense_approval.approve',
-                    args: { doctype: frm.doctype, docname: frm.doc.name },
-                    freeze: true,
-                    freeze_message: __('Approving...'),
-                    callback: (r) => {
-                        if (r.message && r.message.success) {
-                            frappe.show_alert({ message: __('Approved'), indicator: 'green' });
-                            frm.reload_doc();
-                        }
-                    },
-                });
-            }
-        );
-    }, __('Actions'));
+	frm.add_custom_button(
+		__("Approve"),
+		function () {
+			frappe.confirm(__("Approve this {0}?", [__(frm.doctype)]), function () {
+				frappe.call({
+					method: "chundakadan.chundakadan.api.expense_approval.approve",
+					args: { doctype: frm.doctype, docname: frm.doc.name },
+					freeze: true,
+					freeze_message: __("Approving..."),
+					callback: (r) => {
+						if (r.message && r.message.success) {
+							frappe.show_alert({ message: __("Approved"), indicator: "green" });
+							frm.reload_doc();
+						}
+					},
+				});
+			});
+		},
+		__("Actions")
+	);
 
-    frm.add_custom_button(__('Reject'), function () {
-        frappe.prompt(
-            [{
-                fieldname: 'remarks',
-                fieldtype: 'Small Text',
-                label: __('Reason for Rejection'),
-                reqd: 1,
-            }],
-            function (values) {
-                frappe.call({
-                    method: 'chundakadan.chundakadan.api.expense_approval.reject',
-                    args: {
-                        doctype: frm.doctype,
-                        docname: frm.doc.name,
-                        remarks: values.remarks,
-                    },
-                    freeze: true,
-                    freeze_message: __('Rejecting...'),
-                    callback: (r) => {
-                        if (r.message && r.message.success) {
-                            frappe.show_alert({ message: __('Rejected'), indicator: 'red' });
-                            frm.reload_doc();
-                        }
-                    },
-                });
-            },
-            __('Reject'), __('Submit')
-        );
-    }, __('Actions'));
+	frm.add_custom_button(
+		__("Reject"),
+		function () {
+			frappe.prompt(
+				[
+					{
+						fieldname: "remarks",
+						fieldtype: "Small Text",
+						label: __("Reason for Rejection"),
+						reqd: 1,
+					},
+				],
+				function (values) {
+					frappe.call({
+						method: "chundakadan.chundakadan.api.expense_approval.reject",
+						args: {
+							doctype: frm.doctype,
+							docname: frm.doc.name,
+							remarks: values.remarks,
+						},
+						freeze: true,
+						freeze_message: __("Rejecting..."),
+						callback: (r) => {
+							if (r.message && r.message.success) {
+								frappe.show_alert({ message: __("Rejected"), indicator: "red" });
+								frm.reload_doc();
+							}
+						},
+					});
+				},
+				__("Reject"),
+				__("Submit")
+			);
+		},
+		__("Actions")
+	);
 
-    frm.change_custom_button_type(__('Reject'), __('Actions'), 'danger');
-    frm.change_custom_button_type(__('Approve'), __('Actions'), 'primary');
+	frm.change_custom_button_type(__("Reject"), __("Actions"), "danger");
+	frm.change_custom_button_type(__("Approve"), __("Actions"), "primary");
 }
 
 function make_payment_entry(frm) {
-    frappe.call({
-        method: 'chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.make_payment_entry',
-        args: { source_name: frm.doc.name },
-        freeze: true,
-        freeze_message: __('Building Journal Entry...'),
-        callback: function (r) {
-            if (!r.message) return;
-            const je = frappe.model.sync(r.message)[0];
-            frappe.set_route('Form', 'Journal Entry', je.name);
-        },
-    });
+	frappe.call({
+		method: "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.make_payment_entry",
+		args: { source_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Building Journal Entry..."),
+		callback: function (r) {
+			if (!r.message) return;
+			const je = frappe.model.sync(r.message)[0];
+			frappe.set_route("Form", "Journal Entry", je.name);
+		},
+	});
 }

@@ -1,6 +1,6 @@
 import frappe
-from frappe.utils import flt, now
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt, now
 
 from chundakadan.chundakadan.api import item_approval as api
 from chundakadan.doc_events.item_approval import (
@@ -41,8 +41,11 @@ class ItemApprovalCase(FrappeTestCase):
 
 		import_file_by_path(
 			frappe.get_app_path(
-				"field_sales", "field_sales", "doctype",
-				"chundakadan_settings", "chundakadan_settings.json",
+				"field_sales",
+				"field_sales",
+				"doctype",
+				"chundakadan_settings",
+				"chundakadan_settings.json",
 			),
 			force=True,
 		)
@@ -54,10 +57,15 @@ class ItemApprovalCase(FrappeTestCase):
 
 	def _make_user(self, email, roles):
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({
-				"doctype": "User", "email": email, "first_name": email.split("@")[0],
-				"send_welcome_email": 0, "user_type": "System User",
-			}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": email.split("@")[0],
+					"send_welcome_email": 0,
+					"user_type": "System User",
+				}
+			).insert()
 		user = frappe.get_doc("User", email)
 		user.add_roles(*roles)
 		return email
@@ -73,26 +81,31 @@ class ItemApprovalCase(FrappeTestCase):
 
 	def _settings(self, enabled, role=ROLE):
 		"""Set the two switches for this test."""
-		frappe.db.set_single_value("Chundakadan Settings", {
-			"enable_item_approval": 1 if enabled else 0,
-			"item_approval_role": role or "",
-		})
+		frappe.db.set_single_value(
+			"Chundakadan Settings",
+			{
+				"enable_item_approval": 1 if enabled else 0,
+				"item_approval_role": role or "",
+			},
+		)
 
 	def _new_item(self, as_user=CREATOR, **extra):
 		self.counter += 1
 		code = f"ITEM-APPR-{frappe.generate_hash(length=6)}-{self.counter}"
 		frappe.set_user(as_user)
-		doc = frappe.get_doc({
-			"doctype": "Item",
-			"item_code": code,
-			"item_name": extra.pop("item_name", f"Approval test {self.counter}"),
-			"item_group": self.item_group,
-			"brand": self.brand,
-			"stock_uom": "Nos",
-			"gst_hsn_code": self.hsn_code,
-			"is_stock_item": 0,
-			**extra,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Item",
+				"item_code": code,
+				"item_name": extra.pop("item_name", f"Approval test {self.counter}"),
+				"item_group": self.item_group,
+				"brand": self.brand,
+				"stock_uom": "Nos",
+				"gst_hsn_code": self.hsn_code,
+				"is_stock_item": 0,
+				**extra,
+			}
+		)
 		doc.insert(ignore_permissions=True)
 		frappe.set_user("Administrator")
 		return doc
@@ -181,9 +194,7 @@ class TestTheGuard(ItemApprovalCase):
 		doc = frappe.get_doc("Item", self.item.name)
 		doc.item_name = "Renamed while pending"
 		doc.save(ignore_permissions=True)
-		self.assertEqual(
-			frappe.db.get_value("Item", self.item.name, "item_name"), "Renamed while pending"
-		)
+		self.assertEqual(frappe.db.get_value("Item", self.item.name, "item_name"), "Renamed while pending")
 
 	def test_the_approver_may_move_it(self):
 		frappe.set_user(APPROVER)
@@ -191,9 +202,7 @@ class TestTheGuard(ItemApprovalCase):
 		doc.set(api.STATUS_FIELD, api.APPROVED)
 		doc.disabled = 0
 		doc.save(ignore_permissions=True)
-		self.assertEqual(
-			frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.APPROVED
-		)
+		self.assertEqual(frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.APPROVED)
 
 
 class TestApproveAndReject(ItemApprovalCase):
@@ -207,7 +216,8 @@ class TestApproveAndReject(ItemApprovalCase):
 		result = api.approve(self.item.name)
 		self.assertEqual(result["approved"], [self.item.name])
 		row = frappe.db.get_value(
-			"Item", self.item.name,
+			"Item",
+			self.item.name,
 			[api.STATUS_FIELD, "disabled", "custom_approved_by", "custom_approved_on"],
 			as_dict=True,
 		)
@@ -219,9 +229,7 @@ class TestApproveAndReject(ItemApprovalCase):
 	def test_approve_applies_an_allowed_correction(self):
 		frappe.set_user(APPROVER)
 		api.approve(self.item.name, {"item_name": "Corrected name", "standard_rate": 250})
-		row = frappe.db.get_value(
-			"Item", self.item.name, ["item_name", "standard_rate"], as_dict=True
-		)
+		row = frappe.db.get_value("Item", self.item.name, ["item_name", "standard_rate"], as_dict=True)
 		self.assertEqual(row.item_name, "Corrected name")
 		self.assertEqual(row.standard_rate, 250)
 
@@ -229,9 +237,7 @@ class TestApproveAndReject(ItemApprovalCase):
 		frappe.set_user(APPROVER)
 		with self.assertRaises(frappe.ValidationError):
 			api.approve(self.item.name, {"disabled": 0})
-		self.assertEqual(
-			frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.PENDING)
 
 	def test_a_correction_needs_a_single_item(self):
 		other = self._new_item()
@@ -252,8 +258,10 @@ class TestApproveAndReject(ItemApprovalCase):
 		frappe.set_user(APPROVER)
 		api.reject(self.item.name, "Duplicate of 0209")
 		row = frappe.db.get_value(
-			"Item", self.item.name,
-			[api.STATUS_FIELD, "disabled", "custom_rejection_reason"], as_dict=True,
+			"Item",
+			self.item.name,
+			[api.STATUS_FIELD, "disabled", "custom_rejection_reason"],
+			as_dict=True,
 		)
 		self.assertEqual(row.custom_approval_status, api.REJECTED)
 		self.assertEqual(row.disabled, 1)
@@ -264,9 +272,7 @@ class TestApproveAndReject(ItemApprovalCase):
 		for reason in ("", "   ", None):
 			with self.assertRaises(frappe.ValidationError):
 				api.reject(self.item.name, reason)
-		self.assertEqual(
-			frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.PENDING)
 
 	def test_an_item_cannot_be_approved_twice(self):
 		frappe.set_user(APPROVER)
@@ -384,9 +390,7 @@ class TestNotification(ItemApprovalCase):
 	def test_an_approved_item_notifies_nobody(self):
 		item = self._new_item(as_user=APPROVER)
 		notify_approvers(item)
-		self.assertFalse(
-			frappe.get_all("Notification Log", filters={"document_name": item.name})
-		)
+		self.assertFalse(frappe.get_all("Notification Log", filters={"document_name": item.name}))
 
 
 class TestBackfillPatch(ItemApprovalCase):
@@ -412,9 +416,7 @@ class TestBackfillPatch(ItemApprovalCase):
 		self._settings(True)
 		pending = self._new_item()
 		execute()
-		self.assertEqual(
-			frappe.db.get_value("Item", pending.name, "custom_approval_status"), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Item", pending.name, "custom_approval_status"), api.PENDING)
 
 
 class TestMobileEndpoints(ItemApprovalCase):
@@ -455,9 +457,7 @@ class TestMobileEndpoints(ItemApprovalCase):
 
 		frappe.set_user(APPROVER)
 		self._call(approve_items, items=[self.item.name], changes={"item_name": "Fixed on mobile"})
-		self.assertEqual(
-			frappe.db.get_value("Item", self.item.name, "item_name"), "Fixed on mobile"
-		)
+		self.assertEqual(frappe.db.get_value("Item", self.item.name, "item_name"), "Fixed on mobile")
 
 	def test_reject_from_the_app(self):
 		from field_sales.Api.auth import reject_items
@@ -479,9 +479,7 @@ class TestMobileEndpoints(ItemApprovalCase):
 
 		res = self._call(reject_items, items=[self.item.name], reason="no")
 		self.assertEqual(res["http_status_code"], 403)
-		self.assertEqual(
-			frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Item", self.item.name, api.STATUS_FIELD), api.PENDING)
 
 	def test_a_bad_request_comes_back_as_500_not_a_crash(self):
 		from field_sales.Api.auth import reject_items
@@ -521,9 +519,7 @@ class TestAnApprovedItemStaysEditable(ItemApprovalCase):
 		doc = self._reopen_as_creator()
 		doc.valuation_rate = 123.45
 		doc.save(ignore_permissions=True)
-		self.assertEqual(
-			flt(frappe.db.get_value("Item", self.item.name, "valuation_rate")), 123.45
-		)
+		self.assertEqual(flt(frappe.db.get_value("Item", self.item.name, "valuation_rate")), 123.45)
 
 	def test_the_approval_stamp_coming_back_as_a_string_is_not_a_change(self):
 		"""The exact shape of the bug."""
@@ -545,8 +541,7 @@ class TestAnApprovedItemStaysEditable(ItemApprovalCase):
 			doc.save(ignore_permissions=True)
 
 	def test_blank_and_none_are_the_same_emptiness(self):
-		frappe.db.set_value("Item", self.item.name, "custom_rejection_reason", None,
-		                    update_modified=False)
+		frappe.db.set_value("Item", self.item.name, "custom_rejection_reason", None, update_modified=False)
 		doc = self._reopen_as_creator()
 		doc.custom_rejection_reason = ""
 		doc.save(ignore_permissions=True)

@@ -36,7 +36,5 @@ def execute():
 		for fieldname in fields:
 			if not meta.get_field(fieldname):
 				continue
-			make_property_setter(
-				doctype, fieldname, "hidden", 1, "Check", validate_fields_for_doctype=False
-			)
+			make_property_setter(doctype, fieldname, "hidden", 1, "Check", validate_fields_for_doctype=False)
 		frappe.clear_cache(doctype=doctype)

@@ -73,9 +73,15 @@ frappe.query_reports["Late Entry Deduction"] = {
 								<tr><td><b>Skipped</b></td><td>${m.skipped}</td></tr>
 								<tr><td><b>Failed</b></td><td>${m.failed}</td></tr></table>`;
 							if (m.errors && m.errors.length) {
-								html += `<div class="text-muted small">${m.errors.join("<br>")}</div>`;
+								html += `<div class="text-muted small">${m.errors.join(
+									"<br>"
+								)}</div>`;
 							}
-							frappe.msgprint({ title: __("Additional Salary (Draft)"), message: html, wide: true });
+							frappe.msgprint({
+								title: __("Additional Salary (Draft)"),
+								message: html,
+								wide: true,
+							});
 						},
 					});
 				}

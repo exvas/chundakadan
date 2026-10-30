@@ -6,8 +6,6 @@ file wires them to Customer's save cycle and creates the custom fields.
 """
 
 import frappe
-
-from chundakadan.utils.fields import field_changed
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now
@@ -20,6 +18,7 @@ from chundakadan.chundakadan.api.customer_approval import (
 	is_approver,
 	is_enabled,
 )
+from chundakadan.utils.fields import field_changed
 
 GUARDED_FIELDS = (
 	STATUS_FIELD,
@@ -94,10 +93,7 @@ def _skip():
 	Pending customers -- which is exactly what the 2026-09 re-import was.
 	"""
 	return bool(
-		frappe.flags.in_import
-		or frappe.flags.in_migrate
-		or frappe.flags.in_install
-		or frappe.flags.in_patch
+		frappe.flags.in_import or frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_patch
 	)
 
 
@@ -158,7 +154,7 @@ def notify_approvers(doc, method=None):
 		push.send_to_users(
 			users,
 			_("New Customer needs approval"),
-			"{0} — {1}".format(doc.name, doc.customer_name or ""),
+			"{0} — {1}".format(doc.name, doc.customer_name or ""),  # noqa: UP030
 			{"route": "/customer_approvals", "name": doc.name},
 		)
 	except Exception:

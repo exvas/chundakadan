@@ -90,17 +90,19 @@ def raise_grievance(grievance_type: str | None = None, description: str | None =
 		frappe.throw(_("Describe the grievance."))
 
 	company = frappe.db.get_value("Employee", employee, "company")
-	doc = frappe.get_doc({
-		"doctype": DOCTYPE,
-		"raised_by": employee,
-		"grievance_type": grievance_type,
-		"subject": grievance_type,
-		"description": description,
-		"date": today(),
-		"status": OPEN,
-		"grievance_against_party": "Company",
-		"grievance_against": company,
-	})
+	doc = frappe.get_doc(
+		{
+			"doctype": DOCTYPE,
+			"raised_by": employee,
+			"grievance_type": grievance_type,
+			"subject": grievance_type,
+			"description": description,
+			"date": today(),
+			"status": OPEN,
+			"grievance_against_party": "Company",
+			"grievance_against": company,
+		}
+	)
 	doc.insert(ignore_permissions=True)
 	_notify_the_people_who_handle_it(doc)
 	return {"name": doc.name, "status": doc.status, "date": str(doc.date)}
@@ -132,15 +134,17 @@ def _notify_the_people_who_handle_it(doc):
 				continue
 			seen.add(user)
 			try:
-				frappe.get_doc({
-					"doctype": "Notification Log",
-					"for_user": user,
-					"type": "Alert",
-					"subject": _("Grievance raised: {0}").format(doc.grievance_type),
-					"email_content": doc.description,
-					"document_type": DOCTYPE,
-					"document_name": doc.name,
-				}).insert(ignore_permissions=True)
+				frappe.get_doc(
+					{
+						"doctype": "Notification Log",
+						"for_user": user,
+						"type": "Alert",
+						"subject": _("Grievance raised: {0}").format(doc.grievance_type),
+						"email_content": doc.description,
+						"document_type": DOCTYPE,
+						"document_name": doc.name,
+					}
+				).insert(ignore_permissions=True)
 			except Exception:
 				frappe.log_error(title="grievance notification", message=frappe.get_traceback())
 

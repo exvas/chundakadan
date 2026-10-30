@@ -95,16 +95,22 @@ def ensure_state_masters():
 	"""Workflow rows link to Workflow State / Workflow Action Master records."""
 	for state, _doc_status, _role, style in STATES:
 		if not frappe.db.exists("Workflow State", state):
-			frappe.get_doc({"doctype": "Workflow State", "workflow_state_name": state, "style": style}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{"doctype": "Workflow State", "workflow_state_name": state, "style": style}
+			).insert(ignore_permissions=True)
 	for _state, action, _next_state, _role in TRANSITIONS:
 		if not frappe.db.exists("Workflow Action Master", action):
-			frappe.get_doc({"doctype": "Workflow Action Master", "workflow_action_name": action}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Workflow Action Master", "workflow_action_name": action}).insert(
+				ignore_permissions=True
+			)
 
 
 def ensure_roles():
 	for role, user in ROLE_USERS.items():
 		if not frappe.db.exists("Role", role):
-			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
 		profile = ROLE_PROFILES.get(role)
 		if profile and frappe.db.exists("Role Profile", profile):
 			doc = frappe.get_doc("Role Profile", profile)
@@ -173,7 +179,13 @@ def ensure_workflow():
 				for state, doc_status, role, style in STATES
 			],
 			"transitions": [
-				{"state": state, "action": action, "next_state": next_state, "allowed": role, "allow_self_approval": 1}
+				{
+					"state": state,
+					"action": action,
+					"next_state": next_state,
+					"allowed": role,
+					"allow_self_approval": 1,
+				}
 				for state, action, next_state, role in TRANSITIONS
 			],
 		}
@@ -187,5 +199,9 @@ def set_default_workflow_state(doc, method=None):
 
 	Without it the order has no state and no transition is offered.
 	"""
-	if doc.docstatus == 0 and not doc.get(STATE_FIELD) and frappe.db.exists("Workflow", {"name": WORKFLOW, "is_active": 1}):
+	if (
+		doc.docstatus == 0
+		and not doc.get(STATE_FIELD)
+		and frappe.db.exists("Workflow", {"name": WORKFLOW, "is_active": 1})
+	):
 		doc.set(STATE_FIELD, DRAFT)

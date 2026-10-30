@@ -12,9 +12,28 @@ COMPANY = "Chundakadan Agencies"
 
 #: the sheet the old software produced, column for column
 SHEET_COLUMNS = [
-	"SlNo", "Date", "Voucher No", "Party Name", "City", "State", "State Code",
-	"GST No", "HSN", "Item group", "Amount", "SGST%", "CGST%", "IGST%",
-	"CGST", "SGST", "IGSTA", "CESS", "Total", "Qty", "Unit", "Discount",
+	"SlNo",
+	"Date",
+	"Voucher No",
+	"Party Name",
+	"City",
+	"State",
+	"State Code",
+	"GST No",
+	"HSN",
+	"Item group",
+	"Amount",
+	"SGST%",
+	"CGST%",
+	"IGST%",
+	"CGST",
+	"SGST",
+	"IGSTA",
+	"CESS",
+	"Total",
+	"Qty",
+	"Unit",
+	"Discount",
 ]
 
 
@@ -67,8 +86,11 @@ class TestTheNumbers(RegisterCase):
 		for row in self.data:
 			self.assertAlmostEqual(
 				flt(row["total"]),
-				flt(row["amount"]) + flt(row["cgst"]) + flt(row["sgst"])
-				+ flt(row["igst"]) + flt(row["cess"]),
+				flt(row["amount"])
+				+ flt(row["cgst"])
+				+ flt(row["sgst"])
+				+ flt(row["igst"])
+				+ flt(row["cess"]),
 				places=2,
 				msg=row["voucher_no"],
 			)
@@ -79,9 +101,7 @@ class TestTheNumbers(RegisterCase):
 			where docstatus = 1 and company = %s and posting_date between %s and %s""",
 			(self.company, add_days(today(), -365), today()),
 		)[0][0]
-		self.assertAlmostEqual(
-			sum(flt(r["amount"]) for r in self.data), flt(expected), places=2
-		)
+		self.assertAlmostEqual(sum(flt(r["amount"]) for r in self.data), flt(expected), places=2)
 
 	def test_the_tax_total_matches_the_invoices(self):
 		expected = frappe.db.sql(
@@ -107,9 +127,7 @@ class TestTheNumbers(RegisterCase):
 		_columns, narrowed = self._run(customer=customer)
 		self.assertTrue(narrowed)
 		for row in narrowed:
-			self.assertEqual(
-				frappe.db.get_value("Sales Invoice", row["voucher_no"], "customer"), customer
-			)
+			self.assertEqual(frappe.db.get_value("Sales Invoice", row["voucher_no"], "customer"), customer)
 
 
 class TestTheHelpers(RegisterCase):

@@ -42,8 +42,16 @@ class TestStockCount(FrappeTestCase):
 		columns, _data = self._run()
 		names = [c["fieldname"] for c in columns]
 		for field in (
-			"item_code", "item_name", "brand", "item_group", "warehouse",
-			"balance_qty", "uom", "stock_value", "in_qty", "out_qty",
+			"item_code",
+			"item_name",
+			"brand",
+			"item_group",
+			"warehouse",
+			"balance_qty",
+			"uom",
+			"stock_value",
+			"in_qty",
+			"out_qty",
 		):
 			self.assertIn(field, names)
 
@@ -54,7 +62,12 @@ class TestStockCount(FrappeTestCase):
 		expected = self._ledger(
 			"""select coalesce(sum(actual_qty), 0) as qty, coalesce(sum(stock_value), 0) as value
 			from `tabBin` where item_code = %(item)s and warehouse = %(wh)s""",
-			{"company": COMPANY, "item": self.sample.item_code, "wh": self.sample.warehouse, "to_date": self.to_date},
+			{
+				"company": COMPANY,
+				"item": self.sample.item_code,
+				"wh": self.sample.warehouse,
+				"to_date": self.to_date,
+			},
 		)
 		_columns, data = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
 		row = next(r for r in data if r.warehouse == self.sample.warehouse)
@@ -63,9 +76,7 @@ class TestStockCount(FrappeTestCase):
 
 	def test_balance_ignores_the_from_date(self):
 		_c, wide = self._run(item_code=self.sample.item_code, hide_zero_balance=0)
-		_c, narrow = self._run(
-			from_date=self.to_date, item_code=self.sample.item_code, hide_zero_balance=0
-		)
+		_c, narrow = self._run(from_date=self.to_date, item_code=self.sample.item_code, hide_zero_balance=0)
 
 		def balances(rows):
 			return {(r.item_code, r.get("warehouse")): flt(r.balance_qty) for r in rows}
@@ -79,17 +90,25 @@ class TestStockCount(FrappeTestCase):
 		self.assertGreaterEqual(flt(row.in_qty), 0)
 		self.assertGreaterEqual(flt(row.out_qty), 0)
 
-		opening = self._ledger(
-			"""select qty_after_transaction as qty from `tabStock Ledger Entry`
+		opening = (
+			self._ledger(
+				"""select qty_after_transaction as qty from `tabStock Ledger Entry`
 			where is_cancelled = 0 and item_code = %(item)s and warehouse = %(wh)s
 			  and posting_date < %(from_date)s
 			order by posting_date desc, posting_time desc, creation desc limit 1""",
-			{"item": self.sample.item_code, "wh": self.sample.warehouse, "from_date": self.from_date},
-		) if frappe.db.exists(
-			"Stock Ledger Entry",
-			{"item_code": self.sample.item_code, "warehouse": self.sample.warehouse,
-			 "posting_date": ["<", self.from_date], "is_cancelled": 0},
-		) else frappe._dict({"qty": 0})
+				{"item": self.sample.item_code, "wh": self.sample.warehouse, "from_date": self.from_date},
+			)
+			if frappe.db.exists(
+				"Stock Ledger Entry",
+				{
+					"item_code": self.sample.item_code,
+					"warehouse": self.sample.warehouse,
+					"posting_date": ["<", self.from_date],
+					"is_cancelled": 0,
+				},
+			)
+			else frappe._dict({"qty": 0})
+		)
 		self.assertAlmostEqual(
 			flt(opening.qty) + flt(row.in_qty) - flt(row.out_qty),
 			flt(row.balance_qty),
@@ -115,10 +134,15 @@ class TestStockCount(FrappeTestCase):
 		if not row:
 			self.skipTest("no reconciliation-set stock on this site")
 		sample = row[0]
-		_columns, data = execute({
-			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date,
-			"item_code": sample.item_code, "hide_zero_balance": 0,
-		})
+		_columns, data = execute(
+			{
+				"company": COMPANY,
+				"from_date": self.from_date,
+				"to_date": self.to_date,
+				"item_code": sample.item_code,
+				"hide_zero_balance": 0,
+			}
+		)
 		reported = next(r for r in data if r.warehouse == sample.warehouse)
 		self.assertAlmostEqual(flt(reported.balance_qty), flt(sample.actual_qty), places=3)
 		self.assertNotEqual(flt(reported.balance_qty), 0.0)
@@ -180,7 +204,9 @@ class TestStockCount(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			execute({"company": COMPANY})
 		with self.assertRaises(frappe.ValidationError):
-			execute({"company": COMPANY, "from_date": getdate("2026-09-10"), "to_date": getdate("2026-09-01")})
+			execute(
+				{"company": COMPANY, "from_date": getdate("2026-09-10"), "to_date": getdate("2026-09-01")}
+			)
 
 	def test_roles_can_open_it(self):
 		import_file_by_path(
@@ -188,13 +214,20 @@ class TestStockCount(FrappeTestCase):
 		)
 		report = frappe.get_doc("Report", "Stock Count")
 		self.assertEqual(report.ref_doctype, "Stock Ledger Entry")
-		self.assertTrue({"Stock User", "Stock Manager", "Accounts User"}.issubset({r.role for r in report.roles}))
+		self.assertTrue(
+			{"Stock User", "Stock Manager", "Accounts User"}.issubset({r.role for r in report.roles})
+		)
 		email = "stock.count.user@example.com"
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({
-				"doctype": "User", "email": email, "first_name": "Stock Count",
-				"send_welcome_email": 0, "user_type": "System User",
-			}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": "Stock Count",
+					"send_welcome_email": 0,
+					"user_type": "System User",
+				}
+			).insert()
 		frappe.get_doc("User", email).add_roles("Stock User")
 		frappe.set_user(email)
 		try:
@@ -210,7 +243,9 @@ class TestStockCountGroupByItem(TestStockCount):
 
 	def _run(self, **extra):
 		filters = {
-			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date,
+			"company": COMPANY,
+			"from_date": self.from_date,
+			"to_date": self.to_date,
 			"group_by": "Item",
 		}
 		filters.update(extra)
@@ -241,10 +276,15 @@ class TestStockCountGroupByItem(TestStockCount):
 		if not row:
 			self.skipTest("no reconciliation-set stock on this site")
 		sample = row[0]
-		_columns, data = execute({
-			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date,
-			"item_code": sample.item_code, "hide_zero_balance": 0,
-		})
+		_columns, data = execute(
+			{
+				"company": COMPANY,
+				"from_date": self.from_date,
+				"to_date": self.to_date,
+				"item_code": sample.item_code,
+				"hide_zero_balance": 0,
+			}
+		)
 		reported = next(r for r in data if r.warehouse == sample.warehouse)
 		self.assertAlmostEqual(flt(reported.balance_qty), flt(sample.actual_qty), places=3)
 		self.assertNotEqual(flt(reported.balance_qty), 0.0)
@@ -277,9 +317,14 @@ class TestStockCountGroupByItem(TestStockCount):
 
 	def test_it_is_the_warehouse_rows_added_up(self):
 		"""Item rows must total exactly what the warehouse-wise rows total."""
-		_columns, per_warehouse = execute({
-			"company": COMPANY, "from_date": self.from_date, "to_date": self.to_date, "hide_zero_balance": 0,
-		})
+		_columns, per_warehouse = execute(
+			{
+				"company": COMPANY,
+				"from_date": self.from_date,
+				"to_date": self.to_date,
+				"hide_zero_balance": 0,
+			}
+		)
 		_columns, per_item = self._run(hide_zero_balance=0)
 		wanted = {}
 		for row in per_warehouse:

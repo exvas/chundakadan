@@ -2,177 +2,186 @@
 // For license information, please see license.txt
 
 frappe.query_reports["Leave Encashment Balance"] = {
-	"filters": [
+	filters: [
 		{
-			"fieldname": "company",
-			"label": __("Company"),
-			"fieldtype": "Link",
-			"options": "Company",
-			"default": frappe.defaults.get_user_default("Company"),
-			"reqd": 0
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+			reqd: 0,
 		},
 		{
-			"fieldname": "leave_period",
-			"label": __("Leave Period"),
-			"fieldtype": "Link",
-			"options": "Leave Period",
-			"reqd": 1
+			fieldname: "leave_period",
+			label: __("Leave Period"),
+			fieldtype: "Link",
+			options: "Leave Period",
+			reqd: 1,
 		},
 		{
-			"fieldname": "department",
-			"label": __("Department"),
-			"fieldtype": "Link",
-			"options": "Department",
-			"reqd": 0
+			fieldname: "department",
+			label: __("Department"),
+			fieldtype: "Link",
+			options: "Department",
+			reqd: 0,
 		},
 		{
-			"fieldname": "employee",
-			"label": __("Employee"),
-			"fieldtype": "Link",
-			"options": "Employee",
-			"reqd": 0
+			fieldname: "employee",
+			label: __("Employee"),
+			fieldtype: "Link",
+			options: "Employee",
+			reqd: 0,
 		},
 		{
-			"fieldname": "leave_type",
-			"label": __("Leave Type"),
-			"fieldtype": "Link",
-			"options": "Leave Type",
-			"get_query": function() {
+			fieldname: "leave_type",
+			label: __("Leave Type"),
+			fieldtype: "Link",
+			options: "Leave Type",
+			get_query: function () {
 				return {
-					"filters": {
-						"allow_encashment": 1
-					}
+					filters: {
+						allow_encashment: 1,
+					},
 				};
 			},
-			"reqd": 0
+			reqd: 0,
 		},
 		{
-			"fieldname": "payment_days",
-			"label": __("Payment Days"),
-			"fieldtype": "Int",
-			"default": 30,
-			"reqd": 1
+			fieldname: "payment_days",
+			label: __("Payment Days"),
+			fieldtype: "Int",
+			default: 30,
+			reqd: 1,
 		},
 		{
-			"fieldname": "salary_component",
-			"label": __("Leave Encashment Salary Component"),
-			"fieldtype": "Link",
-			"options": "Salary Component",
-			"get_query": function() {
+			fieldname: "salary_component",
+			label: __("Leave Encashment Salary Component"),
+			fieldtype: "Link",
+			options: "Salary Component",
+			get_query: function () {
 				return {
-					"filters": {
-						"type": "Earning"
-					}
+					filters: {
+						type: "Earning",
+					},
 				};
 			},
-			"reqd": 0
-		}
+			reqd: 0,
+		},
 	],
-	
-	"onload": function(report) {
+
+	onload: function (report) {
 		// Add bulk create button
-		report.page.add_inner_button(__("Bulk Create Additional Salary"), function() {
+		report.page.add_inner_button(__("Bulk Create Additional Salary"), function () {
 			bulk_create_additional_salary(report);
 		});
-		
+
 		// Add selective create button
-		report.page.add_inner_button(__("Create Individual Additional Salary"), function() {
+		report.page.add_inner_button(__("Create Individual Additional Salary"), function () {
 			selective_create_additional_salary(report);
 		});
 	},
-	
-	"formatter": function(value, row, column, data, default_formatter) {
+
+	formatter: function (value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);
-		
-		if (column.fieldname == "pending_encashment_leaves" && data && data.pending_encashment_leaves > 0) {
+
+		if (
+			column.fieldname == "pending_encashment_leaves" &&
+			data &&
+			data.pending_encashment_leaves > 0
+		) {
 			value = "<span style='color:orange; font-weight:bold'>" + value + "</span>";
 		}
-		
+
 		if (column.fieldname == "total_payable_amount" && data && data.total_payable_amount > 0) {
 			value = "<span style='color:green; font-weight:bold'>" + value + "</span>";
 		}
-		
+
 		return value;
-	}
+	},
 };
 
 // Bulk create Additional Salary for all employees
 function bulk_create_additional_salary(report) {
 	// Get salary component from filters
-	let salary_component = frappe.query_report.get_filter_value('salary_component');
-	
+	let salary_component = frappe.query_report.get_filter_value("salary_component");
+
 	if (!salary_component) {
 		frappe.msgprint({
-			title: __('Salary Component Required'),
-			message: __('Please select a Leave Encashment Salary Component in the filters before creating Additional Salary'),
-			indicator: 'red'
+			title: __("Salary Component Required"),
+			message: __(
+				"Please select a Leave Encashment Salary Component in the filters before creating Additional Salary"
+			),
+			indicator: "red",
 		});
 		return;
 	}
-	
+
 	// Get report data
 	let data = frappe.query_report.data;
-	
+
 	if (!data || data.length === 0) {
-		frappe.msgprint(__('No data available. Please run the report first.'));
+		frappe.msgprint(__("No data available. Please run the report first."));
 		return;
 	}
-	
+
 	// Filter employees with pending encashment (exclude total/summary rows)
-	let eligible_employees = data.filter(row => 
-		row.pending_encashment_leaves > 0 && 
-		row.total_payable_amount > 0 &&
-		row.employee &&  // Must have employee ID
-		!row.employee.toLowerCase().includes('total')  // Exclude total rows
+	let eligible_employees = data.filter(
+		(row) =>
+			row.pending_encashment_leaves > 0 &&
+			row.total_payable_amount > 0 &&
+			row.employee && // Must have employee ID
+			!row.employee.toLowerCase().includes("total") // Exclude total rows
 	);
-	
+
 	if (eligible_employees.length === 0) {
-		frappe.msgprint(__('No employees with pending leave encashment found.'));
+		frappe.msgprint(__("No employees with pending leave encashment found."));
 		return;
 	}
-	
+
 	// Calculate totals - group by employee to avoid counting same employee multiple times
 	let employee_totals = {};
-	eligible_employees.forEach(row => {
+	eligible_employees.forEach((row) => {
 		// Skip if no valid employee ID
-		if (!row.employee || typeof row.employee !== 'string') {
+		if (!row.employee || typeof row.employee !== "string") {
 			return;
 		}
-		
-		let key = row.employee + '|' + row.leave_type;
+
+		let key = row.employee + "|" + row.leave_type;
 		if (!employee_totals[key]) {
 			employee_totals[key] = {
 				employee: row.employee,
 				employee_name: row.employee_name || row.employee,
 				leave_type: row.leave_type,
 				pending_leaves: row.pending_encashment_leaves,
-				amount: row.total_payable_amount
+				amount: row.total_payable_amount,
 			};
 		}
 	});
-	
+
 	let unique_employees = Object.values(employee_totals);
-	let total_employees = new Set(unique_employees.map(e => e.employee)).size;
+	let total_employees = new Set(unique_employees.map((e) => e.employee)).size;
 	let total_amount = unique_employees.reduce((sum, e) => sum + e.amount, 0);
 	let total_leaves = unique_employees.reduce((sum, e) => sum + e.pending_leaves, 0);
-	
+
 	// Build employee breakdown for clarity
 	let employee_breakdown = {};
-	unique_employees.forEach(e => {
+	unique_employees.forEach((e) => {
 		if (!employee_breakdown[e.employee]) {
 			employee_breakdown[e.employee] = {
 				name: e.employee_name,
-				leave_types: []
+				leave_types: [],
 			};
 		}
 		employee_breakdown[e.employee].leave_types.push(e.leave_type);
 	});
-	
-	let breakdown_html = Object.keys(employee_breakdown).map(emp => {
-		let info = employee_breakdown[emp];
-		return `<li>${info.name} (${emp}): ${info.leave_types.join(', ')}</li>`;
-	}).join('');
-	
+
+	let breakdown_html = Object.keys(employee_breakdown)
+		.map((emp) => {
+			let info = employee_breakdown[emp];
+			return `<li>${info.name} (${emp}): ${info.leave_types.join(", ")}</li>`;
+		})
+		.join("");
+
 	// Show confirmation with summary
 	let message = `
 		<div style="margin-bottom: 15px;">
@@ -211,55 +220,58 @@ function bulk_create_additional_salary(report) {
 			<strong>Note:</strong> Existing Additional Salary entries for the same employee and payroll date will be skipped.
 		</p>
 	`;
-	
-	frappe.confirm(
-		message,
-		function() {
-			// Get payroll date
-			frappe.prompt([
+
+	frappe.confirm(message, function () {
+		// Get payroll date
+		frappe.prompt(
+			[
 				{
-					'fieldname': 'payroll_date',
-					'fieldtype': 'Date',
-					'label': __('Payroll Date'),
-					'reqd': 1,
-					'default': frappe.datetime.get_today(),
-					'description': __('This date will be used for all Additional Salary entries')
-				}
+					fieldname: "payroll_date",
+					fieldtype: "Date",
+					label: __("Payroll Date"),
+					reqd: 1,
+					default: frappe.datetime.get_today(),
+					description: __("This date will be used for all Additional Salary entries"),
+				},
 			],
-			function(values) {
+			function (values) {
 				// Set overwrite_salary_structure_amount to 0 (unchecked) by default
 				values.overwrite_salary_structure_amount = 0;
 				// Prepare employee data - use unique entries
-				let employees_data = unique_employees.map(e => ({
+				let employees_data = unique_employees.map((e) => ({
 					employee: e.employee,
 					employee_name: e.employee_name,
 					leave_type: e.leave_type,
 					pending_leaves: e.pending_leaves,
 					amount: e.amount,
-					company: eligible_employees.find(row => row.employee === e.employee && row.leave_type === e.leave_type).company || ''
+					company:
+						eligible_employees.find(
+							(row) => row.employee === e.employee && row.leave_type === e.leave_type
+						).company || "",
 				}));
-				
+
 				// Debug: Log the data being sent
-				console.log('Sending employees_data:', employees_data);
-				
+				console.log("Sending employees_data:", employees_data);
+
 				// Call bulk creation method
 				frappe.call({
-					method: 'chundakadan.chundakadan.report.leave_encashment_balance.leave_encashment_balance.bulk_create_additional_salary',
+					method: "chundakadan.chundakadan.report.leave_encashment_balance.leave_encashment_balance.bulk_create_additional_salary",
 					args: {
 						employees_data: employees_data,
 						salary_component: salary_component,
 						payroll_date: values.payroll_date,
-						overwrite_salary_structure_amount: values.overwrite_salary_structure_amount
+						overwrite_salary_structure_amount:
+							values.overwrite_salary_structure_amount,
 					},
 					freeze: true,
-					freeze_message: __('Creating Additional Salary entries...'),
-					callback: function(r) {
+					freeze_message: __("Creating Additional Salary entries..."),
+					callback: function (r) {
 						if (r.message) {
 							let result = r.message;
-							
+
 							// Debug: Log the result
-							console.log('Bulk creation result:', result);
-							
+							console.log("Bulk creation result:", result);
+
 							// Show detailed results
 							let result_message = `
 								<div style="margin-bottom: 15px;">
@@ -284,102 +296,110 @@ function bulk_create_additional_salary(report) {
 									</tr>
 								</table>
 							`;
-							
+
 							if (result.errors && result.errors.length > 0) {
 								result_message += `
 									<div style="margin-top: 15px;">
 										<h5>Errors:</h5>
 										<ul style="max-height: 300px; overflow-y: auto;">
-											${result.errors.map(err => `<li>${err}</li>`).join('')}
+											${result.errors.map((err) => `<li>${err}</li>`).join("")}
 										</ul>
 									</div>
 								`;
 							}
-							
+
 							if (result.created_docs && result.created_docs.length > 0) {
 								result_message += `
 									<div style="margin-top: 15px;">
 										<h5>Created Documents:</h5>
 										<ul style="max-height: 200px; overflow-y: auto;">
-											${result.created_docs.map(doc => `<li><a href="/app/additional-salary/${doc}" target="_blank">${doc}</a></li>`).join('')}
+											${result.created_docs
+												.map(
+													(doc) =>
+														`<li><a href="/app/additional-salary/${doc}" target="_blank">${doc}</a></li>`
+												)
+												.join("")}
 										</ul>
 									</div>
 								`;
 							}
-							
+
 							frappe.msgprint({
-								title: __('Bulk Creation Complete'),
+								title: __("Bulk Creation Complete"),
 								message: result_message,
-								indicator: result.failed > 0 ? 'orange' : 'green',
-								wide: true
+								indicator: result.failed > 0 ? "orange" : "green",
+								wide: true,
 							});
-							
+
 							// Refresh report
 							frappe.query_report.refresh();
 						}
 					},
-					error: function(r) {
-						console.error('Bulk creation error:', r);
+					error: function (r) {
+						console.error("Bulk creation error:", r);
 						frappe.msgprint({
-							title: __('Error'),
-							message: __('An error occurred during bulk creation. Check console for details.'),
-							indicator: 'red'
+							title: __("Error"),
+							message: __(
+								"An error occurred during bulk creation. Check console for details."
+							),
+							indicator: "red",
 						});
-					}
+					},
 				});
 			},
-			__('Payroll Date'),
-			__('Create All')
-			);
-		}
-	);
+			__("Payroll Date"),
+			__("Create All")
+		);
+	});
 }
-
 
 // Selective create Additional Salary for chosen employees
 function selective_create_additional_salary(report) {
 	// Get salary component from filters
-	let salary_component = frappe.query_report.get_filter_value('salary_component');
-	
+	let salary_component = frappe.query_report.get_filter_value("salary_component");
+
 	if (!salary_component) {
 		frappe.msgprint({
-			title: __('Salary Component Required'),
-			message: __('Please select a Leave Encashment Salary Component in the filters before creating Additional Salary'),
-			indicator: 'red'
+			title: __("Salary Component Required"),
+			message: __(
+				"Please select a Leave Encashment Salary Component in the filters before creating Additional Salary"
+			),
+			indicator: "red",
 		});
 		return;
 	}
-	
+
 	// Get report data
 	let data = frappe.query_report.data;
-	
+
 	if (!data || data.length === 0) {
-		frappe.msgprint(__('No data available. Please run the report first.'));
+		frappe.msgprint(__("No data available. Please run the report first."));
 		return;
 	}
-	
+
 	// Filter employees with pending encashment (exclude total/summary rows)
-	let eligible_employees = data.filter(row => 
-		row.pending_encashment_leaves > 0 && 
-		row.total_payable_amount > 0 &&
-		row.employee &&
-		!row.employee.toLowerCase().includes('total')
+	let eligible_employees = data.filter(
+		(row) =>
+			row.pending_encashment_leaves > 0 &&
+			row.total_payable_amount > 0 &&
+			row.employee &&
+			!row.employee.toLowerCase().includes("total")
 	);
-	
+
 	if (eligible_employees.length === 0) {
-		frappe.msgprint(__('No employees with pending leave encashment found.'));
+		frappe.msgprint(__("No employees with pending leave encashment found."));
 		return;
 	}
-	
+
 	// Build selection options grouped by employee
 	let employee_options = {};
-	eligible_employees.forEach(row => {
+	eligible_employees.forEach((row) => {
 		if (!employee_options[row.employee]) {
 			employee_options[row.employee] = {
 				employee: row.employee,
 				employee_name: row.employee_name || row.employee,
-				company: row.company || '',
-				leave_types: []
+				company: row.company || "",
+				leave_types: [],
 			};
 		}
 		employee_options[row.employee].leave_types.push({
@@ -387,10 +407,10 @@ function selective_create_additional_salary(report) {
 			pending_leaves: row.pending_encashment_leaves,
 			amount: row.total_payable_amount,
 			basic_salary: row.basic_salary,
-			per_day_rate: row.per_day_rate
+			per_day_rate: row.per_day_rate,
 		});
 	});
-	
+
 	// Create selection dialog with attractive UI
 	show_selection_dialog(employee_options, salary_component);
 }
@@ -398,7 +418,7 @@ function selective_create_additional_salary(report) {
 function show_selection_dialog(employee_options, salary_component) {
 	// Build HTML for employee selection with checkboxes
 	let employees_list = Object.values(employee_options);
-	
+
 	let html = `
 		<div style="max-height: 600px; overflow-y: auto;">
 			<style>
@@ -574,7 +594,7 @@ function show_selection_dialog(employee_options, salary_component) {
 					gap: 8px;
 				}
 			</style>
-			
+
 			<div class="selection-summary">
 				<div class="summary-title">
 					<span>📋</span>
@@ -595,23 +615,23 @@ function show_selection_dialog(employee_options, salary_component) {
 					</div>
 				</div>
 			</div>
-			
+
 			<div class="select-all-section">
 				<input type="checkbox" class="select-all-checkbox" id="select-all-employees">
 				<label class="select-all-label" for="select-all-employees">
 					Select All (${employees_list.length} employees)
 				</label>
 			</div>
-			
+
 			<div class="employees-container">
 	`;
-	
+
 	employees_list.forEach((emp, emp_idx) => {
 		html += `
 			<div class="employee-card">
 				<div class="employee-header">
-					<input type="checkbox" class="employee-checkbox" 
-						data-employee="${emp.employee}" 
+					<input type="checkbox" class="employee-checkbox"
+						data-employee="${emp.employee}"
 						id="emp-${emp_idx}">
 					<div class="employee-info">
 						<div class="employee-name" title="${emp.employee_name}">${emp.employee_name}</div>
@@ -620,11 +640,11 @@ function show_selection_dialog(employee_options, salary_component) {
 				</div>
 				<div class="leave-type-list">
 		`;
-		
+
 		emp.leave_types.forEach((lt, lt_idx) => {
 			html += `
 				<div class="leave-type-item">
-					<input type="checkbox" class="leave-type-checkbox" 
+					<input type="checkbox" class="leave-type-checkbox"
 						data-employee="${emp.employee}"
 						data-employee-name="${emp.employee_name}"
 						data-company="${emp.company}"
@@ -648,73 +668,75 @@ function show_selection_dialog(employee_options, salary_component) {
 				</div>
 			`;
 		});
-		
+
 		html += `
 				</div>
 			</div>
 		`;
 	});
-	
-	html += '</div></div>';
-	
+
+	html += "</div></div>";
+
 	// Create dialog
 	let d = new frappe.ui.Dialog({
-		title: __('Select Employees for Additional Salary'),
+		title: __("Select Employees for Additional Salary"),
 		fields: [
 			{
-				fieldtype: 'HTML',
-				fieldname: 'employee_selection',
-				options: html
+				fieldtype: "HTML",
+				fieldname: "employee_selection",
+				options: html,
 			},
 			{
-				fieldtype: 'Section Break'
+				fieldtype: "Section Break",
 			},
 			{
-				fieldtype: 'Date',
-				fieldname: 'payroll_date',
-				label: __('Payroll Date'),
+				fieldtype: "Date",
+				fieldname: "payroll_date",
+				label: __("Payroll Date"),
 				reqd: 1,
 				default: frappe.datetime.get_today(),
-				description: __('This date will be used for all Additional Salary entries')
-			}
+				description: __("This date will be used for all Additional Salary entries"),
+			},
 		],
-		size: 'extra-large',
-		primary_action_label: __('Create Selected'),
-		primary_action: function(values) {
+		size: "extra-large",
+		primary_action_label: __("Create Selected"),
+		primary_action: function (values) {
 			// Get selected leave types
 			let selected = [];
-			d.$wrapper.find('.leave-type-checkbox:checked').each(function() {
+			d.$wrapper.find(".leave-type-checkbox:checked").each(function () {
 				let $checkbox = $(this);
 				selected.push({
-					employee: $checkbox.data('employee'),
-					employee_name: $checkbox.data('employee-name'),
-					company: $checkbox.data('company'),
-					leave_type: $checkbox.data('leave-type'),
-					pending_leaves: parseFloat($checkbox.data('pending-leaves')),
-					amount: parseFloat($checkbox.data('amount'))
+					employee: $checkbox.data("employee"),
+					employee_name: $checkbox.data("employee-name"),
+					company: $checkbox.data("company"),
+					leave_type: $checkbox.data("leave-type"),
+					pending_leaves: parseFloat($checkbox.data("pending-leaves")),
+					amount: parseFloat($checkbox.data("amount")),
 				});
 			});
-			
+
 			if (selected.length === 0) {
-				frappe.msgprint(__('Please select at least one leave type to create Additional Salary'));
+				frappe.msgprint(
+					__("Please select at least one leave type to create Additional Salary")
+				);
 				return;
 			}
-			
+
 			// Call bulk creation method
 			frappe.call({
-				method: 'chundakadan.chundakadan.report.leave_encashment_balance.leave_encashment_balance.bulk_create_additional_salary',
+				method: "chundakadan.chundakadan.report.leave_encashment_balance.leave_encashment_balance.bulk_create_additional_salary",
 				args: {
 					employees_data: selected,
 					salary_component: salary_component,
 					payroll_date: values.payroll_date,
-					overwrite_salary_structure_amount: 0  // Set to 0 (unchecked)
+					overwrite_salary_structure_amount: 0, // Set to 0 (unchecked)
 				},
 				freeze: true,
-				freeze_message: __('Creating Additional Salary entries...'),
-				callback: function(r) {
+				freeze_message: __("Creating Additional Salary entries..."),
+				callback: function (r) {
 					if (r.message) {
 						let result = r.message;
-						
+
 						// Show detailed results
 						let result_message = `
 							<div style="margin-bottom: 15px;">
@@ -739,55 +761,62 @@ function show_selection_dialog(employee_options, salary_component) {
 								</tr>
 							</table>
 						`;
-						
+
 						if (result.errors && result.errors.length > 0) {
 							result_message += `
 								<div style="margin-top: 15px;">
 									<h5>⚠️ Errors:</h5>
 									<ul style="max-height: 300px; overflow-y: auto;">
-										${result.errors.map(err => `<li>${err}</li>`).join('')}
+										${result.errors.map((err) => `<li>${err}</li>`).join("")}
 									</ul>
 								</div>
 							`;
 						}
-						
+
 						if (result.created_docs && result.created_docs.length > 0) {
 							result_message += `
 								<div style="margin-top: 15px;">
 									<h5>📄 Created Documents:</h5>
 									<ul style="max-height: 200px; overflow-y: auto;">
-										${result.created_docs.map(doc => `<li><a href="/app/additional-salary/${doc}" target="_blank">${doc}</a></li>`).join('')}
+										${result.created_docs
+											.map(
+												(doc) =>
+													`<li><a href="/app/additional-salary/${doc}" target="_blank">${doc}</a></li>`
+											)
+											.join("")}
 									</ul>
 								</div>
 							`;
 						}
-						
+
 						frappe.msgprint({
-							title: __('Creation Complete'),
+							title: __("Creation Complete"),
 							message: result_message,
-							indicator: result.failed > 0 ? 'orange' : 'green',
-							wide: true
+							indicator: result.failed > 0 ? "orange" : "green",
+							wide: true,
 						});
-						
+
 						// Close dialog and refresh report
 						d.hide();
 						frappe.query_report.refresh();
 					}
 				},
-				error: function(r) {
-					console.error('Selective creation error:', r);
+				error: function (r) {
+					console.error("Selective creation error:", r);
 					frappe.msgprint({
-						title: __('Error'),
-						message: __('An error occurred during creation. Check console for details.'),
-						indicator: 'red'
+						title: __("Error"),
+						message: __(
+							"An error occurred during creation. Check console for details."
+						),
+						indicator: "red",
 					});
-				}
+				},
 			});
-		}
+		},
 	});
-	
+
 	d.show();
-	
+
 	// Add event listeners after dialog is shown
 	setTimeout(() => {
 		// Update summary on checkbox change
@@ -795,55 +824,59 @@ function show_selection_dialog(employee_options, salary_component) {
 			let selected_employees = new Set();
 			let total_leaves = 0;
 			let total_amount = 0;
-			
-			d.$wrapper.find('.leave-type-checkbox:checked').each(function() {
+
+			d.$wrapper.find(".leave-type-checkbox:checked").each(function () {
 				let $checkbox = $(this);
-				selected_employees.add($checkbox.data('employee'));
-				total_leaves += parseFloat($checkbox.data('pending-leaves'));
-				total_amount += parseFloat($checkbox.data('amount'));
+				selected_employees.add($checkbox.data("employee"));
+				total_leaves += parseFloat($checkbox.data("pending-leaves"));
+				total_amount += parseFloat($checkbox.data("amount"));
 			});
-			
-			d.$wrapper.find('#selected-employees-count').text(selected_employees.size);
-			d.$wrapper.find('#selected-leaves-count').text(total_leaves.toFixed(2));
-			d.$wrapper.find('#selected-amount-total').text(format_currency(total_amount, null, 0));
+
+			d.$wrapper.find("#selected-employees-count").text(selected_employees.size);
+			d.$wrapper.find("#selected-leaves-count").text(total_leaves.toFixed(2));
+			d.$wrapper.find("#selected-amount-total").text(format_currency(total_amount, null, 0));
 		}
-		
+
 		// Employee checkbox - select/deselect all leave types for that employee
-		d.$wrapper.find('.employee-checkbox').on('change', function() {
-			let employee = $(this).data('employee');
-			let is_checked = $(this).prop('checked');
-			d.$wrapper.find(`.leave-type-checkbox[data-employee="${employee}"]`).prop('checked', is_checked);
+		d.$wrapper.find(".employee-checkbox").on("change", function () {
+			let employee = $(this).data("employee");
+			let is_checked = $(this).prop("checked");
+			d.$wrapper
+				.find(`.leave-type-checkbox[data-employee="${employee}"]`)
+				.prop("checked", is_checked);
 			updateSummary();
 		});
-		
+
 		// Leave type checkbox - update employee checkbox state
-		d.$wrapper.find('.leave-type-checkbox').on('change', function() {
-			let employee = $(this).data('employee');
+		d.$wrapper.find(".leave-type-checkbox").on("change", function () {
+			let employee = $(this).data("employee");
 			let all_checked = true;
 			let any_checked = false;
-			
-			d.$wrapper.find(`.leave-type-checkbox[data-employee="${employee}"]`).each(function() {
-				if ($(this).prop('checked')) {
+
+			d.$wrapper.find(`.leave-type-checkbox[data-employee="${employee}"]`).each(function () {
+				if ($(this).prop("checked")) {
 					any_checked = true;
 				} else {
 					all_checked = false;
 				}
 			});
-			
+
 			let $emp_checkbox = d.$wrapper.find(`.employee-checkbox[data-employee="${employee}"]`);
-			$emp_checkbox.prop('checked', all_checked);
-			$emp_checkbox.prop('indeterminate', any_checked && !all_checked);
-			
+			$emp_checkbox.prop("checked", all_checked);
+			$emp_checkbox.prop("indeterminate", any_checked && !all_checked);
+
 			updateSummary();
 		});
-		
+
 		// Select all checkbox
-		d.$wrapper.find('#select-all-employees').on('change', function() {
-			let is_checked = $(this).prop('checked');
-			d.$wrapper.find('.employee-checkbox, .leave-type-checkbox').prop('checked', is_checked);
+		d.$wrapper.find("#select-all-employees").on("change", function () {
+			let is_checked = $(this).prop("checked");
+			d.$wrapper
+				.find(".employee-checkbox, .leave-type-checkbox")
+				.prop("checked", is_checked);
 			updateSummary();
 		});
-		
+
 		// Initialize summary
 		updateSummary();
 	}, 100);

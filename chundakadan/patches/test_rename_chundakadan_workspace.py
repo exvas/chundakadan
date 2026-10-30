@@ -12,10 +12,18 @@ class TestRenameChundakadanWorkspace(FrappeTestCase):
 		frappe.db.rollback()
 
 	def _make(self, name):
-		doc = frappe.get_doc({
-			"doctype": "Workspace", "name": name, "title": name, "label": name,
-			"module": "Chundakadan", "public": 1, "content": "[]", "sequence_id": 1.0,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Workspace",
+				"name": name,
+				"title": name,
+				"label": name,
+				"module": "Chundakadan",
+				"public": 1,
+				"content": "[]",
+				"sequence_id": 1.0,
+			}
+		)
 		doc.flags.name_set = True
 		doc.flags.ignore_links = True
 		doc.insert(ignore_permissions=True)
@@ -28,7 +36,10 @@ class TestRenameChundakadanWorkspace(FrappeTestCase):
 			self._make(OLD)
 		execute()
 		self.assertFalse(frappe.db.exists("Workspace", OLD))
-		self.assertEqual(frappe.db.get_value("Workspace", NEW, ["title", "label"], as_dict=True), frappe._dict({"title": NEW, "label": NEW}))
+		self.assertEqual(
+			frappe.db.get_value("Workspace", NEW, ["title", "label"], as_dict=True),
+			frappe._dict({"title": NEW, "label": NEW}),
+		)
 
 	def test_what_the_site_added_travels_with_it(self):
 		if frappe.db.exists("Workspace", NEW):

@@ -5,7 +5,12 @@ import frappe
 from frappe.desk.doctype.number_card.number_card import get_result
 from frappe.tests.utils import FrappeTestCase
 
-from chundakadan.seed.approvals import CARDS, WORKSPACE, ensure_approval_number_cards, ensure_approvals_workspace
+from chundakadan.seed.approvals import (
+	CARDS,
+	WORKSPACE,
+	ensure_approval_number_cards,
+	ensure_approvals_workspace,
+)
 
 
 class TestApprovalsWorkspace(FrappeTestCase):
@@ -28,14 +33,20 @@ class TestApprovalsWorkspace(FrappeTestCase):
 			self.assertEqual(card.function, "Count")
 
 	def test_approval_cards_are_scoped_to_the_signed_in_user(self):
-		for label, doctype, _filters, dynamic, _colour in CARDS:
+		for label, doctype, _filters, dynamic, _colour in CARDS:  # noqa: B007
 			# These cards are not "waiting on me" by user: a cheque or a
 			# follow-up belongs to nobody in particular, a PO is scoped by
 			# workflow role, an Item by the approval role, and a grievance
 			# by its own permission query -- the GM and the HR Manager count
 			# every open one, everybody else their own.
-			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order",
-			               "Item", "Customer", "Employee Grievance"):
+			if doctype in (
+				"Post Dated Cheque",
+				"Customer Follow Up",
+				"Purchase Order",
+				"Item",
+				"Customer",
+				"Employee Grievance",
+			):
 				continue
 			if not frappe.db.exists("DocType", doctype):
 				continue

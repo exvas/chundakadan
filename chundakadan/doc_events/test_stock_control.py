@@ -83,7 +83,6 @@ class TestUpdateStockControl(FrappeTestCase):
 			frappe.db.exists("Delivery Note Item", {"against_sales_invoice": doc.name, "docstatus": ["<", 2]})
 		)
 
-
 	def test_defaults_are_seeded_when_the_toggles_are_created(self):
 		# simulate a site that never had the toggles
 		for _doctype, (fieldname, _label, _default) in sc.UPDATE_STOCK_SETTINGS.items():

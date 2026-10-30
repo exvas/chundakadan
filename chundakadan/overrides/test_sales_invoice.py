@@ -48,9 +48,7 @@ def row(item_code, **kwargs):
 
 
 def invoice(rows, **kwargs):
-	doc = frappe._dict(
-		{"is_return": 1, "return_against": None, "update_stock": 1, "items": rows, **kwargs}
-	)
+	doc = frappe._dict({"is_return": 1, "return_against": None, "update_stock": 1, "items": rows, **kwargs})
 	doc.get = lambda key, default=None: dict.get(doc, key, default)
 	return doc
 

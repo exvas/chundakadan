@@ -20,7 +20,10 @@ def _as_administrator(fn, **kwargs):
 def _place_of_dispatch(invoice):
 	city, state = None, None
 	if invoice.company_address:
-		city, state = frappe.db.get_value("Address", invoice.company_address, ["city", "state"]) or (None, None)
+		city, state = frappe.db.get_value("Address", invoice.company_address, ["city", "state"]) or (
+			None,
+			None,
+		)
 	return city or "Kerala", state or "Kerala"
 
 
@@ -65,9 +68,7 @@ def _sync_ewaybill(log, invoice):
 			},
 		)
 
-	frappe.db.set_value(
-		"Sales Invoice", invoice.name, "driver_name", log.driver_name, update_modified=False
-	)
+	frappe.db.set_value("Sales Invoice", invoice.name, "driver_name", log.driver_name, update_modified=False)
 
 
 def sync_transport(log) -> str:

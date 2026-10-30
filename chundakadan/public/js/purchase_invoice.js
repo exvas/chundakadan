@@ -1,207 +1,218 @@
-frappe.ui.form.on('Purchase Invoice', {
-    onload: function (frm) {
-        if (frm.is_new()) apply_stock_defaults(frm);
-        keep_plain_list_price_label(frm);
-    },
+frappe.ui.form.on("Purchase Invoice", {
+	onload: function (frm) {
+		if (frm.is_new()) apply_stock_defaults(frm);
+		keep_plain_list_price_label(frm);
+	},
 
-    company: function (frm) {
-        apply_stock_defaults(frm);
-    },
+	company: function (frm) {
+		apply_stock_defaults(frm);
+	},
 
-    refresh: function (frm) {
-        // Scan Barcode stays hidden even if its Property Setter is reset:
-        // saving Stock Settings with show_barcode_field on rewrites it to
-        // visible on every stock transaction.
-        frm.set_df_property('scan_barcode', 'hidden', 1);
-        keep_plain_list_price_label(frm);
-        if (frm.fields_dict.items && frm.fields_dict.items.grid) {
-            const item_code_field = frm.fields_dict.items.grid.get_field('item_code');
-            if (item_code_field && item_code_field.$input) {
-                item_code_field.$input.css({
-                    'cursor': 'pointer',
-                    'background-color': '#f8f9fa'
-                });
-            }
-        }
+	refresh: function (frm) {
+		// Scan Barcode stays hidden even if its Property Setter is reset:
+		// saving Stock Settings with show_barcode_field on rewrites it to
+		// visible on every stock transaction.
+		frm.set_df_property("scan_barcode", "hidden", 1);
+		keep_plain_list_price_label(frm);
+		if (frm.fields_dict.items && frm.fields_dict.items.grid) {
+			const item_code_field = frm.fields_dict.items.grid.get_field("item_code");
+			if (item_code_field && item_code_field.$input) {
+				item_code_field.$input.css({
+					cursor: "pointer",
+					"background-color": "#f8f9fa",
+				});
+			}
+		}
 
-        // Force users into the Payment Request approval workflow — hide
-        // the direct "Payment" (Payment Entry) button under Create.
-        // ERPNext adds standard buttons after our refresh runs, so wait.
-        setTimeout(() => {
-            try {
-                frm.remove_custom_button(__('Payment'), __('Create'));
-            } catch (e) { /* button may not be present on this state */ }
-        }, 100);
-    }
+		// Force users into the Payment Request approval workflow — hide
+		// the direct "Payment" (Payment Entry) button under Create.
+		// ERPNext adds standard buttons after our refresh runs, so wait.
+		setTimeout(() => {
+			try {
+				frm.remove_custom_button(__("Payment"), __("Create"));
+			} catch (e) {
+				/* button may not be present on this state */
+			}
+		}, 100);
+	},
 });
 
-frappe.ui.form.on('Purchase Invoice Item', {
-    item_code: function (frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
+frappe.ui.form.on("Purchase Invoice Item", {
+	item_code: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
 
-        // field_sales: Select Item dialog trigger removed
-    }
+		// field_sales: Select Item dialog trigger removed
+	},
 });
 
 function show_item_selection_dialog(frm, cdt, cdn) {
-    let dialog = new frappe.ui.Dialog({
-        title: __('Select Item'),
-        fields: [
-            {
-                fieldname: 'item_group',
-                fieldtype: 'Link',
-                label: __('Item Group'),
-                options: 'Item Group',
-                reqd: 1
-            },
-            {
-                fieldname: 'size',
-                fieldtype: 'Link',
-                label: __('Model & Size'),
-                options: 'Size',
-                get_query: function () {
-                    const item_group = dialog.get_value("item_group")
-                    return {
-                        filters: {
-                            item_group: item_group
-                        }
-                    };
-                }
-            },
-            {
-                fieldname: 'finish',
-                fieldtype: 'Link',
-                label: __('Finish'),
-                options: 'Finish Item',
-                get_query: function () {
-                    const item_group = dialog.get_value("item_group")
-                    return {
-                        filters: {
-                            item_group: item_group
-                        }
-                    };
-                }
-            },
-            {
-                fieldname: 'search_button',
-                fieldtype: 'Button',
-                label: __('Search Items'),
-                click: function () {
-                    search_filtered_items(dialog, frm, cdt, cdn);
-                }
-            },
-            {
-                fieldname: 'section_break',
-                fieldtype: 'Section Break'
-            },
-            {
-                fieldname: 'items_html',
-                fieldtype: 'HTML',
-                label: __('Available Items')
-            }
-        ],
-        primary_action_label: __('OK'),
-        primary_action: function () {
-            let item_group = dialog.get_value('item_group');
-            let size = dialog.get_value('size');
-            let finish = dialog.get_value('finish');
+	let dialog = new frappe.ui.Dialog({
+		title: __("Select Item"),
+		fields: [
+			{
+				fieldname: "item_group",
+				fieldtype: "Link",
+				label: __("Item Group"),
+				options: "Item Group",
+				reqd: 1,
+			},
+			{
+				fieldname: "size",
+				fieldtype: "Link",
+				label: __("Model & Size"),
+				options: "Size",
+				get_query: function () {
+					const item_group = dialog.get_value("item_group");
+					return {
+						filters: {
+							item_group: item_group,
+						},
+					};
+				},
+			},
+			{
+				fieldname: "finish",
+				fieldtype: "Link",
+				label: __("Finish"),
+				options: "Finish Item",
+				get_query: function () {
+					const item_group = dialog.get_value("item_group");
+					return {
+						filters: {
+							item_group: item_group,
+						},
+					};
+				},
+			},
+			{
+				fieldname: "search_button",
+				fieldtype: "Button",
+				label: __("Search Items"),
+				click: function () {
+					search_filtered_items(dialog, frm, cdt, cdn);
+				},
+			},
+			{
+				fieldname: "section_break",
+				fieldtype: "Section Break",
+			},
+			{
+				fieldname: "items_html",
+				fieldtype: "HTML",
+				label: __("Available Items"),
+			},
+		],
+		primary_action_label: __("OK"),
+		primary_action: function () {
+			let item_group = dialog.get_value("item_group");
+			let size = dialog.get_value("size");
+			let finish = dialog.get_value("finish");
 
-            if (!item_group) {
-                frappe.msgprint(__('Please select an Item Group'));
-                return;
-            }
+			if (!item_group) {
+				frappe.msgprint(__("Please select an Item Group"));
+				return;
+			}
 
-            let filters = {
-                'item_group': item_group,
-                'custom_size': size || '',
-                'custom_finish': finish || '',
-                'disabled': 0,
-                'is_purchase_item': 1
-            };
+			let filters = {
+				item_group: item_group,
+				custom_size: size || "",
+				custom_finish: finish || "",
+				disabled: 0,
+				is_purchase_item: 1,
+			};
 
-            frappe.call({
-                method: 'frappe.client.get_value',
-                args: {
-                    doctype: 'Item',
-                    filters: filters,
-                    fieldname: 'name'
-                },
-                callback: function (r) {
-                    if (r.message && r.message.name) {
-                        select_item_from_dialog(r.message.name, cdt, cdn);
-                        dialog.hide();
-                    } else {
-                        frappe.msgprint(__('No item found matching the selected criteria.'));
-                    }
-                }
-            });
-        }
-    });
+			frappe.call({
+				method: "frappe.client.get_value",
+				args: {
+					doctype: "Item",
+					filters: filters,
+					fieldname: "name",
+				},
+				callback: function (r) {
+					if (r.message && r.message.name) {
+						select_item_from_dialog(r.message.name, cdt, cdn);
+						dialog.hide();
+					} else {
+						frappe.msgprint(__("No item found matching the selected criteria."));
+					}
+				},
+			});
+		},
+	});
 
-    dialog.set_secondary_action_label(__('Close'));
-    dialog.set_secondary_action(() => dialog.hide());
-    dialog.show();
+	dialog.set_secondary_action_label(__("Close"));
+	dialog.set_secondary_action(() => dialog.hide());
+	dialog.show();
 }
 
 function search_filtered_items(dialog, frm, cdt, cdn) {
-    let item_group = dialog.get_value('item_group');
-    let finish = dialog.get_value('finish');
-    let size = dialog.get_value('size');
+	let item_group = dialog.get_value("item_group");
+	let finish = dialog.get_value("finish");
+	let size = dialog.get_value("size");
 
-    if (!item_group) {
-        frappe.msgprint(__('Please select an Item Group'));
-        return;
-    }
+	if (!item_group) {
+		frappe.msgprint(__("Please select an Item Group"));
+		return;
+	}
 
-    let filters = {
-        'item_group': item_group,
-        'disabled': 0,
-        'is_purchase_item': 1
-    };
+	let filters = {
+		item_group: item_group,
+		disabled: 0,
+		is_purchase_item: 1,
+	};
 
-    if (finish) {
-        filters['custom_finish'] = finish;
-    }
+	if (finish) {
+		filters["custom_finish"] = finish;
+	}
 
-    if (size) {
-        filters['custom_size'] = size;
-    }
+	if (size) {
+		filters["custom_size"] = size;
+	}
 
-    if (dialog.fields_dict.items_html && dialog.fields_dict.items_html.$wrapper) {
-        dialog.fields_dict.items_html.$wrapper.html(`
+	if (dialog.fields_dict.items_html && dialog.fields_dict.items_html.$wrapper) {
+		dialog.fields_dict.items_html.$wrapper.html(`
             <div class="text-center" style="padding: 20px;">
                 <i class="fa fa-spinner fa-spin"></i> Loading items...
             </div>
         `);
-    }
+	}
 
-    frappe.call({
-        method: 'frappe.client.get_list',
-        args: {
-            doctype: 'Item',
-            filters: filters,
-            fields: ['name', 'item_name', 'item_group', 'brand', 'custom_size', 'stock_uom', 'image', 'custom_finish'],
-            limit_page_length: 50,
-            order_by: 'item_name'
-        },
-        callback: function (r) {
-            if (r.message && r.message.length > 0) {
-                display_items_grid(dialog, r.message, frm, cdt, cdn);
-            } else {
-                if (dialog.fields_dict.items_html && dialog.fields_dict.items_html.$wrapper) {
-                    dialog.fields_dict.items_html.$wrapper.html(`
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Item",
+			filters: filters,
+			fields: [
+				"name",
+				"item_name",
+				"item_group",
+				"brand",
+				"custom_size",
+				"stock_uom",
+				"image",
+				"custom_finish",
+			],
+			limit_page_length: 50,
+			order_by: "item_name",
+		},
+		callback: function (r) {
+			if (r.message && r.message.length > 0) {
+				display_items_grid(dialog, r.message, frm, cdt, cdn);
+			} else {
+				if (dialog.fields_dict.items_html && dialog.fields_dict.items_html.$wrapper) {
+					dialog.fields_dict.items_html.$wrapper.html(`
                         <div class="alert alert-info">
                             <i class="fa fa-info-circle"></i> No items found with the selected criteria.
                         </div>
                     `);
-                }
-            }
-        }
-    });
+				}
+			}
+		},
+	});
 }
 
 function display_items_grid(dialog, items, frm, cdt, cdn) {
-    let html = `
+	let html = `
         <div class="item-selection-grid">
             <style>
                 .item-selection-grid {
@@ -249,101 +260,106 @@ function display_items_grid(dialog, items, frm, cdt, cdn) {
             </style>
     `;
 
-    items.forEach(item => {
-        let image_html = '';
-        if (item.image) {
-            image_html = `<img src="${item.image}" class="item-image" alt="${item.item_name}">`;
-        } else {
-            image_html = `<div class="item-image" style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; color: #6c757d;"><i class="fa fa-image"></i></div>`;
-        }
+	items.forEach((item) => {
+		let image_html = "";
+		if (item.image) {
+			image_html = `<img src="${item.image}" class="item-image" alt="${item.item_name}">`;
+		} else {
+			image_html = `<div class="item-image" style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; color: #6c757d;"><i class="fa fa-image"></i></div>`;
+		}
 
-        html += `
-            <div class="item-card" onclick="select_item_from_dialog('${item.name}', '${cdt}', '${cdn}')">
+		html += `
+            <div class="item-card" onclick="select_item_from_dialog('${
+				item.name
+			}', '${cdt}', '${cdn}')">
                 <div style="display: flex; align-items: center;">
                     ${image_html}
                     <div class="item-details">
                         <div class="item-name">${item.item_name}</div>
                         <div class="item-code">${item.name}</div>
                         <div class="item-meta">
-                            Group: ${item.item_group} | 
-                            Brand: ${item.brand || 'N/A'} | 
-                            Size: ${item.custom_size || 'N/A'}
+                            Group: ${item.item_group} |
+                            Brand: ${item.brand || "N/A"} |
+                            Size: ${item.custom_size || "N/A"}
                         </div>
                     </div>
                 </div>
             </div>
         `;
-    });
+	});
 
-    html += '</div>';
-    if (dialog.fields_dict.items_html && dialog.fields_dict.items_html.$wrapper) {
-        dialog.fields_dict.items_html.$wrapper.html(html);
-    }
+	html += "</div>";
+	if (dialog.fields_dict.items_html && dialog.fields_dict.items_html.$wrapper) {
+		dialog.fields_dict.items_html.$wrapper.html(html);
+	}
 }
 
 window.select_item_from_dialog = function (item_code, cdt, cdn) {
-    let row = locals[cdt][cdn];
+	let row = locals[cdt][cdn];
 
-    row._from_dialog = true;
+	row._from_dialog = true;
 
-    frappe.model.set_value(cdt, cdn, 'item_code', item_code).then(() => {
-        if (cur_frm && cur_frm.fields_dict.items && cur_frm.fields_dict.items.grid) {
-            let grid_row = cur_frm.fields_dict.items.grid.grid_rows_by_docname[cdn];
-            if (grid_row) {
-                if (grid_row.on_grid_fields_dict && grid_row.on_grid_fields_dict.item_code) {
-                    grid_row.on_grid_fields_dict.item_code.df.onchange &&
-                        grid_row.on_grid_fields_dict.item_code.df.onchange();
-                }
-                grid_row.refresh();
-            }
-        }
+	frappe.model.set_value(cdt, cdn, "item_code", item_code).then(() => {
+		if (cur_frm && cur_frm.fields_dict.items && cur_frm.fields_dict.items.grid) {
+			let grid_row = cur_frm.fields_dict.items.grid.grid_rows_by_docname[cdn];
+			if (grid_row) {
+				if (grid_row.on_grid_fields_dict && grid_row.on_grid_fields_dict.item_code) {
+					grid_row.on_grid_fields_dict.item_code.df.onchange &&
+						grid_row.on_grid_fields_dict.item_code.df.onchange();
+				}
+				grid_row.refresh();
+			}
+		}
 
-        if (window.cur_dialog) {
-            window.cur_dialog.hide();
-        }
+		if (window.cur_dialog) {
+			window.cur_dialog.hide();
+		}
 
-        frappe.show_alert({
-            message: __('Item selected successfully'),
-            indicator: 'green'
-        }, 3);
-    });
+		frappe.show_alert(
+			{
+				message: __("Item selected successfully"),
+				indicator: "green",
+			},
+			3
+		);
+	});
 };
 
 // Update Stock always on + company Stores warehouse as Set Accepted Warehouse
 // (server enforces the same in chundakadan.doc_events.purchase_invoice).
 const PI_COMPANY_STORE_WAREHOUSE = {
-    "Chundakadan Agencies": "Stores - CA",
-    "Chundakadan Home Stop": "Stores - CHS",
+	"Chundakadan Agencies": "Stores - CA",
+	"Chundakadan Home Stop": "Stores - CHS",
 };
 
 function apply_stock_defaults(frm) {
-    if (!frm || !frm.doc || frm.doc.docstatus !== 0) return;
-    if (frm.doc.is_opening === "Yes" || frm.doc.is_subcontracted) return;
-    const warehouse = PI_COMPANY_STORE_WAREHOUSE[frm.doc.company];
-    if (!warehouse) return;
-    if (frm.doc.set_warehouse !== warehouse) frm.set_value("set_warehouse", warehouse);
+	if (!frm || !frm.doc || frm.doc.docstatus !== 0) return;
+	if (frm.doc.is_opening === "Yes" || frm.doc.is_subcontracted) return;
+	const warehouse = PI_COMPANY_STORE_WAREHOUSE[frm.doc.company];
+	if (!warehouse) return;
+	if (frm.doc.set_warehouse !== warehouse) frm.set_value("set_warehouse", warehouse);
 }
 
 // ERPNext's set_dynamic_labels appends the currency to item grid labels
 // ("List Price (INR)") on every refresh, currency or tax change. Wrap it once
 // per form and put the plain label back after it runs.
 function keep_plain_list_price_label(frm) {
-    const cscript = frm.cscript;
-    if (cscript && cscript.set_dynamic_labels && !cscript._plain_list_price_label) {
-        const original = cscript.set_dynamic_labels;
-        cscript.set_dynamic_labels = function (...args) {
-            const result = original.apply(this, args);
-            set_plain_list_price_label(frm);
-            return result;
-        };
-        cscript._plain_list_price_label = true;
-    }
-    set_plain_list_price_label(frm);
+	const cscript = frm.cscript;
+	if (cscript && cscript.set_dynamic_labels && !cscript._plain_list_price_label) {
+		const original = cscript.set_dynamic_labels;
+		cscript.set_dynamic_labels = function (...args) {
+			const result = original.apply(this, args);
+			set_plain_list_price_label(frm);
+			return result;
+		};
+		cscript._plain_list_price_label = true;
+	}
+	set_plain_list_price_label(frm);
 }
 
 function set_plain_list_price_label(frm) {
-    const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
-    if (grid) grid.update_docfield_property('price_list_rate', 'label', __('List Price'));
+	const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+	if (grid) grid.update_docfield_property("price_list_rate", "label", __("List Price"));
 }
 
 // "Avail. Qty" — what is already in the warehouse the goods are going into.
@@ -360,10 +376,10 @@ function chundakadan_fill_available_qty(frm, cdt, cdn) {
 		return;
 	}
 	frappe
-		.xcall(
-			"chundakadan.doc_events.purchase_invoice_available_qty.available_qty",
-			{ item_code: row.item_code, warehouse: warehouse }
-		)
+		.xcall("chundakadan.doc_events.purchase_invoice_available_qty.available_qty", {
+			item_code: row.item_code,
+			warehouse: warehouse,
+		})
 		.then((qty) => frappe.model.set_value(cdt, cdn, CHUNDAKADAN_AVAIL_QTY, qty || 0))
 		.catch(() => {});
 }

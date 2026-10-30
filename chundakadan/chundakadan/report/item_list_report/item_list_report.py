@@ -28,17 +28,35 @@ def get_columns(filters=None):
 	filters = frappe._dict(filters or {})
 	customer_columns = (
 		[
-			{"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 110},
+			{
+				"label": _("Customer"),
+				"fieldname": "customer",
+				"fieldtype": "Link",
+				"options": "Customer",
+				"width": 110,
+			},
 			{"label": _("Customer Name"), "fieldname": "customer_name", "fieldtype": "Data", "width": 240},
 		]
 		if group_by_customer(filters)
 		else []
 	)
 	return [
-		{"label": _("Item Code"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 110},
+		{
+			"label": _("Item Code"),
+			"fieldname": "item_code",
+			"fieldtype": "Link",
+			"options": "Item",
+			"width": 110,
+		},
 		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 240},
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 110},
-		{"label": _("Item Group"), "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 140},
+		{
+			"label": _("Item Group"),
+			"fieldname": "item_group",
+			"fieldtype": "Link",
+			"options": "Item Group",
+			"width": 140,
+		},
 		{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 70},
 		*customer_columns,
 		{"label": _("Qty Sold"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
@@ -49,7 +67,11 @@ def get_columns(filters=None):
 
 
 def get_data(filters):
-	conditions = ["si.docstatus = 1", "si.company = %(company)s", "si.posting_date between %(from_date)s and %(to_date)s"]
+	conditions = [
+		"si.docstatus = 1",
+		"si.company = %(company)s",
+		"si.posting_date between %(from_date)s and %(to_date)s",
+	]
 	for key, column in (
 		("item_code", "sii.item_code"),
 		("customer", "si.customer"),
@@ -59,7 +81,9 @@ def get_data(filters):
 			conditions.append(f"{column} = %({key})s")
 	if filters.get("item_group"):
 		lft, rgt = frappe.db.get_value("Item Group", filters.item_group, ["lft", "rgt"])
-		conditions.append("item.item_group in (select name from `tabItem Group` where lft >= %(ig_lft)s and rgt <= %(ig_rgt)s)")
+		conditions.append(
+			"item.item_group in (select name from `tabItem Group` where lft >= %(ig_lft)s and rgt <= %(ig_rgt)s)"
+		)
 		filters.ig_lft, filters.ig_rgt = lft, rgt
 
 	by_customer = group_by_customer(filters)

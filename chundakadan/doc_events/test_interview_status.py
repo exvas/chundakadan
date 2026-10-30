@@ -68,6 +68,4 @@ class TestInterviewOnHoldStatus(FrappeTestCase):
 
 	def test_the_option_list_is_exactly_what_we_set(self):
 		ensure_interview_on_hold_status()
-		self.assertEqual(
-			frappe.get_meta("Interview", cached=False).get_field("status").options, OPTIONS
-		)
+		self.assertEqual(frappe.get_meta("Interview", cached=False).get_field("status").options, OPTIONS)

@@ -33,7 +33,5 @@ def ensure_interview_on_hold_status(*args, **kwargs):
 		return
 	if field.options == OPTIONS:
 		return
-	make_property_setter(
-		DOCTYPE, FIELD, "options", OPTIONS, "Text", validate_fields_for_doctype=False
-	)
+	make_property_setter(DOCTYPE, FIELD, "options", OPTIONS, "Text", validate_fields_for_doctype=False)
 	frappe.clear_cache(doctype=DOCTYPE)

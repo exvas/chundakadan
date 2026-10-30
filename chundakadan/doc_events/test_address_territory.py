@@ -23,36 +23,42 @@ class AddressTerritoryCase(FrappeTestCase):
 
 	def _territory(self, name):
 		if not frappe.db.exists("Territory", name):
-			frappe.get_doc({
-				"doctype": "Territory",
-				"territory_name": name,
-				"is_group": 0,
-				"parent_territory": frappe.db.get_value("Territory", {"is_group": 1}, "name"),
-			}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{
+					"doctype": "Territory",
+					"territory_name": name,
+					"is_group": 0,
+					"parent_territory": frappe.db.get_value("Territory", {"is_group": 1}, "name"),
+				}
+			).insert(ignore_permissions=True)
 		return name
 
 	def _customer(self, territory):
-		return frappe.get_doc({
-			"doctype": "Customer",
-			"customer_name": "CDN Address Territory Co",
-			"customer_group": frappe.db.get_value("Customer Group", {"is_group": 0}, "name"),
-			"customer_type": "Company",
-			"territory": territory,
-		}).insert(ignore_permissions=True)
+		return frappe.get_doc(
+			{
+				"doctype": "Customer",
+				"customer_name": "CDN Address Territory Co",
+				"customer_group": frappe.db.get_value("Customer Group", {"is_group": 0}, "name"),
+				"customer_type": "Company",
+				"territory": territory,
+			}
+		).insert(ignore_permissions=True)
 
 	def _address(self, customer=None, **values):
-		doc = frappe.get_doc({
-			"doctype": "Address",
-			"address_title": "CDN Address Territory",
-			"address_type": "Billing",
-			"address_line1": "8/243A, Thrissur Road",
-			"city": "Changaramkulam",
-			"state": "Kerala",
-			"country": "India",
-			"pincode": "679575",
-			"links": [{"link_doctype": "Customer", "link_name": (customer or self.customer.name)}],
-			**values,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Address",
+				"address_title": "CDN Address Territory",
+				"address_type": "Billing",
+				"address_line1": "8/243A, Thrissur Road",
+				"city": "Changaramkulam",
+				"state": "Kerala",
+				"country": "India",
+				"pincode": "679575",
+				"links": [{"link_doctype": "Customer", "link_name": (customer or self.customer.name)}],
+				**values,
+			}
+		)
 		doc.insert(ignore_permissions=True)
 		return doc
 
@@ -86,18 +92,20 @@ class TestTheAddressFollowsTheCustomer(AddressTerritoryCase):
 		supplier = frappe.db.get_value("Supplier", {}, "name")
 		if not supplier:
 			self.skipTest("no supplier to link")
-		doc = frappe.get_doc({
-			"doctype": "Address",
-			"address_title": "CDN Supplier Address",
-			"address_type": "Billing",
-			"address_line1": "Market Road",
-			"address_line2": "Opposite the bank",
-			"city": "Calicut",
-			"state": "Kerala",
-			"country": "India",
-			"pincode": "673001",
-			"links": [{"link_doctype": "Supplier", "link_name": supplier}],
-		}).insert(ignore_permissions=True)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Address",
+				"address_title": "CDN Supplier Address",
+				"address_type": "Billing",
+				"address_line1": "Market Road",
+				"address_line2": "Opposite the bank",
+				"city": "Calicut",
+				"state": "Kerala",
+				"country": "India",
+				"pincode": "673001",
+				"links": [{"link_doctype": "Supplier", "link_name": supplier}],
+			}
+		).insert(ignore_permissions=True)
 		self.assertEqual(doc.address_line2, "Opposite the bank")
 
 	def test_a_customer_with_no_territory_leaves_the_line_as_typed(self):

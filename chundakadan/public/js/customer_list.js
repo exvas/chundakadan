@@ -21,7 +21,9 @@ frappe.listview_settings["Customer"].onload = function (listview) {
 					__("Approve {0} customer(s)? They will be enabled.", [names.length]),
 					() => {
 						frappe
-							.xcall("chundakadan.chundakadan.api.customer_approval.approve", { customers: names })
+							.xcall("chundakadan.chundakadan.api.customer_approval.approve", {
+								customers: names,
+							})
 							.then((r) => {
 								frappe.show_alert({
 									message: __("{0} customer(s) approved", [r.approved.length]),
@@ -37,7 +39,14 @@ frappe.listview_settings["Customer"].onload = function (listview) {
 				const names = listview.get_checked_items(true);
 				if (!names.length) return;
 				frappe.prompt(
-					[{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1 }],
+					[
+						{
+							fieldname: "reason",
+							label: __("Reason"),
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+					],
 					(values) => {
 						frappe
 							.xcall("chundakadan.chundakadan.api.customer_approval.reject", {
@@ -63,7 +72,11 @@ frappe.listview_settings["Customer"].onload = function (listview) {
 frappe.listview_settings["Customer"].get_indicator = function (doc) {
 	const colour = chundakadan_customer_indicator[doc.custom_approval_status];
 	if (colour) {
-		return [__(doc.custom_approval_status), colour, "custom_approval_status,=," + doc.custom_approval_status];
+		return [
+			__(doc.custom_approval_status),
+			colour,
+			"custom_approval_status,=," + doc.custom_approval_status,
+		];
 	}
 	if (doc.disabled) return [__("Disabled"), "grey", "disabled,=,1"];
 	return [__("Enabled"), "blue", "disabled,=,0"];

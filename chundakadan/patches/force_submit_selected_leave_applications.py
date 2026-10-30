@@ -11,104 +11,62 @@ import frappe
 
 
 def execute():
+	leave_applications = [
+		"HR-LAP-2026-00136",
+		"HR-LAP-2026-00135",
+		"HR-LAP-2026-00141",
+		"HR-LAP-2026-00156",
+		"HR-LAP-2026-00111",
+		"HR-LAP-2026-00062",
+	]
 
-    leave_applications = [
-        "HR-LAP-2026-00136",
-        "HR-LAP-2026-00135",
-        "HR-LAP-2026-00141",
-        "HR-LAP-2026-00156",
-        "HR-LAP-2026-00111",
-        "HR-LAP-2026-00062",
-    ]
+	submitted = 0
+	amended = 0
+	skipped = 0
 
-    submitted = 0
-    amended = 0
-    skipped = 0
+	for docname in leave_applications:
+		try:
+			doc = frappe.get_doc("Leave Application", docname)
 
-    for docname in leave_applications:
+			# Draft docs
+			if doc.docstatus == 0:
+				# Fix invalid status values
+				if doc.status == "Partially Approved":
+					frappe.db.set_value(
+						"Leave Application", doc.name, "status", "Approved", update_modified=False
+					)
 
-        try:
+				# Force submit
+				frappe.db.set_value("Leave Application", doc.name, "docstatus", 1, update_modified=False)
 
-            doc = frappe.get_doc(
-                "Leave Application",
-                docname
-            )
+				print(f"[{docname}] Force submitted")
 
-            # Draft docs
-            if doc.docstatus == 0:
+				submitted += 1
 
-                # Fix invalid status values
-                if doc.status == "Partially Approved":
-                    frappe.db.set_value(
-                        "Leave Application",
-                        doc.name,
-                        "status",
-                        "Approved",
-                        update_modified=False
-                    )
+			# Cancelled docs
+			elif doc.docstatus == 2:
+				amended_doc = frappe.copy_doc(doc)
 
-                # Force submit
-                frappe.db.set_value(
-                    "Leave Application",
-                    doc.name,
-                    "docstatus",
-                    1,
-                    update_modified=False
-                )
+				amended_doc.amended_from = doc.name
 
-                print(
-                    f"[{docname}] Force submitted"
-                )
+				amended_doc.insert(ignore_permissions=True)
 
-                submitted += 1
+				frappe.db.set_value(
+					"Leave Application", amended_doc.name, "docstatus", 1, update_modified=False
+				)
 
+				print(f"[{docname}] Amended -> {amended_doc.name}")
 
-            # Cancelled docs
-            elif doc.docstatus == 2:
+				amended += 1
 
-                amended_doc = frappe.copy_doc(doc)
+			else:
+				print(f"[{docname}] Already submitted")
 
-                amended_doc.amended_from = doc.name
+				skipped += 1
 
-                amended_doc.insert(
-                    ignore_permissions=True
-                )
+		except Exception as e:
+			print(f"[{docname}] Error: {e!s}")
 
-                frappe.db.set_value(
-                    "Leave Application",
-                    amended_doc.name,
-                    "docstatus",
-                    1,
-                    update_modified=False
-                )
+	frappe.db.commit()
 
-                print(
-                    f"[{docname}] "
-                    f"Amended -> {amended_doc.name}"
-                )
-
-                amended += 1
-
-
-            else:
-
-                print(
-                    f"[{docname}] "
-                    "Already submitted"
-                )
-
-                skipped += 1
-
-        except Exception as e:
-
-            print(
-                f"[{docname}] Error: {str(e)}"
-            )
-
-    frappe.db.commit()
-
-    print(
-        f"\n✅ Submitted: {submitted}"
-        f"\n🔁 Amended: {amended}"
-        f"\n⏭ Skipped: {skipped}"
-    )
+	print(f"\n✅ Submitted: {submitted}\n🔁 Amended: {amended}\n⏭ Skipped: {skipped}")

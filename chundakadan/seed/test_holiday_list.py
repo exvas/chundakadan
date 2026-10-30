@@ -61,8 +61,7 @@ class TestHolidaySeed(FrappeTestCase):
 		"""Leaving a year alone must not stop the next year arriving."""
 		self._seed(2027)
 		upsert_holidays(target_list=LIST_NAME, years=[2028])
-		years = {getdate(h.holiday_date).year
-		         for h in frappe.get_doc("Holiday List", LIST_NAME).holidays}
+		years = {getdate(h.holiday_date).year for h in frappe.get_doc("Holiday List", LIST_NAME).holidays}
 		self.assertEqual(years, {2027, 2028})
 
 	def test_emptying_a_year_does_not_refill_it(self):

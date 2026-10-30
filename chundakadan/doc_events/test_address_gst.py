@@ -23,17 +23,19 @@ class TestAddressGST(FrappeTestCase):
 		self.assertIsNone(state_for_gstin("99ABCDE1234F1Z5"))
 
 	def _address(self, **values):
-		doc = frappe.get_doc({
-			"doctype": "Address",
-			"address_title": f"GST Test {frappe.generate_hash(length=5)}",
-			"address_type": "Billing",
-			"address_line1": "Test line",
-			"city": "Test",
-			"country": "India",
-			"state": "Kerala",
-			"pincode": "673310",
-			**values,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Address",
+				"address_title": f"GST Test {frappe.generate_hash(length=5)}",
+				"address_type": "Billing",
+				"address_line1": "Test line",
+				"city": "Test",
+				"country": "India",
+				"state": "Kerala",
+				"pincode": "673310",
+				**values,
+			}
+		)
 		doc.flags.ignore_mandatory = True
 		doc.insert(ignore_permissions=True)
 		return doc

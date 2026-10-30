@@ -8,9 +8,8 @@
 # right before delegating to HRMS's own execute.  This way HRMS handles all
 # filter validation and query setup regardless of its version.
 
-from frappe.utils import cstr
-
 import hrms.hr.report.monthly_attendance_sheet.monthly_attendance_sheet as _mas
+from frappe.utils import cstr
 
 
 def execute(filters=None):

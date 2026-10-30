@@ -102,7 +102,14 @@ function remark(frm) {
 
 function send_back(frm) {
 	frappe.prompt(
-		[{ fieldname: "reason", label: __("What needs correcting?"), fieldtype: "Small Text", reqd: 1 }],
+		[
+			{
+				fieldname: "reason",
+				label: __("What needs correcting?"),
+				fieldtype: "Small Text",
+				reqd: 1,
+			},
+		],
 		(values) => {
 			frappe
 				.xcall("chundakadan.chundakadan.api.work_summary.return_for_correction", {
@@ -110,7 +117,10 @@ function send_back(frm) {
 					reason: values.reason,
 				})
 				.then(() => {
-					frappe.show_alert({ message: __("Returned to the employee"), indicator: "orange" });
+					frappe.show_alert({
+						message: __("Returned to the employee"),
+						indicator: "orange",
+					});
 					frm.reload_doc();
 				});
 		},

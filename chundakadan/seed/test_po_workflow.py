@@ -46,7 +46,9 @@ class TestPOWorkflow(FrappeTestCase):
 
 	def test_workflow_states_and_transitions(self):
 		wf = frappe.get_doc("Workflow", WORKFLOW)
-		self.assertEqual((wf.document_type, wf.is_active, wf.workflow_state_field), (DOCTYPE, 1, "workflow_state"))
+		self.assertEqual(
+			(wf.document_type, wf.is_active, wf.workflow_state_field), (DOCTYPE, 1, "workflow_state")
+		)
 		self.assertEqual([(s.state, int(s.doc_status)) for s in wf.states], [(s[0], s[1]) for s in STATES])
 		self.assertEqual([(t.state, t.action, t.next_state, t.allowed) for t in wf.transitions], TRANSITIONS)
 		self.assertTrue(frappe.get_meta(DOCTYPE).get_field("workflow_state"))
@@ -55,18 +57,33 @@ class TestPOWorkflow(FrappeTestCase):
 		for role, user in ROLE_USERS.items():
 			self.assertTrue(frappe.db.exists("Role", role), role)
 			if frappe.db.exists("User", user):
-				self.assertTrue(frappe.db.exists("Has Role", {"parent": user, "role": role}), f"{user} {role}")
+				self.assertTrue(
+					frappe.db.exists("Has Role", {"parent": user, "role": role}), f"{user} {role}"
+				)
 
 	def test_permissions(self):
 		for role in ROLE_USERS:
-			perm = frappe.db.get_value("Custom DocPerm", {"parent": DOCTYPE, "role": role, "permlevel": 0}, ["read", "write", "submit"], as_dict=True)
+			perm = frappe.db.get_value(
+				"Custom DocPerm",
+				{"parent": DOCTYPE, "role": role, "permlevel": 0},
+				["read", "write", "submit"],
+				as_dict=True,
+			)
 			self.assertTrue(perm, role)
 			self.assertEqual((perm.read, perm.write), (1, 1), role)
-		gm = frappe.db.get_value("Custom DocPerm", {"parent": DOCTYPE, "role": GM_ROLE, "permlevel": 0}, "submit")
+		gm = frappe.db.get_value(
+			"Custom DocPerm", {"parent": DOCTYPE, "role": GM_ROLE, "permlevel": 0}, "submit"
+		)
 		self.assertEqual(gm, 1)
 		for doctype in ("Item", "Supplier"):
 			for role in ROLE_USERS:
-				self.assertEqual(frappe.db.get_value("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}, "read"), 1, f"{doctype} {role}")
+				self.assertEqual(
+					frappe.db.get_value(
+						"Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}, "read"
+					),
+					1,
+					f"{doctype} {role}",
+				)
 
 	def test_seed_is_idempotent(self):
 		before = frappe.db.count("Workflow Transition", {"parent": WORKFLOW})
@@ -79,17 +96,29 @@ class TestPOWorkflow(FrappeTestCase):
 		company = "Chundakadan Agencies"
 		supplier = frappe.db.get_value("Supplier", {"disabled": 0}, "name")
 		item = frappe.db.get_value("Item", {"is_stock_item": 1, "disabled": 0, "has_variants": 0}, "name")
-		warehouse = frappe.db.get_value("Warehouse", {"company": company, "is_group": 0, "disabled": 0}, "name")
-		po = frappe.get_doc({
-			"doctype": DOCTYPE,
-			"company": company,
-			"supplier": supplier,
-			"transaction_date": frappe.utils.nowdate(),
-			"schedule_date": frappe.utils.nowdate(),
-			"currency": frappe.get_cached_value("Company", company, "default_currency"),
-			"conversion_rate": 1,
-			"items": [{"item_code": item, "qty": 1, "rate": 100, "schedule_date": frappe.utils.nowdate(), "warehouse": warehouse}],
-		})
+		warehouse = frappe.db.get_value(
+			"Warehouse", {"company": company, "is_group": 0, "disabled": 0}, "name"
+		)
+		po = frappe.get_doc(
+			{
+				"doctype": DOCTYPE,
+				"company": company,
+				"supplier": supplier,
+				"transaction_date": frappe.utils.nowdate(),
+				"schedule_date": frappe.utils.nowdate(),
+				"currency": frappe.get_cached_value("Company", company, "default_currency"),
+				"conversion_rate": 1,
+				"items": [
+					{
+						"item_code": item,
+						"qty": 1,
+						"rate": 100,
+						"schedule_date": frappe.utils.nowdate(),
+						"warehouse": warehouse,
+					}
+				],
+			}
+		)
 		po.flags.ignore_permissions = True
 		po.insert(ignore_permissions=True)
 		self.assertEqual(po.workflow_state, DRAFT)  # set by the before_insert hook
