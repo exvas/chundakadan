@@ -20,5 +20,5 @@ jobs:
       app: chundakadan
       frappe_versions: '["version-15"]'
       draft_frappe_versions: '["version-15"]'
-      erpnext: true
+      hrms: true
       runs_on: '"ubuntu-latest"'
