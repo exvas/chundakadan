@@ -154,7 +154,7 @@ def notify_approvers(doc, method=None):
 		push.send_to_users(
 			users,
 			_("New Customer needs approval"),
-			"{0} — {1}".format(doc.name, doc.customer_name or ""),
+			"{0} — {1}".format(doc.name, doc.customer_name or ""),  # noqa: UP030
 			{"route": "/customer_approvals", "name": doc.name},
 		)
 	except Exception:

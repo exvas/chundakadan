@@ -76,7 +76,7 @@ class WarningLetter(Document):
 			along with a deduction of {1} day's salary. Please be informed that any further instances of duty
 			negligence will result in serious disciplinary action, which may include termination of employment,
 			in accordance with company policy and applicable labor laws.</p>
-			""".format(
+			""".format(  # noqa: UP030
 				self.warning_type.lower() if self.warning_type else "warning",
 				self.salary_deduction_days or "one",
 			)
@@ -106,7 +106,7 @@ class WarningLetter(Document):
 
 		<p>Sincerely,<br>
 		{0}</p>
-		""".format(self.company or "Your Company Name")
+		""".format(self.company or "Your Company Name")  # noqa: UP030
 
 		return content
 

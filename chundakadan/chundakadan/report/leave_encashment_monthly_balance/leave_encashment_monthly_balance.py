@@ -97,11 +97,11 @@ def get_columns(filters):
 
 
 def get_data(filters):
-	company = filters.get("company")
+	company = filters.get("company")  # noqa: F841
 	employee_id = filters.get("employee")
 	leave_type_filter = filters.get("leave_type")
 	payment_days = flt(filters.get("payment_days", 30))
-	department = filters.get("department")
+	department = filters.get("department")  # noqa: F841
 
 	if not employee_id:
 		frappe.msgprint(_("Please select an Employee"))

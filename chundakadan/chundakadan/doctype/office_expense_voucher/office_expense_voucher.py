@@ -238,7 +238,7 @@ class OfficeExpenseVoucher(AccountsController):
 			descs = [unescape(strip_html(r.description or "")).strip() for r in (self.items or [])]
 			text = "; ".join(d for d in descs if d)
 		if not text and (self.vendor_payee or "").strip():
-			text = "Paid to {0}".format(self.vendor_payee.strip())
+			text = "Paid to {0}".format(self.vendor_payee.strip())  # noqa: UP030
 		return text
 
 	def get_gl_entries(self) -> list[dict]:
@@ -504,9 +504,9 @@ class OfficeExpenseVoucher(AccountsController):
 			as_dict=True,
 		)
 		return flt(rows[0]["d"]) if rows else 0.0
-		self.status = status
-		if update:
-			self.db_set("status", status, update_modified=update_modified)
+		self.status = status  # noqa: F821
+		if update:  # noqa: F821
+			self.db_set("status", status, update_modified=update_modified)  # noqa: F821
 
 
 # --- Module utilities -----------------------------------------------

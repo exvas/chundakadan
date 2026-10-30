@@ -477,7 +477,7 @@ def allow_cheque_links_on_cancel(doc, method=None):
 	Bounce cancels the payment on purpose. It has to run in before_cancel:
 	the check (check_no_back_links_exist) happens before on_cancel.
 	"""
-	doc.ignore_linked_doctypes = tuple(doc.get("ignore_linked_doctypes") or ()) + (
+	doc.ignore_linked_doctypes = tuple(doc.get("ignore_linked_doctypes") or ()) + (  # noqa: RUF005
 		"Post Dated Cheque",
 		"Cheque Bounce",
 	)

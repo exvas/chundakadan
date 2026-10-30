@@ -31,7 +31,7 @@ def execute():
 			_clean(doc.description)
 			or "; ".join(all_descs)
 			or (
-				"Paid to {0}".format((doc.vendor_payee or "").strip())
+				"Paid to {0}".format((doc.vendor_payee or "").strip())  # noqa: UP030
 				if (doc.vendor_payee or "").strip()
 				else ""
 			)
@@ -47,4 +47,4 @@ def execute():
 				frappe.db.set_value("GL Entry", g.name, "remarks", new, update_modified=False)
 				updated += 1
 	frappe.db.commit()
-	print("backfill_oev_gl_narration: updated {0} GL entries across {1} OEVs".format(updated, len(names)))
+	print("backfill_oev_gl_narration: updated {0} GL entries across {1} OEVs".format(updated, len(names)))  # noqa: UP030

@@ -33,7 +33,7 @@ class TestApprovalsWorkspace(FrappeTestCase):
 			self.assertEqual(card.function, "Count")
 
 	def test_approval_cards_are_scoped_to_the_signed_in_user(self):
-		for label, doctype, _filters, dynamic, _colour in CARDS:
+		for label, doctype, _filters, dynamic, _colour in CARDS:  # noqa: B007
 			# These cards are not "waiting on me" by user: a cheque or a
 			# follow-up belongs to nobody in particular, a PO is scoped by
 			# workflow role, an Item by the approval role, and a grievance

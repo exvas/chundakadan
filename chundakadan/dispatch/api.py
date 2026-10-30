@@ -93,7 +93,7 @@ def get_counts(filters=None):
 		for tab in ("pending", "followup", "dispatched", "not_delivered")
 	}
 	counts["delivered_today"] = _count(
-		base
+		base  # noqa: RUF005
 		+ [
 			["dispatch_status", "in", [C.DELIVERED, C.PICKUP]],
 			["delivery_confirmed_on", ">=", nowdate()],

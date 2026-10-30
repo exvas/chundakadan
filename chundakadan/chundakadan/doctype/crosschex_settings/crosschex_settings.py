@@ -198,7 +198,7 @@ def test_individual_api_config(api_url, api_key, config_row_name, config_name=No
 
 						dt = parser.parse(expires_raw)
 						expires_formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
-					except:
+					except Exception:
 						expires_formatted = None
 
 				return {
@@ -270,7 +270,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 
 		try:
 			token_expires = config_doc.token_expires
-		except:
+		except Exception:
 			pass
 
 		# Check if token is valid
@@ -280,7 +280,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 				expires_dt = get_datetime(token_expires)
 				if expires_dt > now_datetime():
 					needs_new_token = False
-			except:
+			except Exception:
 				pass
 
 		# Generate new token if needed
@@ -329,7 +329,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 							dt = parser.parse(expires_raw)
 							expires_formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
 							config_doc.db_set("token_expires", expires_formatted, update_modified=False)
-						except:
+						except Exception:
 							pass
 
 					config_doc.db_set("last_token_generated", now_datetime(), update_modified=False)
@@ -350,7 +350,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 				# Convert to UTC
 				if begin_time > end_time:
 					begin_time = end_time - timedelta(days=7)
-			except:
+			except Exception:
 				begin_time = end_time - timedelta(days=7)
 		else:
 			# Initial sync: get last 30 days of data
@@ -485,8 +485,8 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 				# Parse check time and convert from UTC to system timezone
 				try:
 					check_datetime = get_datetime(check_time)
-					original_check_time = check_time
-					original_check_datetime = check_datetime
+					original_check_time = check_time  # noqa: F841
+					original_check_datetime = check_datetime  # noqa: F841
 
 					# CrossChec sends times in UTC, convert to system timezone
 					import pytz
@@ -888,12 +888,12 @@ def check_and_refresh_token():
 
 					try:
 						token = config_doc.get_password("token")
-					except:
+					except Exception:
 						pass
 
 					try:
 						token_expires = config_doc.token_expires
-					except:
+					except Exception:
 						pass
 
 					needs_refresh = False
@@ -905,7 +905,7 @@ def check_and_refresh_token():
 							# Refresh if expires within next 30 minutes
 							if (expires_dt - now_datetime()).total_seconds() <= 1800:
 								needs_refresh = True
-						except:
+						except Exception:
 							needs_refresh = True
 
 					if needs_refresh:

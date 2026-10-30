@@ -132,7 +132,7 @@ def get_data(filters):
 
 	results = []
 	sl_no = 1
-	for k, row in data_map.items():
+	for k, row in data_map.items():  # noqa: B007
 		row["ytd_avg"] = row["total"] / 12 if row["total"] else 0
 
 		last_3_months = [row["oct"], row["nov"], row["dec"]]

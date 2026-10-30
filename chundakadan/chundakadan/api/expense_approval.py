@@ -570,14 +570,14 @@ def get_permission_query_conditions(user=None):
 		# Doctype name is injected by caller; we use %(doctype)s placeholder
 		# via Frappe's standard mechanism. But since this hook is per-DT,
 		# we just use the parent column to point at the approval_flow rows.
-		role_clause = (
+		role_clause = (  # noqa: F841
 			f" OR EXISTS (SELECT 1 FROM `tabChundakadan Approval Detail` af "
 			f"WHERE af.parent = `tab%s`.name AND af.approver_role IN ({role_list}))"
 		)
 
 	# owner / current_approver / employee.user_id direct
 	user_q = frappe.db.escape(user)
-	base = f"(`tab%s`.owner = {user_q} OR " f"`tab%s`.current_approver = {user_q}"
+	base = f"(`tab%s`.owner = {user_q} OR " f"`tab%s`.current_approver = {user_q}"  # noqa: F841
 
 	# We don't know the DocType in this hook signature — Frappe passes it
 	# implicitly via the caller. The placeholder %s gets replaced by

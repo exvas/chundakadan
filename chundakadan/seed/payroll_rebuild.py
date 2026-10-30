@@ -248,7 +248,7 @@ def _esi_formula(rate):
 	zero-amount additional components) so the formula doesn't trip
 	NameError on slips where the company never paid arrears or
 	incentives.
-	"""
+	"""  # noqa: RUF002
 	esi_ceiling, esi_ext, _ = _get_ceilings()
 	# ESI base = (gross MINUS arrears/incentives) prorated by attendance
 	base_expr = "((gross_pay - AR - IN - CI) * payment_days / total_working_days)"

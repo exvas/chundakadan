@@ -686,7 +686,7 @@ def send_mobile_relogin_reminder(employee, reason=""):
 	user_id = frappe.db.get_value("Employee", employee, "user_id")
 	if not user_id:
 		frappe.throw(_("Employee has no linked User — nothing to notify"))
-	emp_name = frappe.db.get_value("Employee", employee, "employee_name")
+	emp_name = frappe.db.get_value("Employee", employee, "employee_name")  # noqa: F841
 	subject = "Please log out and log back in on the mobile app"
 	body = (
 		reason
@@ -1151,7 +1151,7 @@ def disable_employee_user(employee, relieving_date=None, reason=None):
 			try:
 				from frappe.sessions import delete_sessions
 
-				deleted = frappe.db.sql("DELETE FROM `tabSessions` WHERE user=%s", emp.user_id)
+				deleted = frappe.db.sql("DELETE FROM `tabSessions` WHERE user=%s", emp.user_id)  # noqa: F841
 				log.append(f"Revoked active sessions for {emp.user_id}")
 			except Exception as e:
 				log.append(f"Session revoke failed: {str(e)[:80]}")

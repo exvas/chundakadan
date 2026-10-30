@@ -268,7 +268,7 @@ def _guard_remarks(doc):
 		return
 	idx = int(doc.get("current_approval_index") or 0)
 	mine = REMARK_FIELD.get(idx) if doc.custom_approval_status in (STATUS_PENDING, STATUS_PARTIAL) else None
-	for step, field in REMARK_FIELD.items():
+	for step, field in REMARK_FIELD.items():  # noqa: B007
 		if not field_changed("Daily Work Summary", doc, before, field):
 			continue
 		if field != mine or not can_act_now(doc):
@@ -329,7 +329,7 @@ def send_for_remarks(docname: str):
 	_notify(
 		doc.current_approver,
 		_("Work summary to review"),
-		"{0} — {1}".format(
+		"{0} — {1}".format(  # noqa: UP030
 			doc.employee_name or doc.employee, frappe.format(doc.work_date, {"fieldtype": "Date"})
 		),
 		doc.name,
@@ -387,7 +387,7 @@ def add_remarks(docname: str, remarks: str | None = None):
 			target = doc.current_approver
 			title, body = (
 				_("Work summary to review"),
-				"{0} — {1}".format(doc.employee_name or doc.employee, doc.work_date),
+				"{0} — {1}".format(doc.employee_name or doc.employee, doc.work_date),  # noqa: UP030
 			)
 	finally:
 		frappe.set_user(original)

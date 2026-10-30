@@ -74,7 +74,7 @@ class TestDispatchWorkspace(FrappeTestCase):
 		ensure_dispatch_number_cards()
 		card = self._card("Pending Over 2 Days")
 		# dashboard_utils.js turns the JS expression into a date before calling get_result
-		filters = json.loads(card.filters_json) + [
+		filters = json.loads(card.filters_json) + [  # noqa: RUF005
 			["Dispatch Log", "posting_date", "<", add_days(nowdate(), -2)]
 		]
 		before = get_result(card, json.dumps(filters))

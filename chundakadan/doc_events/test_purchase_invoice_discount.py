@@ -73,7 +73,7 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 
 	# qty (pcs), list price, discount %, discount amount, rate, amount
 	# — the supplier bill for PI-CA-26-0003 (CAPRI), which bills per packet
-	SHEET = [
+	SHEET = [  # noqa: RUF012
 		(48000, 0.85, 57, 0.4845, 0.3655, 17544.00),
 		(31200, 1.64, 57, 0.9348, 0.7052, 22002.24),
 		(15600, 2.29, 57, 1.3053, 0.9847, 15361.32),
@@ -108,7 +108,7 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		ensure_purchase_invoice_discount_columns()
 		frappe.clear_cache(doctype="Purchase Invoice")
 		pi = self._sheet_invoice()
-		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET, strict=False):
+		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET, strict=False):  # noqa: B007
 			self.assertAlmostEqual(row.discount_amount, disc, places=4, msg=qty)
 			self.assertAlmostEqual(row.rate, rate, places=4, msg=qty)
 			self.assertAlmostEqual(row.amount, amount, places=2, msg=qty)

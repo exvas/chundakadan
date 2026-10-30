@@ -147,7 +147,7 @@ def get_data(filters):
 	date_conditions = f"""
         (leave_period = '{leave_period}'
          OR (from_date <= '{to_date}' AND to_date >= '{from_date}'))
-    """
+    """  # noqa: F841
 
 	if employee:
 		conditions["employee"] = employee

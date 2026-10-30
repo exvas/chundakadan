@@ -156,7 +156,7 @@ def notify_approvers(doc, method=None):
 	from chundakadan.utils import push
 
 	title = _("New Item needs approval")
-	body = "{0} — {1}".format(doc.name, doc.item_name or "")
+	body = "{0} — {1}".format(doc.name, doc.item_name or "")  # noqa: UP030
 	try:
 		push.send_to_users(users, title, body, {"route": "/item_approvals", "name": doc.name})
 	except Exception:
