@@ -473,7 +473,13 @@ override_doctype_class = {
 # Guarantees the session-healing patch installs on every web worker even when
 # the app package was never otherwise imported (get_hooks serves from the redis
 # cache without importing app code). See overrides/session_healing.py.
-before_request = ["chundakadan.overrides.session_healing.install"]
+before_request = [
+    "chundakadan.overrides.session_healing.install",
+    # erpnext 15.124 made the GL Voucher Type column a Link to DocType,
+    # which stops every non-System-Manager with "No permission to read
+    # DocType"; upstream already reverted it to a Select
+    "chundakadan.overrides.general_ledger_columns.install",
+]
 
 scheduler_events = {
 	"cron": {
