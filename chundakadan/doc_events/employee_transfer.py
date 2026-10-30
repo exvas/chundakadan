@@ -324,9 +324,9 @@ def _apply_to_sales(doc, old_dept, new_dept):
 				added += 1
 			if added:
 				cs.save(ignore_permissions=True)
-				log.append(f"Added {added} MOP Mapping row(s) " f"for {sp_name}")
+				log.append(f"Added {added} MOP Mapping row(s) for {sp_name}")
 			else:
-				log.append("MOP Mapping rows already present (or accounts " "missing) — no change")
+				log.append("MOP Mapping rows already present (or accounts missing) — no change")
 		except Exception as e:
 			log.append(f"MOP Mapping update failed: {str(e)[:120]}")
 
@@ -341,8 +341,7 @@ def _apply_to_sales(doc, old_dept, new_dept):
 		cleared += 1
 	if cleared:
 		log.append(
-			f"Cleared shift_location on {cleared} active "
-			f"Shift Assignment(s) — now field staff (no geofence)"
+			f"Cleared shift_location on {cleared} active Shift Assignment(s) — now field staff (no geofence)"
 		)
 	else:
 		log.append("No shift_location to clear — already field staff")
@@ -377,7 +376,7 @@ def _apply_from_sales(doc, old_dept, new_dept):
 	if sp_name:
 		if frappe.db.get_value("Sales Person", sp_name, "enabled"):
 			frappe.db.set_value("Sales Person", sp_name, "enabled", 0, update_modified=False)
-			log.append(f"Disabled Sales Person: {sp_name} " f"(history kept)")
+			log.append(f"Disabled Sales Person: {sp_name} (history kept)")
 		else:
 			log.append(f"Sales Person {sp_name} already disabled")
 
@@ -387,8 +386,7 @@ def _apply_from_sales(doc, old_dept, new_dept):
 		)
 		if n:
 			log.append(
-				f"Kept {n} historical MOP Mapping row(s) for "
-				f"{sp_name} (will not auto-suggest in new entries)"
+				f"Kept {n} historical MOP Mapping row(s) for {sp_name} (will not auto-suggest in new entries)"
 			)
 
 	# 3. Shift Assignment — set shift_location=HOD (office staff)
@@ -403,11 +401,10 @@ def _apply_from_sales(doc, old_dept, new_dept):
 					"Shift Assignment", existing_active, "shift_location", "HOD", update_modified=False
 				)
 				log.append(
-					f"Set shift_location=HOD on Shift Assignment "
-					f"{existing_active} (was {cur_loc or 'NULL'})"
+					f"Set shift_location=HOD on Shift Assignment {existing_active} (was {cur_loc or 'NULL'})"
 				)
 			else:
-				log.append(f"Shift Assignment {existing_active} already " f"on HOD")
+				log.append(f"Shift Assignment {existing_active} already on HOD")
 		else:
 			st = (
 				"Office Shift"
@@ -429,9 +426,9 @@ def _apply_from_sales(doc, old_dept, new_dept):
 					)
 					sa.insert(ignore_permissions=True)
 					sa.submit()
-					log.append(f"Created Shift Assignment {sa.name} " f"({st}, shift_location=HOD)")
+					log.append(f"Created Shift Assignment {sa.name} ({st}, shift_location=HOD)")
 				except Exception as e:
-					log.append(f"Could not create Shift Assignment: " f"{str(e)[:120]}")
+					log.append(f"Could not create Shift Assignment: {str(e)[:120]}")
 
 	# 4. Salary Structure
 	new_ss, new_rp = _resolve_dept_targets(new_dept)
@@ -469,7 +466,7 @@ def _apply_office_to_office(doc, old_dept, new_dept):
 			frappe.db.set_value("Employee", emp, "leave_approver", new_la, update_modified=False)
 			log.append(f"leave_approver: {old_la or '(none)'} → {new_la}")
 	if not log:
-		log.append("No mappable targets for office-to-office change " "(department not in DEPT_TO_STRUCTURE)")
+		log.append("No mappable targets for office-to-office change (department not in DEPT_TO_STRUCTURE)")
 	return log
 
 
@@ -481,7 +478,7 @@ def _apply_office_to_office(doc, old_dept, new_dept):
 def _switch_salary_structure(emp, new_structure, log):
 	"""Cancel the current SSA + create a fresh one with the same base."""
 	if not frappe.db.exists("Salary Structure", new_structure):
-		log.append(f"Salary Structure {new_structure} doesn't exist — " f"skipped")
+		log.append(f"Salary Structure {new_structure} doesn't exist — skipped")
 		return
 
 	current = frappe.db.sql(
@@ -504,7 +501,7 @@ def _switch_salary_structure(emp, new_structure, log):
 		try:
 			d = frappe.get_doc("Salary Structure Assignment", current[0]["name"])
 			d.cancel()
-			log.append(f"Cancelled SSA {current[0]['name']} " f"({current[0]['salary_structure']})")
+			log.append(f"Cancelled SSA {current[0]['name']} ({current[0]['salary_structure']})")
 		except Exception as e:
 			log.append(f"Could not cancel old SSA: {str(e)[:120]}")
 			return
@@ -522,7 +519,7 @@ def _switch_salary_structure(emp, new_structure, log):
 		)
 		new_ssa.insert(ignore_permissions=True)
 		new_ssa.submit()
-		log.append(f"Created SSA {new_ssa.name} " f"({new_structure}, base=₹{base:,.0f})")
+		log.append(f"Created SSA {new_ssa.name} ({new_structure}, base=₹{base:,.0f})")
 	except Exception as e:
 		log.append(f"Could not create new SSA: {str(e)[:120]}")
 

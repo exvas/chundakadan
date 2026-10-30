@@ -258,17 +258,13 @@ def upsert_holidays(target_list=HOLIDAY_LIST_NAME, years=None):
 
 		if added == 0:
 			print(
-				f"  · {target_list}: nothing to add for {years} "
-				f"(date range: {doc.from_date} → {doc.to_date})"
+				f"  · {target_list}: nothing to add for {years} (date range: {doc.from_date} → {doc.to_date})"
 			)
 			return target_list
 
 		doc.flags.ignore_permissions = True
 		doc.save()
-		print(
-			f"  ✓ {target_list}: appended {added} new entries "
-			f"(now covers {doc.from_date} → {doc.to_date})"
-		)
+		print(f"  ✓ {target_list}: appended {added} new entries (now covers {doc.from_date} → {doc.to_date})")
 		return target_list
 
 	# Doesn't exist — create fresh
@@ -298,8 +294,7 @@ def upsert_holidays(target_list=HOLIDAY_LIST_NAME, years=None):
 	n_weekly = sum(1 for _, _, w in all_rows if w)
 	n_holidays = len(all_rows) - n_weekly
 	print(
-		f"  ✓ Created {target_list}: {n_weekly} Sundays + "
-		f"{n_holidays} holidays ({target_from} → {target_to})"
+		f"  ✓ Created {target_list}: {n_weekly} Sundays + {n_holidays} holidays ({target_from} → {target_to})"
 	)
 	return target_list
 
@@ -353,8 +348,7 @@ def annual_holiday_refresh():
 	next_year = today.year + 1
 
 	print(
-		f"chundakadan.seed.holiday_list: Dec-31 refresh — "
-		f"extending {HOLIDAY_LIST_NAME} to cover {next_year}"
+		f"chundakadan.seed.holiday_list: Dec-31 refresh — extending {HOLIDAY_LIST_NAME} to cover {next_year}"
 	)
 	try:
 		upsert_holidays(HOLIDAY_LIST_NAME, years=[next_year])

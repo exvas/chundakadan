@@ -542,7 +542,7 @@ def make_payment_entry(source_name: str) -> dict:
 		frappe.throw(_("Voucher must be submitted before paying."))
 	if source.paid_from:
 		frappe.throw(
-			_("This voucher was already paid via {0}. " "No further payment needed.").format(source.paid_from)
+			_("This voucher was already paid via {0}. No further payment needed.").format(source.paid_from)
 		)
 	if not source.payable_account:
 		frappe.throw(_("No Payable Account set — voucher posting state is invalid."))

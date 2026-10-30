@@ -2,7 +2,7 @@ import frappe
 
 
 def execute():
-	options = "Open\n" "Pending\n" "Approved\n" "Rejected\n" "Cancelled"
+	options = "Open\nPending\nApproved\nRejected\nCancelled"
 
 	ps_name = "Leave Application-status-options"
 

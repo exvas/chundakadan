@@ -586,7 +586,7 @@ def get_permission_query_conditions(user=None):
 	clauses = [
 		f"`tabDaily Work Summary`.owner = {safe}",
 		f"`tabDaily Work Summary`.current_approver = {safe}",
-		f"`tabDaily Work Summary`.employee in " f"(select name from `tabEmployee` where user_id = {safe})",
+		f"`tabDaily Work Summary`.employee in (select name from `tabEmployee` where user_id = {safe})",
 		f"exists (select 1 from `tabChundakadan Approval Detail` af "
 		f"where af.parent = `tabDaily Work Summary`.name and af.approver = {safe})",
 	]

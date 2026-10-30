@@ -42,7 +42,7 @@ def execute():
 			update_modified=False,
 		)
 
-		print(f"[{rec.name}] " "Rejected → Draft")
+		print(f"[{rec.name}] Rejected → Draft")
 
 		updated += 1
 
@@ -67,7 +67,7 @@ def execute():
 			update_modified=False,
 		)
 
-		print(f"[{rec.name}] " "Partially Approved → Cancelled")
+		print(f"[{rec.name}] Partially Approved → Cancelled")
 
 		updated += 1
 

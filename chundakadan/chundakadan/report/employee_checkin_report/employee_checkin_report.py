@@ -99,7 +99,7 @@ def get_data(filters, swh):
             MAX(CASE WHEN c.log_type = 'OUT' THEN c.time END)    AS last_out_dt
         FROM `tabEmployee Checkin` c
         LEFT JOIN `tabEmployee` e ON e.name = c.employee
-        WHERE {' AND '.join(where)}
+        WHERE {" AND ".join(where)}
         GROUP BY c.employee, DATE(c.time)
         ORDER BY c.employee, att_date
         """,

@@ -129,7 +129,7 @@ def ensure_fcm_credentials_field(*args, **kwargs):
 			}
 		).insert(ignore_permissions=True)
 		frappe.db.commit()
-		print("chundakadan.install: Custom Field 'fcm_credentials_json' " "created on Chundakadan Settings")
+		print("chundakadan.install: Custom Field 'fcm_credentials_json' created on Chundakadan Settings")
 	except Exception as e:
 		print(f"chundakadan.install: could not create FCM field: {e}")
 
@@ -255,7 +255,7 @@ def ensure_payroll_config_fields(*args, **kwargs):
 			if changed:
 				settings.flags.ignore_permissions = True
 				settings.save()
-				print("chundakadan.install: backfilled payroll defaults " "on Chundakadan Settings singleton")
+				print("chundakadan.install: backfilled payroll defaults on Chundakadan Settings singleton")
 		except Exception as e:
 			print(f"chundakadan.install: could not backfill defaults: {e}")
 
@@ -423,7 +423,7 @@ def ensure_visit_log_sales_user_create_perm(*args, **kwargs):
 					"delete": 1,
 				}
 			).insert(ignore_permissions=True)
-			print("chundakadan.install: created Sales User Custom DocPerm " "on Customer Visit Log")
+			print("chundakadan.install: created Sales User Custom DocPerm on Customer Visit Log")
 		frappe.db.commit()
 		frappe.clear_cache(doctype="Customer Visit Log")
 	except Exception as e:
@@ -816,7 +816,7 @@ def ensure_visit_log_visit_type_field(*args, **kwargs):
 				}
 			).insert(ignore_permissions=True)
 			frappe.db.commit()
-			print("chundakadan.install: Custom Field 'visit_type' created " "on Customer Visit Log")
+			print("chundakadan.install: Custom Field 'visit_type' created on Customer Visit Log")
 		except Exception as e:
 			print(f"chundakadan.install: could not create visit_type field: {e}")
 			return
@@ -838,9 +838,7 @@ def ensure_visit_log_visit_type_field(*args, **kwargs):
 		frappe.db.commit()
 		rows = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
 		if rows:
-			print(
-				f"chundakadan.install: re-tagged visit_type on {rows} " "auto-paired Customer Visit Log rows"
-			)
+			print(f"chundakadan.install: re-tagged visit_type on {rows} auto-paired Customer Visit Log rows")
 	except Exception as e:
 		print(f"chundakadan.install: could not backfill visit_type: {e}")
 
@@ -883,7 +881,7 @@ def ensure_visit_log_location_field(*args, **kwargs):
 			}
 		).insert(ignore_permissions=True)
 		frappe.db.commit()
-		print("chundakadan.install: Custom Field 'custom_location' created " "on Customer Visit Log")
+		print("chundakadan.install: Custom Field 'custom_location' created on Customer Visit Log")
 	except Exception as e:
 		print(f"chundakadan.install: could not create visit log location field: {e}")
 
@@ -1060,8 +1058,7 @@ def ensure_expense_payable_account(*args, **kwargs):
 			if current_type == "Payable":
 				frappe.db.set_value("Account", full, "account_type", "", update_modified=False)
 				print(
-					f"chundakadan.install: cleared account_type='Payable' "
-					f"on '{full}' (now neutral Liability)"
+					f"chundakadan.install: cleared account_type='Payable' on '{full}' (now neutral Liability)"
 				)
 			continue
 
@@ -1255,9 +1252,9 @@ def ensure_oev_settings_fields(*args, **kwargs):
 			settings.save()
 			frappe.db.commit()
 			n = len(settings.oev_defaults or [])
-			print(f"chundakadan.install: seeded {n} per-company OEV " f"default rows")
+			print(f"chundakadan.install: seeded {n} per-company OEV default rows")
 	except Exception as e:
-		print(f"chundakadan.install: could not seed OEV per-company " f"defaults: {e}")
+		print(f"chundakadan.install: could not seed OEV per-company defaults: {e}")
 
 
 def get_oev_defaults_for_company(company: str) -> dict:
@@ -1298,7 +1295,7 @@ def ensure_oev_default_supplier(*args, **kwargs):
 	# Pick any leaf Supplier Group (ERPNext seeds at least one on Company setup)
 	sg = frappe.db.get_value("Supplier Group", {"is_group": 0}, "name")
 	if not sg:
-		print("chundakadan.install: no leaf Supplier Group found, " "skipping default supplier creation")
+		print("chundakadan.install: no leaf Supplier Group found, skipping default supplier creation")
 		return
 
 	try:
@@ -1314,9 +1311,9 @@ def ensure_oev_default_supplier(*args, **kwargs):
 		doc.flags.ignore_permissions = True
 		doc.insert()
 		frappe.db.commit()
-		print(f"chundakadan.install: created Supplier " f"'{target_name}' (docname: {doc.name})")
+		print(f"chundakadan.install: created Supplier '{target_name}' (docname: {doc.name})")
 	except Exception as e:
-		print(f"chundakadan.install: could not create Supplier " f"'{target_name}': {e}")
+		print(f"chundakadan.install: could not create Supplier '{target_name}': {e}")
 
 
 def ensure_oev_workspace_pin(*args, **kwargs):
@@ -1389,9 +1386,9 @@ def _pin_oev_in_workspace(ws_name: str) -> None:
 			ws.flags.ignore_permissions = True
 			ws.save()
 			frappe.db.commit()
-			print(f"chundakadan.install: pinned 'Office Expense Voucher' " f"on '{ws_name}' workspace")
+			print(f"chundakadan.install: pinned 'Office Expense Voucher' on '{ws_name}' workspace")
 		except Exception as e:
-			print(f"chundakadan.install: could not pin OEV on " f"'{ws_name}': {e}")
+			print(f"chundakadan.install: could not pin OEV on '{ws_name}': {e}")
 
 
 def ensure_je_oev_reference_option(*args, **kwargs):
@@ -1461,7 +1458,7 @@ def ensure_employee_advance_defaults(*args, **kwargs):
 			ps.value = "1"
 			ps.save(ignore_permissions=True)
 			frappe.db.commit()
-			print("chundakadan.install: Property Setter " f"{ps_name} set to '1'")
+			print(f"chundakadan.install: Property Setter {ps_name} set to '1'")
 		return
 
 	try:
@@ -1478,12 +1475,10 @@ def ensure_employee_advance_defaults(*args, **kwargs):
 		).insert(ignore_permissions=True)
 		frappe.db.commit()
 		print(
-			"chundakadan.install: enabled "
-			"'Repay Unclaimed Amount from Salary' by default on "
-			"Employee Advance"
+			"chundakadan.install: enabled 'Repay Unclaimed Amount from Salary' by default on Employee Advance"
 		)
 	except Exception as e:
-		print(f"chundakadan.install: could not set default on " f"repay_unclaimed_amount_from_salary: {e}")
+		print(f"chundakadan.install: could not set default on repay_unclaimed_amount_from_salary: {e}")
 
 
 def ensure_payroll_entry_form_defaults(*args, **kwargs):
@@ -1525,13 +1520,13 @@ def ensure_payroll_entry_form_defaults(*args, **kwargs):
 	]
 
 	for ps in setters:
-		ps_name = f"{ps['doc_type']}-{ps['field_name']}" f"-{ps['property']}"
+		ps_name = f"{ps['doc_type']}-{ps['field_name']}-{ps['property']}"
 		if frappe.db.exists("Property Setter", ps_name):
 			# Update value if it drifted
 			cur = frappe.db.get_value("Property Setter", ps_name, "value")
 			if cur != ps["value"]:
 				frappe.db.set_value("Property Setter", ps_name, "value", ps["value"], update_modified=False)
-				print(f"chundakadan.install: updated PS {ps_name} " f"({cur!r} → {ps['value']!r})")
+				print(f"chundakadan.install: updated PS {ps_name} ({cur!r} → {ps['value']!r})")
 			continue
 		try:
 			frappe.get_doc(
@@ -1541,9 +1536,9 @@ def ensure_payroll_entry_form_defaults(*args, **kwargs):
 					**ps,
 				}
 			).insert(ignore_permissions=True)
-			print(f"chundakadan.install: created PS {ps_name} " f"= {ps['value']!r}")
+			print(f"chundakadan.install: created PS {ps_name} = {ps['value']!r}")
 		except Exception as e:
-			print(f"chundakadan.install: could not create {ps_name}: " f"{str(e)[:120]}")
+			print(f"chundakadan.install: could not create {ps_name}: {str(e)[:120]}")
 
 	frappe.db.commit()
 	frappe.clear_cache(doctype="Payroll Entry")
@@ -1602,9 +1597,9 @@ def ensure_employee_transfer_custom_fields(*args, **kwargs):
 				}
 			).insert(ignore_permissions=True)
 			created += 1
-			print(f"chundakadan.install: created Custom Field " f"Employee Transfer.{cf['fieldname']}")
+			print(f"chundakadan.install: created Custom Field Employee Transfer.{cf['fieldname']}")
 		except Exception as e:
-			print(f"chundakadan.install: could not create " f"{cf_name}: {e}")
+			print(f"chundakadan.install: could not create {cf_name}: {e}")
 	if created:
 		frappe.db.commit()
 		frappe.clear_cache(doctype="Employee Transfer")
@@ -1673,7 +1668,7 @@ def before_tests(*args, **kwargs):
 	if relaxed:
 		frappe.db.commit()
 		frappe.clear_cache(doctype="Employee")
-		print(f"chundakadan.install.before_tests: relaxed reqd on " f"{len(relaxed)} setter(s) — {relaxed}")
+		print(f"chundakadan.install.before_tests: relaxed reqd on {len(relaxed)} setter(s) — {relaxed}")
 
 	# 3. Monkey-patch india_compliance validators that reject auto-
 	#    created _Test Item Tax Template stubs (GST rate=0 + Taxable
@@ -1720,7 +1715,7 @@ def before_tests(*args, **kwargs):
 			d.insert()
 			pre_created += 1
 		except Exception as e:
-			print(f"chundakadan.install.before_tests: could not " f"pre-create {doctype} {root_name}: {e}")
+			print(f"chundakadan.install.before_tests: could not pre-create {doctype} {root_name}: {e}")
 	if pre_created:
 		frappe.db.commit()
-		print(f"chundakadan.install.before_tests: pre-created " f"{pre_created} root master(s)")
+		print(f"chundakadan.install.before_tests: pre-created {pre_created} root master(s)")

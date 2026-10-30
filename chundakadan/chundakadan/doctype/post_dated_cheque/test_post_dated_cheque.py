@@ -252,7 +252,7 @@ class TestPostDatedCheque(FrappeTestCase):
 		for days, expected in ((3, True), (1, True), (0, True), (5, False)):
 			frappe.db.rollback()
 			ensure_doctypes()
-			result, push = self._reminder_run(add_days(nowdate(), days))
+			_, push = self._reminder_run(add_days(nowdate(), days))
 			self.assertEqual(push.called, expected, f"{days} days")
 
 	def test_reminder_skips_collected_cheques(self):

@@ -88,7 +88,7 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
 				"addressdetails": 1,
 			},
 			headers={
-				"User-Agent": ("chundakadan-erp/1.0 " "(contact: sammish.thundiyil@gmail.com)"),
+				"User-Agent": ("chundakadan-erp/1.0 (contact: sammish.thundiyil@gmail.com)"),
 			},
 			timeout=15,
 		)
@@ -107,7 +107,7 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
 					"addressdetails": 1,
 				},
 				headers={
-					"User-Agent": ("chundakadan-erp/1.0 " "(contact: sammish.thundiyil@gmail.com)"),
+					"User-Agent": ("chundakadan-erp/1.0 (contact: sammish.thundiyil@gmail.com)"),
 				},
 				timeout=15,
 			)
@@ -117,7 +117,7 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
 			# Nominatim returns long HTML on errors.
 			frappe.log_error(
 				f"chundakadan.utils.geocode: HTTP {res.status_code}",
-				f"doctype={doctype} name={name} lat={lat} lon={lon}\n" f"body={res.text[:400]}",
+				f"doctype={doctype} name={name} lat={lat} lon={lon}\nbody={res.text[:400]}",
 			)
 			return None
 

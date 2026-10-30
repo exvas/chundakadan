@@ -50,9 +50,7 @@ class DisplayMovement(Document):
 
 	def on_cancel(self):
 		if "Display Manager" not in frappe.get_roles(frappe.session.user):
-			frappe.throw(
-				_("Only a Display Manager may cancel a movement. " "Log a reversing movement instead.")
-			)
+			frappe.throw(_("Only a Display Manager may cancel a movement. Log a reversing movement instead."))
 		self._recompute_unit_from_history()
 
 	# -- helpers ---------------------------------------------------------

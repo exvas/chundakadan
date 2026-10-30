@@ -439,7 +439,7 @@ def _enforce_monthly_cap(doc):
 	if existing_days + this_days > MAX_DAYS_PER_MONTH + 1e-9:
 		frappe.throw(
 			_(
-				"Only {0} day of {1} is allowed per month. {2} already has {3} day(s) " "booked for {4} {5}."
+				"Only {0} day of {1} is allowed per month. {2} already has {3} day(s) booked for {4} {5}."
 			).format(
 				MAX_DAYS_PER_MONTH,
 				doc.leave_type,

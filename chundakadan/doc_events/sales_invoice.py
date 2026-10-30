@@ -95,8 +95,7 @@ def enforce_b2b_billing(doc, method):
 		gstin = (frappe.db.get_value("Customer", doc.customer, "gstin") or "").strip()
 	if not doc.get("customer_address"):
 		frappe.throw(
-			"Chundakadan Agencies: cannot bill this customer - no Address. "
-			"Add a billing address (B2B only)."
+			"Chundakadan Agencies: cannot bill this customer - no Address. Add a billing address (B2B only)."
 		)
 	if not gstin:
 		frappe.throw(

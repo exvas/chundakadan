@@ -147,7 +147,7 @@ def send_approval_email(
 		# still send so they have an audit trail.
 		pass
 
-	applicant_email, applicant_name = _applicant(doc)
+	_, applicant_name = _applicant(doc)
 	slug = _DOCTYPE_SLUG.get(doc.doctype, doc.doctype.lower().replace(" ", "-"))
 
 	context = {

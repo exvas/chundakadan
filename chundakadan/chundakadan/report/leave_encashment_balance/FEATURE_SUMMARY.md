@@ -92,20 +92,13 @@
 
 ```python
 # Additional Salary Created
-{
-    "employee": "EMP-001",
-    "salary_component": "Leave Encashment",
-    "amount": 5000,
-    "payroll_date": "2026-02-28"
-}
+{"employee": "EMP-001", "salary_component": "Leave Encashment", "amount": 5000, "payroll_date": "2026-02-28"}
 
 # When you create Salary Slip for February 2026
 # ERPNext runs this logic internally:
 
 additional_salaries = get_additional_salaries(
-    employee="EMP-001",
-    start_date="2026-02-01",
-    end_date="2026-02-28"
+	employee="EMP-001", start_date="2026-02-01", end_date="2026-02-28"
 )
 
 # Finds the Additional Salary because:
@@ -114,10 +107,7 @@ additional_salaries = get_additional_salaries(
 # - Status is submitted ✓
 
 # Automatically adds to Salary Slip earnings:
-earnings.append({
-    "salary_component": "Leave Encashment",
-    "amount": 5000
-})
+earnings.append({"salary_component": "Leave Encashment", "amount": 5000})
 ```
 
 ## 📋 Files Created/Modified

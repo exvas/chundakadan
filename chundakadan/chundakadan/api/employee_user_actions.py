@@ -342,12 +342,10 @@ def _apply_user_permissions(user_id, emp, log):
 		)
 		if stale:
 			frappe.delete_doc("User Permission", stale, force=True, ignore_permissions=True)
-			log.append(
-				f"Removed stale Employee=self user permission " f"({reason} — should see other employees)"
-			)
+			log.append(f"Removed stale Employee=self user permission ({reason} — should see other employees)")
 		else:
 			log.append(
-				f"Skipped Employee user permission ({reason}) — " f"this user needs to see other employees"
+				f"Skipped Employee user permission ({reason}) — this user needs to see other employees"
 			)
 
 	# 2. Company restriction (only meaningful in multi-company benches)
@@ -364,7 +362,7 @@ def _apply_user_permissions(user_id, emp, log):
 		)
 	elif emp.company and n_companies <= 1:
 		log.append(
-			"Single-company bench — skipping Company user permission " "(no other companies to filter out)"
+			"Single-company bench — skipping Company user permission (no other companies to filter out)"
 		)
 
 
@@ -394,7 +392,7 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1, is_mana
 
 	email = (email or emp.company_email or emp.personal_email or "").strip().lower()
 	if not email:
-		frappe.throw(_("Email is required. Set Employee.company_email or " "pass email in the dialog."))
+		frappe.throw(_("Email is required. Set Employee.company_email or pass email in the dialog."))
 	validate_email_address(email, throw=True)
 
 	if frappe.db.exists("User", email):
@@ -583,7 +581,7 @@ def auto_provision_on_insert(doc, method=None):
 				log.append(f"Assigned Role Profile + Module Profile: {role_profile}")
 			else:
 				log.append(
-					"No Role Profile mapped for department " f"{doc.department or '(none)'} — assign manually"
+					f"No Role Profile mapped for department {doc.department or '(none)'} — assign manually"
 				)
 
 		_apply_user_permissions(doc.user_id, doc, log)
@@ -650,7 +648,7 @@ def apply_geofence_for_employee(employee, shift_location=None):
 			log.append(f"Shift Assignment {sa.name}: {current or '<none>'} → {label}")
 			changed += 1
 		if not changed:
-			log.append(f"All active Shift Assignments already at " f"{target or '<cleared>'} — no change")
+			log.append(f"All active Shift Assignments already at {target or '<cleared>'} — no change")
 
 	log.append(
 		"⚠ Remind the employee to log out + log back in on the mobile "
@@ -1044,7 +1042,7 @@ def apply_sales_person_setup_for_employee(employee):
 	emp = frappe.get_doc("Employee", employee)
 	if not _is_sales_dept(emp.department):
 		frappe.throw(
-			_("This is for Sales/Marketing employees only. " "Current department: {0}").format(emp.department)
+			_("This is for Sales/Marketing employees only. Current department: {0}").format(emp.department)
 		)
 	log = []
 	sp = _setup_sales_person_full(emp.name, log)

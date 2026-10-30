@@ -26,6 +26,9 @@
 	"root": true,
 	"globals": {
 		"frappe": true,
+		"erpnext": true,
+		"chundakadan": true,
+		"select_item_from_dialog": true,
 		"Vue": true,
 		"SetVueGlobals": true,
 		"__": true,

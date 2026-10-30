@@ -32,7 +32,7 @@ def seed_policy():
 	doc.flags.ignore_permissions = True
 	doc.save()
 	frappe.db.commit()
-	print(f"✓ HR Policy seeded — version {doc.version}, " f"{len(html)} characters of HTML.")
+	print(f"✓ HR Policy seeded — version {doc.version}, {len(html)} characters of HTML.")
 	return {"version": doc.version, "html_length": len(html)}
 
 
@@ -91,5 +91,5 @@ def seed_test_newsletter():
 	frappe.db.commit()
 	print(f"✓ Test Newsletter created: {doc.name}")
 	print(f"  Subject: {subject}")
-	print("  Mobile push will fire via the after_insert hook for every " "Active employee.")
+	print("  Mobile push will fire via the after_insert hook for every Active employee.")
 	return {"name": doc.name, "subject": subject}

@@ -31,16 +31,16 @@ salary_component: "ESI"
 type: "Deduction"
 amount_based_on_formula: 1
 formula: "round(gross_pay * 0.0075) if gross_pay <= 21000 else 0"
-condition: "gross_pay <= 21000"   # extra safety; either condition or formula clause works
+condition: "gross_pay <= 21000"  # extra safety; either condition or formula clause works
 round_to_the_nearest_integer: 1
-depends_on_payment_days: 1        # prorate if LOP days
+depends_on_payment_days: 1  # prorate if LOP days
 ```
 
 **ESI Employer (Employer share — Statistical):**
 ```python
 salary_component: "ESI Employer Contribution"
-type: "Earning"                   # added as informational, NOT deducted
-statistical_component: 1          # excluded from gross pay totals
+type: "Earning"  # added as informational, NOT deducted
+statistical_component: 1  # excluded from gross pay totals
 amount_based_on_formula: 1
 formula: "round(gross_pay * 0.0325) if gross_pay <= 21000 else 0"
 do_not_include_in_total: 1
@@ -77,7 +77,7 @@ All rates applied to **Basic + DA** (or capped at ₹15K).
 ### Current broken state
 ```python
 # Current formula:
-base * 0.12 / 100   if base <= 10000   else 0
+base * 0.12 / 100 if base <= 10000 else 0
 ```
 
 For base = ₹15,000, returns **₹18** (should be ₹1,800). The formula was probably written with the intent of "12 / 100" but accidentally typed "0.12 / 100" which is 0.12%. Plus wrong threshold (10K vs 15K).
@@ -149,40 +149,40 @@ Update via `chundakadan/seed/salary_components.py` (new file):
 import frappe
 
 COMPONENTS = [
-    {
-        "name": "ESI",
-        "type": "Deduction",
-        "amount_based_on_formula": 1,
-        "formula": "round(gross_pay * 0.0075) if gross_pay <= 21000 else 0",
-        "round_to_the_nearest_integer": 1,
-        "depends_on_payment_days": 1,
-    },
-    {
-        "name": "Employee PF",
-        "type": "Deduction",
-        "amount_based_on_formula": 1,
-        "formula": "round(min(base, 15000) * 0.12)",
-        "round_to_the_nearest_integer": 1,
-        "depends_on_payment_days": 1,
-    },
-    {
-        "name": "ESI Employer Contribution",
-        "type": "Earning",
-        "statistical_component": 1,
-        "do_not_include_in_total": 1,
-        "amount_based_on_formula": 1,
-        "formula": "round(gross_pay * 0.0325) if gross_pay <= 21000 else 0",
-        "round_to_the_nearest_integer": 1,
-    },
-    {
-        "name": "PF Employer Contribution",
-        "type": "Earning",
-        "statistical_component": 1,
-        "do_not_include_in_total": 1,
-        "amount_based_on_formula": 1,
-        "formula": "round(min(base, 15000) * 0.12)",
-        "round_to_the_nearest_integer": 1,
-    },
+	{
+		"name": "ESI",
+		"type": "Deduction",
+		"amount_based_on_formula": 1,
+		"formula": "round(gross_pay * 0.0075) if gross_pay <= 21000 else 0",
+		"round_to_the_nearest_integer": 1,
+		"depends_on_payment_days": 1,
+	},
+	{
+		"name": "Employee PF",
+		"type": "Deduction",
+		"amount_based_on_formula": 1,
+		"formula": "round(min(base, 15000) * 0.12)",
+		"round_to_the_nearest_integer": 1,
+		"depends_on_payment_days": 1,
+	},
+	{
+		"name": "ESI Employer Contribution",
+		"type": "Earning",
+		"statistical_component": 1,
+		"do_not_include_in_total": 1,
+		"amount_based_on_formula": 1,
+		"formula": "round(gross_pay * 0.0325) if gross_pay <= 21000 else 0",
+		"round_to_the_nearest_integer": 1,
+	},
+	{
+		"name": "PF Employer Contribution",
+		"type": "Earning",
+		"statistical_component": 1,
+		"do_not_include_in_total": 1,
+		"amount_based_on_formula": 1,
+		"formula": "round(min(base, 15000) * 0.12)",
+		"round_to_the_nearest_integer": 1,
+	},
 ]
 ```
 

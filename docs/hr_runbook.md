@@ -186,21 +186,26 @@ Source of truth is always the Python file. Don't edit Custom Fields / Role Profi
 ```python
 # Re-sync all 15 Role Profiles to current spec
 from chundakadan.seed.role_profiles import seed_profiles
+
 seed_profiles()
 
 # Re-apply USER_PROFILE_MAP (strips + re-adds roles per spec)
 from chundakadan.seed.role_profiles import apply_user_assignments
+
 apply_user_assignments()
 
 # Audit user-profile state
 from chundakadan.seed.role_profiles import audit
+
 audit()
 
 # Push a test notification
 from chundakadan.utils.push import send_to_users
+
 send_to_users(["gm@chundakadan.in"], "Test", "Test push", {"route": "/hr_policy"})
 
 # Backfill missing reverse-geocoded addresses (slow, 1 req/sec)
 from chundakadan.utils.geocode import backfill_synchronously
+
 backfill_synchronously("Customer Visit Log", lat_field="latitude", lon_field="longitude")
 ```

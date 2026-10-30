@@ -577,7 +577,7 @@ def get_permission_query_conditions(user=None):
 
 	# owner / current_approver / employee.user_id direct
 	user_q = frappe.db.escape(user)
-	base = f"(`tab%s`.owner = {user_q} OR " f"`tab%s`.current_approver = {user_q}"  # noqa: F841
+	base = f"(`tab%s`.owner = {user_q} OR `tab%s`.current_approver = {user_q}"  # noqa: F841
 
 	# We don't know the DocType in this hook signature — Frappe passes it
 	# implicitly via the caller. The placeholder %s gets replaced by
@@ -602,7 +602,7 @@ def _query_conditions_for(doctype: str, user: str) -> str:
 
 	# employee.user_id link if the doctype has an `employee` field
 	if frappe.get_meta(doctype).has_field("employee"):
-		parts.append(f"{table}.employee IN (SELECT name FROM `tabEmployee` " f"WHERE user_id = {user_q})")
+		parts.append(f"{table}.employee IN (SELECT name FROM `tabEmployee` WHERE user_id = {user_q})")
 
 	user_roles = frappe.get_roles(user)
 	if user_roles:

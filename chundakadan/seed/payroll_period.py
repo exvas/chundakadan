@@ -76,6 +76,6 @@ def ensure_current_fy_period(*args, **kwargs):
 		doc.flags.ignore_permissions = True
 		doc.insert()
 		frappe.db.commit()
-		print(f"chundakadan.seed.payroll_period: created '{period_name}' " f"({start} → {end}) for {COMPANY}")
+		print(f"chundakadan.seed.payroll_period: created '{period_name}' ({start} → {end}) for {COMPANY}")
 	except Exception as e:
 		print(f"chundakadan.seed.payroll_period: could not create period: {e}")

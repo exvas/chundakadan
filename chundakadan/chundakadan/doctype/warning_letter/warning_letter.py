@@ -62,7 +62,7 @@ class WarningLetter(Document):
 
 	def get_default_letter_content(self):
 		"""Generate default letter content based on violation type and warning type"""
-		content = f"""<p>Dear {self.employee_name or 'Employee'},</p>"""
+		content = f"""<p>Dear {self.employee_name or "Employee"},</p>"""
 
 		if self.violation_type == "Negligence of Duty":
 			content += """
@@ -84,9 +84,9 @@ class WarningLetter(Document):
 			content += f"""
 			<p>This letter serves as a formal warning regarding your {self.violation_type.lower()} on {self.warning_date}.</p>
 
-			<p>{self.violation_details or 'Details of the violation have been documented.'}</p>
+			<p>{self.violation_details or "Details of the violation have been documented."}</p>
 
-			<p>This breach has been noted, and as a consequence, you are hereby issued a {self.warning_type.lower() if self.warning_type else 'warning'}."""
+			<p>This breach has been noted, and as a consequence, you are hereby issued a {self.warning_type.lower() if self.warning_type else "warning"}."""
 
 			if self.penalty_type == "Salary Deduction":
 				content += (

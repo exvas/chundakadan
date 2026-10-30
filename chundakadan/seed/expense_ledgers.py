@@ -217,7 +217,7 @@ def _resolve_claim_account(spec: str, abbr: str) -> str | None:
 	  'REUSE:5215 - Telephone ...' -> '5215 - Telephone ... - <abbr>'
 	"""
 	if spec.startswith("REUSE:"):
-		full = f"{spec[len('REUSE:'):]} - {abbr}"
+		full = f"{spec[len('REUSE:') :]} - {abbr}"
 	else:
 		full = f"{spec} - {abbr}"
 	return full if frappe.db.exists("Account", full) else None

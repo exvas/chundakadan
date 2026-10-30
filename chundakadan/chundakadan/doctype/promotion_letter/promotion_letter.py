@@ -78,32 +78,32 @@ class PromotionLetter(Document):
 
 		content = f"""<p><strong>To,</strong><br>
 		{self.employee_name}<br>
-		ID No: {self.employee_id or 'N/A'}<br>
+		ID No: {self.employee_id or "N/A"}<br>
 		<strong>Subject:</strong> {self.subject}</p>
 
 		<p>Dear {self.employee_name},</p>
 
 		<p>We are pleased to inform you that, in recognition of your dedication, hard work, and
-		outstanding performance at {self.company or 'Chundakadan'} Agencies, you have been promoted to the position
+		outstanding performance at {self.company or "Chundakadan"} Agencies, you have been promoted to the position
 		of <strong>{self.new_position}</strong>. Effective from {effective_date_str}.</p>
 
-		<p>Your consistent commitment to maintaining high standards in {self.new_department or 'your'} services, along
+		<p>Your consistent commitment to maintaining high standards in {self.new_department or "your"} services, along
 		with your leadership skills and ability to work effectively with your team, has made you a
 		valuable asset to our organization. We are confident that you will excel in this new role and
-		continue to contribute to the success of {self.company or 'Chundakadan'} Agencies.</p>
+		continue to contribute to the success of {self.company or "Chundakadan"} Agencies.</p>
 
 		<p><strong>Details of Your New Role:</strong></p>
 		<ul>
 			<li><strong>Position:</strong> {self.new_position}</li>
-			<li><strong>Department:</strong> {self.new_department or 'N/A'}</li>
-			<li><strong>Reporting to:</strong> {frappe.db.get_value('Employee', self.reporting_to, 'employee_name') if self.reporting_to else 'N/A'}</li>
+			<li><strong>Department:</strong> {self.new_department or "N/A"}</li>
+			<li><strong>Reporting to:</strong> {frappe.db.get_value("Employee", self.reporting_to, "employee_name") if self.reporting_to else "N/A"}</li>
 		</ul>
 
 		<p>As a {self.new_position}, you will be responsible for {self.get_role_description()}.
 		We believe your skills and experience will greatly enhance the team's performance in this capacity.</p>
 
 		<p>Once again, congratulations on your well-deserved promotion. We look forward to your
-		continued contributions to {self.company or 'Chundakadan'} Agencies.</p>
+		continued contributions to {self.company or "Chundakadan"} Agencies.</p>
 
 		<p>Sincerely,<br>
 		<strong>General Manager</strong></p>
@@ -127,7 +127,7 @@ class PromotionLetter(Document):
 		return f"""<p>In recognition of your:</p>
 		<ul>
 			<li>Dedication and hard work</li>
-			<li>Outstanding performance at {self.company or 'Chundakadan'} Agencies</li>
+			<li>Outstanding performance at {self.company or "Chundakadan"} Agencies</li>
 			<li>Consistent commitment to maintaining high standards</li>
 			<li>Leadership skills and ability to work effectively with your team</li>
 			<li>Valuable contributions to the organization</li>
@@ -137,10 +137,10 @@ class PromotionLetter(Document):
 		"""Get default responsibilities for the new role"""
 		return f"""<p>As {self.new_position}, your responsibilities will include:</p>
 		<ul>
-			<li>Leading and managing the team in {self.new_department or 'your department'}</li>
+			<li>Leading and managing the team in {self.new_department or "your department"}</li>
 			<li>Ensuring high standards of work quality and efficiency</li>
 			<li>Coordinating with other departments for seamless operations</li>
-			<li>Reporting to {frappe.db.get_value('Employee', self.reporting_to, 'employee_name') if self.reporting_to else 'management'}</li>
+			<li>Reporting to {frappe.db.get_value("Employee", self.reporting_to, "employee_name") if self.reporting_to else "management"}</li>
 			<li>Contributing to strategic planning and organizational goals</li>
 		</ul>"""
 

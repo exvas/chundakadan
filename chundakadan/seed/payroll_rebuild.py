@@ -130,9 +130,7 @@ def cleanup_all_payroll():
 	backup_state() first."""
 
 	if not _latest_backup():
-		raise RuntimeError(
-			"No backup found in /tmp/chundakadan_payroll_backup/. " "Run backup_state() first."
-		)
+		raise RuntimeError("No backup found in /tmp/chundakadan_payroll_backup/. Run backup_state() first.")
 
 	print(f"Using backup: {_latest_backup()}")
 
@@ -452,7 +450,7 @@ def seed_salary_components():
 				print(f"  ✗ couldn't create {name}: {e}")
 
 	frappe.db.commit()
-	print(f"  ✓ Salary Components: {created} created, " f"{updated} updated, {unchanged} unchanged")
+	print(f"  ✓ Salary Components: {created} created, {updated} updated, {unchanged} unchanged")
 
 
 # ═════════════════════════════════════════════════════════════════════

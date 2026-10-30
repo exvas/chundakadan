@@ -108,9 +108,7 @@ DISPATCH_READ_DOCTYPES = ("Sales Invoice", "Supplier", "Customer")
 def ensure_dispatch_role(*args, **kwargs):
 	if frappe.db.exists("Role", C.ROLE):
 		return
-	frappe.get_doc({"doctype": "Role", "role_name": C.ROLE, "desk_access": 1}).insert(
-		ignore_permissions=True
-	)
+	frappe.get_doc({"doctype": "Role", "role_name": C.ROLE, "desk_access": 1}).insert(ignore_permissions=True)
 
 
 def ensure_sales_invoice_field():
@@ -157,6 +155,7 @@ def ensure_dispatch_setup(*args, **kwargs):
 ````python
 # file: edit_hooks.py
 """Edit hooks.py and patches.txt for dispatch tracking. Idempotent; aborts on missing anchors."""
+
 import sys
 
 APP = "/home/frappe/frappe-bench-15-india/apps/chundakadan/chundakadan"
@@ -165,34 +164,34 @@ hk = APP + "/hooks.py"
 h = open(hk).read()
 
 if "chundakadan.dispatch.events.create_dispatch_log" not in h:
-    anchor = '        "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",'
-    if h.count(anchor) != 1:
-        sys.exit("hooks.py: Sales Invoice on_trash anchor not found once")
-    h = h.replace(
-        anchor,
-        anchor
-        + '\n        "on_submit": "chundakadan.dispatch.events.create_dispatch_log",'
-        + '\n        "on_cancel": "chundakadan.dispatch.events.mark_invoice_cancelled",',
-    )
-    print("hooks.py: Sales Invoice on_submit/on_cancel added")
+	anchor = '        "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",'
+	if h.count(anchor) != 1:
+		sys.exit("hooks.py: Sales Invoice on_trash anchor not found once")
+	h = h.replace(
+		anchor,
+		anchor
+		+ '\n        "on_submit": "chundakadan.dispatch.events.create_dispatch_log",'
+		+ '\n        "on_cancel": "chundakadan.dispatch.events.mark_invoice_cancelled",',
+	)
+	print("hooks.py: Sales Invoice on_submit/on_cancel added")
 
 if "chundakadan.dispatch.setup.ensure_dispatch_role" not in h:
-    anchor = 'before_migrate = [\n'
-    if h.count(anchor) != 1:
-        sys.exit("hooks.py: before_migrate anchor not found once")
-    h = h.replace(anchor, anchor + '    "chundakadan.dispatch.setup.ensure_dispatch_role",\n')
-    print("hooks.py: before_migrate ensure_dispatch_role added")
+	anchor = "before_migrate = [\n"
+	if h.count(anchor) != 1:
+		sys.exit("hooks.py: before_migrate anchor not found once")
+	h = h.replace(anchor, anchor + '    "chundakadan.dispatch.setup.ensure_dispatch_role",\n')
+	print("hooks.py: before_migrate ensure_dispatch_role added")
 
 if "chundakadan.dispatch.setup.ensure_dispatch_setup" not in h:
-    anchor = '    "chundakadan.install.ensure_sick_leave_deduction_component",\n]\n\n# Uninstallation'
-    if h.count(anchor) != 1:
-        sys.exit("hooks.py: after_migrate closing anchor not found once")
-    h = h.replace(
-        anchor,
-        '    "chundakadan.install.ensure_sick_leave_deduction_component",\n'
-        '    "chundakadan.dispatch.setup.ensure_dispatch_setup",\n]\n\n# Uninstallation',
-    )
-    print("hooks.py: after_migrate ensure_dispatch_setup added")
+	anchor = '    "chundakadan.install.ensure_sick_leave_deduction_component",\n]\n\n# Uninstallation'
+	if h.count(anchor) != 1:
+		sys.exit("hooks.py: after_migrate closing anchor not found once")
+	h = h.replace(
+		anchor,
+		'    "chundakadan.install.ensure_sick_leave_deduction_component",\n'
+		'    "chundakadan.dispatch.setup.ensure_dispatch_setup",\n]\n\n# Uninstallation',
+	)
+	print("hooks.py: after_migrate ensure_dispatch_setup added")
 
 open(hk, "w").write(h)
 
@@ -200,8 +199,8 @@ pt = APP + "/patches.txt"
 p = open(pt).read()
 entry = "chundakadan.patches.backfill_dispatch_logs"
 if entry not in p:
-    open(pt, "w").write(p.rstrip("\n") + "\n" + entry + "\n")
-    print("patches.txt: backfill_dispatch_logs added")
+	open(pt, "w").write(p.rstrip("\n") + "\n" + entry + "\n")
+	print("patches.txt: backfill_dispatch_logs added")
 ````
 
 - [ ] **Step 3: Verify**
@@ -334,17 +333,13 @@ class TestDispatchLog(FrappeTestCase):
 		log = self._dispatch(fresh_log(self.invoices[0]), expected_delivery="2 Days")
 		self.assertEqual(log.dispatched_by, "Administrator")
 		self.assertIsNotNone(log.dispatched_on)
-		self.assertEqual(
-			getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 2)
-		)
+		self.assertEqual(getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 2))
 
 	def test_changing_option_recomputes_date(self):
 		log = self._dispatch(fresh_log(self.invoices[0]), expected_delivery="Next Day")
 		log.expected_delivery = "After 2 Days"
 		log.save()
-		self.assertEqual(
-			getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 3)
-		)
+		self.assertEqual(getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 3))
 
 	def test_invalid_transition_rejected(self):
 		log = fresh_log(self.invoices[0])
@@ -383,7 +378,9 @@ class TestDispatchLog(FrappeTestCase):
 		self.assertEqual(invoice.transporter, self.transporter)
 		self.assertEqual(invoice.vehicle_no, "KL10XY9999")
 		self.assertEqual(invoice.dispatch_status, C.DISPATCHED)
-		self.assertEqual(frappe.db.get_value("Dispatch Log", log.name, "ewaybill_sync_status"), "Not Required")
+		self.assertEqual(
+			frappe.db.get_value("Dispatch Log", log.name, "ewaybill_sync_status"), "Not Required"
+		)
 ````
 
 - [ ] **Step 2: Create the DocType definition**
@@ -541,9 +538,7 @@ class DispatchLog(Document):
 		new_status = self.dispatch_status or C.PENDING
 
 		if new_status not in ALLOWED_TRANSITIONS.get(old_status, set()):
-			frappe.throw(
-				_("Dispatch status cannot change from {0} to {1}.").format(old_status, new_status)
-			)
+			frappe.throw(_("Dispatch status cannot change from {0} to {1}.").format(old_status, new_status))
 
 		if new_status == C.DISPATCHED:
 			self._validate_dispatch(old_status, previous)
@@ -712,7 +707,9 @@ class TestDispatch(FrappeTestCase):
 
 	def _dispatched_log_with_ewaybill(self, gst_transporter_id=None):
 		log = fresh_log(self.invoices[0])
-		frappe.db.set_value("Sales Invoice", log.sales_invoice, "ewaybill", "331000000001", update_modified=False)
+		frappe.db.set_value(
+			"Sales Invoice", log.sales_invoice, "ewaybill", "331000000001", update_modified=False
+		)
 		log.transporter = self.transporter
 		log.gst_transporter_id = gst_transporter_id
 		log.vehicle_no = "KL10AB1234"
@@ -723,21 +720,29 @@ class TestDispatch(FrappeTestCase):
 
 	def test_sync_with_ewaybill_updates_vehicle_on_portal(self):
 		log = self._dispatched_log_with_ewaybill()
-		with patch(f"{E_WAYBILL}.update_vehicle_info") as vehicle, patch(f"{E_WAYBILL}.update_transporter") as transporter:
+		with (
+			patch(f"{E_WAYBILL}.update_vehicle_info") as vehicle,
+			patch(f"{E_WAYBILL}.update_transporter") as transporter,
+		):
 			log.save()
 		vehicle.assert_called_once()
 		values = vehicle.call_args.kwargs["values"]
 		self.assertEqual(values["vehicle_no"], "KL10AB1234")
 		self.assertEqual(values["lr_no"], "LR-1")
 		transporter.assert_not_called()  # no GST transporter id
-		self.assertEqual(frappe.db.get_value("Sales Invoice", log.sales_invoice, "transporter"), self.transporter)
+		self.assertEqual(
+			frappe.db.get_value("Sales Invoice", log.sales_invoice, "transporter"), self.transporter
+		)
 		self.assertEqual(frappe.db.get_value("Dispatch Log", log.name, "ewaybill_sync_status"), "Synced")
 
 	def test_sync_calls_update_transporter_when_id_present(self):
 		log = self._dispatched_log_with_ewaybill()
 		# Every save/sync of a log whose invoice has an e-Waybill must stay patched:
 		# unpatched calls would reach the live e-Waybill portal.
-		with patch(f"{E_WAYBILL}.update_vehicle_info"), patch(f"{E_WAYBILL}.update_transporter") as transporter:
+		with (
+			patch(f"{E_WAYBILL}.update_vehicle_info"),
+			patch(f"{E_WAYBILL}.update_transporter") as transporter,
+		):
 			log.save()
 			transporter.reset_mock()
 			# fetch_from blanks the id on save, so set it after saving and sync directly
@@ -750,7 +755,12 @@ class TestDispatch(FrappeTestCase):
 		log = self._dispatched_log_with_ewaybill()
 		with patch(f"{E_WAYBILL}.update_vehicle_info", side_effect=Exception("portal down")):
 			log.save()
-		row = frappe.db.get_value("Dispatch Log", log.name, ["dispatch_status", "ewaybill_sync_status", "ewaybill_sync_error"], as_dict=True)
+		row = frappe.db.get_value(
+			"Dispatch Log",
+			log.name,
+			["dispatch_status", "ewaybill_sync_status", "ewaybill_sync_error"],
+			as_dict=True,
+		)
 		self.assertEqual(row.dispatch_status, C.DISPATCHED)
 		self.assertEqual(row.ewaybill_sync_status, "Failed")
 		self.assertIn("portal down", row.ewaybill_sync_error)
@@ -952,7 +962,10 @@ def _as_administrator(fn, **kwargs):
 def _place_of_dispatch(invoice):
 	city, state = None, None
 	if invoice.company_address:
-		city, state = frappe.db.get_value("Address", invoice.company_address, ["city", "state"]) or (None, None)
+		city, state = frappe.db.get_value("Address", invoice.company_address, ["city", "state"]) or (
+			None,
+			None,
+		)
 	return city or "Kerala", state or "Kerala"
 
 
@@ -997,9 +1010,7 @@ def _sync_ewaybill(log, invoice):
 			},
 		)
 
-	frappe.db.set_value(
-		"Sales Invoice", invoice.name, "driver_name", log.driver_name, update_modified=False
-	)
+	frappe.db.set_value("Sales Invoice", invoice.name, "driver_name", log.driver_name, update_modified=False)
 
 
 def sync_transport(log) -> str:
@@ -1148,7 +1159,10 @@ def _count(conditions, or_filters):
 def get_counts(filters=None):
 	frappe.has_permission("Dispatch Log", "read", throw=True)
 	base, or_filters = _base_filters(filters)
-	counts = {tab: _count(base + _tab_filters(tab), or_filters) for tab in ("pending", "followup", "dispatched", "not_delivered")}
+	counts = {
+		tab: _count(base + _tab_filters(tab), or_filters)
+		for tab in ("pending", "followup", "dispatched", "not_delivered")
+	}
 	counts["delivered_today"] = _count(
 		base
 		+ [
@@ -1203,14 +1217,22 @@ def _set_transport(doc, transporter, vehicle_no, lr_no, lr_date, driver_name, mo
 	doc.lr_date = lr_date or None
 	doc.driver_name = driver_name
 	doc.mode_of_transport = mode_of_transport or "Road"
-	supplier = frappe.db.get_value("Supplier", transporter, ["supplier_name", "gst_transporter_id"], as_dict=True) if transporter else None
+	supplier = (
+		frappe.db.get_value("Supplier", transporter, ["supplier_name", "gst_transporter_id"], as_dict=True)
+		if transporter
+		else None
+	)
 	doc.transporter_name = supplier.supplier_name if supplier else None
 	doc.gst_transporter_id = supplier.gst_transporter_id if supplier else None
 
 
 def _result(doc):
 	doc.reload()
-	return {"name": doc.name, "dispatch_status": doc.dispatch_status, "ewaybill_sync_status": doc.ewaybill_sync_status}
+	return {
+		"name": doc.name,
+		"dispatch_status": doc.dispatch_status,
+		"ewaybill_sync_status": doc.ewaybill_sync_status,
+	}
 
 
 @frappe.whitelist()

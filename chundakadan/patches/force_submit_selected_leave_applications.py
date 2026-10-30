@@ -55,12 +55,12 @@ def execute():
 					"Leave Application", amended_doc.name, "docstatus", 1, update_modified=False
 				)
 
-				print(f"[{docname}] " f"Amended -> {amended_doc.name}")
+				print(f"[{docname}] Amended -> {amended_doc.name}")
 
 				amended += 1
 
 			else:
-				print(f"[{docname}] " "Already submitted")
+				print(f"[{docname}] Already submitted")
 
 				skipped += 1
 
@@ -69,4 +69,4 @@ def execute():
 
 	frappe.db.commit()
 
-	print(f"\n✅ Submitted: {submitted}" f"\n🔁 Amended: {amended}" f"\n⏭ Skipped: {skipped}")
+	print(f"\n✅ Submitted: {submitted}\n🔁 Amended: {amended}\n⏭ Skipped: {skipped}")

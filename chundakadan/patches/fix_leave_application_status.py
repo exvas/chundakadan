@@ -60,7 +60,7 @@ def execute():
 				update_modified=False,
 			)
 
-			print(f"[{rec.name}] " f"'{old_status}' → '{new_status}'")
+			print(f"[{rec.name}] '{old_status}' → '{new_status}'")
 
 			updated += 1
 		else:
