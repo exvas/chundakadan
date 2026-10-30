@@ -21,11 +21,35 @@ def get_columns():
 		{"label": _("Status"), "fieldname": "status", "fieldtype": "Data", "width": 90},
 		{"label": _("Days to Cheque Date"), "fieldname": "days_to_due", "fieldtype": "Int", "width": 90},
 		{"label": _("Customer's Bank"), "fieldname": "bank_name", "fieldtype": "Data", "width": 140},
-		{"label": _("Sales Person"), "fieldname": "sales_person", "fieldtype": "Link", "options": "Sales Person", "width": 130},
+		{
+			"label": _("Sales Person"),
+			"fieldname": "sales_person",
+			"fieldtype": "Link",
+			"options": "Sales Person",
+			"width": 130,
+		},
 		{"label": _("Invoices"), "fieldname": "invoices", "fieldtype": "Data", "width": 180},
-		{"label": _("Payment Entry"), "fieldname": "payment_entry", "fieldtype": "Link", "options": "Payment Entry", "width": 140},
-		{"label": _("PDC"), "fieldname": "name", "fieldtype": "Link", "options": "Post Dated Cheque", "width": 120},
-		{"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 100},
+		{
+			"label": _("Payment Entry"),
+			"fieldname": "payment_entry",
+			"fieldtype": "Link",
+			"options": "Payment Entry",
+			"width": 140,
+		},
+		{
+			"label": _("PDC"),
+			"fieldname": "name",
+			"fieldtype": "Link",
+			"options": "Post Dated Cheque",
+			"width": 120,
+		},
+		{
+			"label": _("Customer"),
+			"fieldname": "customer",
+			"fieldtype": "Link",
+			"options": "Customer",
+			"width": 100,
+		},
 	]
 
 
@@ -49,7 +73,19 @@ def get_data(filters):
 	rows = frappe.get_all(
 		"Post Dated Cheque",
 		filters=conditions,
-		fields=["name", "cheque_date", "cheque_no", "customer", "customer_name", "amount", "posting_date", "status", "bank_name", "sales_person", "payment_entry"],
+		fields=[
+			"name",
+			"cheque_date",
+			"cheque_no",
+			"customer",
+			"customer_name",
+			"amount",
+			"posting_date",
+			"status",
+			"bank_name",
+			"sales_person",
+			"payment_entry",
+		],
 		order_by="cheque_date asc, creation asc",
 	)
 	if not rows:

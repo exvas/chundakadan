@@ -14,7 +14,9 @@ COMPANY = "Chundakadan Agencies"
 
 
 def ensure_doctype():
-	import_file_by_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "customer_follow_up.json"), force=True)
+	import_file_by_path(
+		os.path.join(os.path.dirname(os.path.abspath(__file__)), "customer_follow_up.json"), force=True
+	)
 
 
 class TestCustomerFollowUp(FrappeTestCase):
@@ -35,23 +37,27 @@ class TestCustomerFollowUp(FrappeTestCase):
 		frappe.db.rollback()
 
 	def _follow_up(self, **values):
-		doc = frappe.get_doc({
-			"doctype": "Customer Follow Up",
-			"customer": self.customer,
-			"company": COMPANY,
-			"follow_up_date": nowdate(),
-			"outcome": "Called",
-			"next_follow_up_date": add_days(nowdate(), 3),
-			"remarks": "spoke to the accountant",
-			**values,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Customer Follow Up",
+				"customer": self.customer,
+				"company": COMPANY,
+				"follow_up_date": nowdate(),
+				"outcome": "Called",
+				"next_follow_up_date": add_days(nowdate(), 3),
+				"remarks": "spoke to the accountant",
+				**values,
+			}
+		)
 		doc.insert()
 		doc.reload()
 		return doc
 
 	def test_outstanding_is_stamped_from_the_invoices(self):
 		doc = self._follow_up()
-		self.assertAlmostEqual(flt(doc.outstanding_amount), flt(customer_outstanding(self.customer, COMPANY)), places=2)
+		self.assertAlmostEqual(
+			flt(doc.outstanding_amount), flt(customer_outstanding(self.customer, COMPANY)), places=2
+		)
 		self.assertGreater(flt(doc.outstanding_amount), 0)
 
 	def test_a_task_is_created_for_the_next_date(self):
@@ -93,7 +99,9 @@ class TestCustomerFollowUp(FrappeTestCase):
 		self.assertEqual(flt(promised.promised_amount), 1000)
 
 	def test_chase_history_lists_newest_first(self):
-		first = self._follow_up(follow_up_date=add_days(nowdate(), -5), next_follow_up_date=add_days(nowdate(), -1))
+		first = self._follow_up(
+			follow_up_date=add_days(nowdate(), -5), next_follow_up_date=add_days(nowdate(), -1)
+		)
 		second = self._follow_up()
 		history = chase_history(self.customer, COMPANY)
 		self.assertEqual([row["name"] for row in history][:2], [second.name, first.name])
@@ -101,7 +109,14 @@ class TestCustomerFollowUp(FrappeTestCase):
 	def test_accounts_user_can_log_one(self):
 		meta_roles = {p.role: p for p in frappe.get_meta("Customer Follow Up").permissions}
 		self.assertIn("Accounts User", meta_roles)
-		self.assertEqual((meta_roles["Accounts User"].read, meta_roles["Accounts User"].write, meta_roles["Accounts User"].create), (1, 1, 1))
+		self.assertEqual(
+			(
+				meta_roles["Accounts User"].read,
+				meta_roles["Accounts User"].write,
+				meta_roles["Accounts User"].create,
+			),
+			(1, 1, 1),
+		)
 		self.assertEqual(meta_roles["Accounts User"].delete, 0)
 
 	def test_deleting_removes_its_task(self):
@@ -125,8 +140,9 @@ class TestCustomerFollowUp(FrappeTestCase):
 
 	def test_partially_paid_still_needs_a_next_date(self):
 		with self.assertRaises(frappe.ValidationError):
-			self._follow_up(outcome="Partially Paid", paid_amount=self._part_of_the_bill(),
-			                next_follow_up_date=None)
+			self._follow_up(
+				outcome="Partially Paid", paid_amount=self._part_of_the_bill(), next_follow_up_date=None
+			)
 
 	def _part_of_the_bill(self):
 		"""Some of what is owed -- never all of it, which would be Paid."""

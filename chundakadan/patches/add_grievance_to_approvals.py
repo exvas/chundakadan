@@ -36,16 +36,18 @@ def execute():
 
 	content = json.loads(ws.content or "[]")
 	if not any(
-		block.get("type") == "number_card"
-		and block.get("data", {}).get("number_card_name") == CARD
+		block.get("type") == "number_card" and block.get("data", {}).get("number_card_name") == CARD
 		for block in content
 	):
 		last = _last_number_card_index(content)
-		content.insert(last + 1, {
-			"id": "ap_nc_griev",
-			"type": "number_card",
-			"data": {"number_card_name": CARD, "col": 3},
-		})
+		content.insert(
+			last + 1,
+			{
+				"id": "ap_nc_griev",
+				"type": "number_card",
+				"data": {"number_card_name": CARD, "col": 3},
+			},
+		)
 		ws.content = json.dumps(content)
 		changed = True
 
@@ -86,9 +88,14 @@ def _add_link_under(ws, card_break_label, doctype):
 	rows[start].link_count = (rows[start].link_count or 0) + 1
 
 	new_row = {
-		"type": "Link", "link_type": "DocType", "link_to": doctype,
-		"label": doctype, "hidden": 0, "is_query_report": 0,
-		"link_count": 0, "onboard": 0,
+		"type": "Link",
+		"link_type": "DocType",
+		"link_to": doctype,
+		"label": doctype,
+		"hidden": 0,
+		"is_query_report": 0,
+		"link_count": 0,
+		"onboard": 0,
 	}
 	ordered = [r.as_dict() for r in rows[:end]] + [new_row] + [r.as_dict() for r in rows[end:]]
 	ws.set("links", [])

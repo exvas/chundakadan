@@ -13,13 +13,15 @@ def day(minutes, deduction):
 
 
 def salary(rows, **kwargs):
-	return frappe._dict({
-		"salary_component": "Late Arrival Deduction",
-		"custom_reason": FETCHED_REASON,
-		"custom_late_entry_details": rows,
-		"amount": 307,
-		**kwargs,
-	})
+	return frappe._dict(
+		{
+			"salary_component": "Late Arrival Deduction",
+			"custom_reason": FETCHED_REASON,
+			"custom_late_entry_details": rows,
+			"amount": 307,
+			**kwargs,
+		}
+	)
 
 
 class TestLateEntryTotal(FrappeTestCase):
@@ -32,8 +34,9 @@ class TestLateEntryTotal(FrappeTestCase):
 		doc = salary([day(2, 3.01), day(20, 30.07)])
 		sync_late_entry_total(doc)
 		self.assertIn("22 late min over 2 day(s)", doc.custom_reason)
-		self.assertIn("2026-10-01 to 2026-10-31", doc.custom_reason,
-					  "the period that was fetched must survive")
+		self.assertIn(
+			"2026-10-01 to 2026-10-31", doc.custom_reason, "the period that was fetched must survive"
+		)
 
 	def test_dropping_every_day_cuts_nothing(self):
 		doc = salary([])

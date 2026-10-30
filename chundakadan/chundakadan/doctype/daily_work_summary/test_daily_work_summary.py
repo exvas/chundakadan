@@ -16,9 +16,7 @@ OTHER_USER = "dws.other@example.com"
 
 
 def _import(*parts):
-	import_file_by_path(
-		os.path.join(os.path.dirname(os.path.abspath(__file__)), *parts), force=True
-	)
+	import_file_by_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), *parts), force=True)
 
 
 class WorkSummaryCase(FrappeTestCase):
@@ -49,9 +47,7 @@ class WorkSummaryCase(FrappeTestCase):
 	def _clear_previous(self):
 		"""Sending a summary fires a push, which commits, so documents
 		survive the per-test rollback. Start each test with a clean slate."""
-		for name in frappe.get_all(
-			"Daily Work Summary", filters={"employee": self.employee}, pluck="name"
-		):
+		for name in frappe.get_all("Daily Work Summary", filters={"employee": self.employee}, pluck="name"):
 			frappe.db.delete("Daily Work Summary Task", {"parent": name})
 			frappe.db.delete("Chundakadan Approval Detail", {"parent": name})
 			frappe.db.delete("Daily Work Summary", {"name": name})
@@ -64,10 +60,15 @@ class WorkSummaryCase(FrappeTestCase):
 
 	def _user(self, email, roles):
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({
-				"doctype": "User", "email": email, "first_name": email.split("@")[0],
-				"send_welcome_email": 0, "user_type": "System User",
-			}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": email.split("@")[0],
+					"send_welcome_email": 0,
+					"user_type": "System User",
+				}
+			).insert(ignore_permissions=True)
 		frappe.get_doc("User", email).add_roles("Employee", *roles)
 		return email
 
@@ -76,32 +77,41 @@ class WorkSummaryCase(FrappeTestCase):
 		existing = frappe.db.get_value("Employee", {"user_id": email}, "name")
 		if existing:
 			return existing
-		dept = department if frappe.db.exists("Department", department) else frappe.db.get_value("Department", {}, "name")
-		doc = frappe.get_doc({
-			"doctype": "Employee",
-			"first_name": "DWS Tester",
-			"user_id": email,
-			"company": frappe.db.get_value("Company", {}, "name"),
-			"date_of_birth": "1995-01-01",
-			"date_of_joining": "2026-01-01",
-			"gender": frappe.db.get_value("Gender", {}, "name"),
-			"status": "Active",
-			"department": dept,
-		}).insert(ignore_permissions=True)
+		dept = (
+			department
+			if frappe.db.exists("Department", department)
+			else frappe.db.get_value("Department", {}, "name")
+		)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "DWS Tester",
+				"user_id": email,
+				"company": frappe.db.get_value("Company", {}, "name"),
+				"date_of_birth": "1995-01-01",
+				"date_of_joining": "2026-01-01",
+				"gender": frappe.db.get_value("Gender", {}, "name"),
+				"status": "Active",
+				"department": dept,
+			}
+		).insert(ignore_permissions=True)
 		return doc.name
 
 	def _summary(self, work_date=None, as_user=EMP_USER, tasks=None):
 		frappe.set_user(as_user)
-		doc = frappe.get_doc({
-			"doctype": "Daily Work Summary",
-			"employee": self.employee,
-			"company": self.company,
-			"work_date": work_date or today(),
-			"tasks": tasks or [
-				{"task": "Customer visit", "work_description": "4 shops in Calicut"},
-				{"task": "Payment follow-up", "work_description": "3 parties called"},
-			],
-		}).insert(ignore_permissions=True)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Daily Work Summary",
+				"employee": self.employee,
+				"company": self.company,
+				"work_date": work_date or today(),
+				"tasks": tasks
+				or [
+					{"task": "Customer visit", "work_description": "4 shops in Calicut"},
+					{"task": "Payment follow-up", "work_description": "3 parties called"},
+				],
+			}
+		).insert(ignore_permissions=True)
 		frappe.set_user("Administrator")
 		return doc
 
@@ -135,12 +145,14 @@ class TestTheChain(WorkSummaryCase):
 		frappe.set_user(EMP_USER)
 		try:
 			with self.assertRaises(frappe.MandatoryError):
-				frappe.get_doc({
-					"doctype": "Daily Work Summary",
-					"employee": self.employee,
-					"company": self.company,
-					"work_date": today(),
-				}).insert(ignore_permissions=True)
+				frappe.get_doc(
+					{
+						"doctype": "Daily Work Summary",
+						"employee": self.employee,
+						"company": self.company,
+						"work_date": today(),
+					}
+				).insert(ignore_permissions=True)
 		finally:
 			frappe.set_user("Administrator")
 
@@ -416,9 +428,7 @@ class TestVisibility(WorkSummaryCase):
 		doc = self._send(self._summary())
 		frappe.set_user(OTHER_USER)
 		condition = ws.get_permission_query_conditions()
-		rows = frappe.db.sql(
-			f"select name from `tabDaily Work Summary` where {condition}", pluck=True
-		)
+		rows = frappe.db.sql(f"select name from `tabDaily Work Summary` where {condition}", pluck=True)
 		frappe.set_user("Administrator")
 		self.assertNotIn(doc.name, rows)
 
@@ -427,9 +437,7 @@ class TestVisibility(WorkSummaryCase):
 		for user in (EMP_USER, self.hod):
 			frappe.set_user(user)
 			condition = ws.get_permission_query_conditions()
-			rows = frappe.db.sql(
-				f"select name from `tabDaily Work Summary` where {condition}", pluck=True
-			)
+			rows = frappe.db.sql(f"select name from `tabDaily Work Summary` where {condition}", pluck=True)
 			frappe.set_user("Administrator")
 			self.assertIn(doc.name, rows, user)
 
@@ -450,9 +458,7 @@ class TestWhoSeesEverything(WorkSummaryCase):
 			condition = ws.get_permission_query_conditions()
 			if not condition:
 				return frappe.get_all("Daily Work Summary", pluck="name", ignore_permissions=True)
-			return frappe.db.sql(
-				f"select name from `tabDaily Work Summary` where {condition}", pluck=True
-			)
+			return frappe.db.sql(f"select name from `tabDaily Work Summary` where {condition}", pluck=True)
 		finally:
 			frappe.set_user("Administrator")
 
@@ -521,9 +527,11 @@ class TestTheHodFollowsTheirDepartment(WorkSummaryCase):
 		frappe.set_user(holder)
 		try:
 			condition = ws.get_permission_query_conditions()
-			rows = frappe.db.sql(
-				f"select name from `tabDaily Work Summary` where {condition}", pluck=True
-			) if condition else []
+			rows = (
+				frappe.db.sql(f"select name from `tabDaily Work Summary` where {condition}", pluck=True)
+				if condition
+				else []
+			)
 			self.assertIn(draft.name, rows)
 			self.assertTrue(ws.has_permission(draft))
 		finally:
@@ -568,8 +576,9 @@ class TestComments(WorkSummaryCase):
 		self.assertEqual(len(notes), 1)
 		self.assertEqual(notes[0].content, "Add the Kannur visits tomorrow")
 		self.item.reload()
-		self.assertEqual(self.item.custom_approval_status, ws.STATUS_PENDING,
-		                 "a comment must not move the summary along")
+		self.assertEqual(
+			self.item.custom_approval_status, ws.STATUS_PENDING, "a comment must not move the summary along"
+		)
 		self.assertIsNone(self.item.hod_remarks, "a comment is not a remark")
 
 	def test_the_employee_can_reply_on_their_own(self):
@@ -617,9 +626,7 @@ class TestHodResolution(WorkSummaryCase):
 
 	def test_accounts_and_purchase_go_to_accounts(self):
 		for dept in ("Accounts - CA", "Purchase - CA"):
-			self.assertEqual(
-				ws.hod_role_for_department(dept), "Accounts Manager Leave Approver", dept
-			)
+			self.assertEqual(ws.hod_role_for_department(dept), "Accounts Manager Leave Approver", dept)
 
 	def test_anything_else_goes_to_hr(self):
 		for dept in (None, "", "Stores - CA"):
@@ -634,10 +641,13 @@ class TestRemindersAndStatus(WorkSummaryCase):
 	"""Phase 3 — who has not sent today's summary."""
 
 	def _settings(self, enabled, time_value="18:00:00"):
-		frappe.db.set_single_value("Chundakadan Settings", {
-			"enable_work_summary_reminder": 1 if enabled else 0,
-			"work_summary_reminder_time": time_value,
-		})
+		frappe.db.set_single_value(
+			"Chundakadan Settings",
+			{
+				"enable_work_summary_reminder": 1 if enabled else 0,
+				"work_summary_reminder_time": time_value,
+			},
+		)
 
 	@classmethod
 	def setUpClass(cls):
@@ -645,8 +655,11 @@ class TestRemindersAndStatus(WorkSummaryCase):
 		if not frappe.get_meta("Chundakadan Settings").has_field("enable_work_summary_reminder"):
 			import_file_by_path(
 				frappe.get_app_path(
-					"field_sales", "field_sales", "doctype",
-					"chundakadan_settings", "chundakadan_settings.json",
+					"field_sales",
+					"field_sales",
+					"doctype",
+					"chundakadan_settings",
+					"chundakadan_settings.json",
 				),
 				force=True,
 			)
@@ -681,8 +694,9 @@ class TestRemindersAndStatus(WorkSummaryCase):
 		self.assertIn(self.employee, [e.name for e in ws.not_submitted(today())])
 
 	def test_a_holiday_is_not_a_missing_summary(self):
-		holiday_list = frappe.db.get_value("Employee", self.employee, "holiday_list") or \
-			frappe.db.get_value("Company", self.company, "default_holiday_list")
+		holiday_list = frappe.db.get_value("Employee", self.employee, "holiday_list") or frappe.db.get_value(
+			"Company", self.company, "default_holiday_list"
+		)
 		if not holiday_list:
 			self.skipTest("no holiday list on this site")
 		day = add_days(today(), -400)
@@ -700,12 +714,19 @@ class TestRemindersAndStatus(WorkSummaryCase):
 		leave_type = frappe.db.get_value("Leave Type", {}, "name")
 		if not leave_type:
 			self.skipTest("no leave type on this site")
-		frappe.get_doc({
-			"doctype": "Leave Application", "employee": self.employee,
-			"leave_type": leave_type, "from_date": day, "to_date": day,
-			"company": self.company, "status": "Approved", "docstatus": 1,
-			"posting_date": day,
-		}).db_insert()
+		frappe.get_doc(
+			{
+				"doctype": "Leave Application",
+				"employee": self.employee,
+				"leave_type": leave_type,
+				"from_date": day,
+				"to_date": day,
+				"company": self.company,
+				"status": "Approved",
+				"docstatus": 1,
+				"posting_date": day,
+			}
+		).db_insert()
 		self.assertNotIn(self.employee, [e.name for e in ws.not_submitted(day)])
 
 	def test_the_department_filter_narrows_it(self):
@@ -735,9 +756,7 @@ class TestRemindersAndStatus(WorkSummaryCase):
 
 		self._settings(True, f"{now_datetime().hour:02d}:00:00")
 		ws.send_submission_reminders()
-		logs = frappe.get_all(
-			"Notification Log", filters={"for_user": EMP_USER}, pluck="subject"
-		)
+		logs = frappe.get_all("Notification Log", filters={"for_user": EMP_USER}, pluck="subject")
 		self.assertTrue(any("work summary" in (s or "").lower() for s in logs), logs)
 
 	def test_the_reminder_skips_whoever_already_sent(self):
@@ -818,10 +837,13 @@ class TestMobileEndpoints(WorkSummaryCase):
 
 		frappe.set_user(EMP_USER)
 		first = self._call(save_work_summary, tasks=[{"task": "Visit", "work_description": "3 shops"}])
-		second = self._call(save_work_summary, tasks=[
-			{"task": "Visit", "work_description": "3 shops"},
-			{"task": "Collection", "work_description": "2 cheques"},
-		])
+		second = self._call(
+			save_work_summary,
+			tasks=[
+				{"task": "Visit", "work_description": "3 shops"},
+				{"task": "Collection", "work_description": "2 cheques"},
+			],
+		)
 		frappe.set_user("Administrator")
 		self.assertEqual(first["data"]["name"], second["data"]["name"], second)
 		self.assertEqual(len(second["data"]["tasks"]), 2)
@@ -854,10 +876,13 @@ class TestMobileEndpoints(WorkSummaryCase):
 
 		self._send(self._summary())
 		frappe.set_user(EMP_USER)
-		res = self._call(save_work_summary, tasks=[
-			{"task": "Visit", "work_description": "3 shops"},
-			{"task": "Collection", "work_description": "2 cheques"},
-		])
+		res = self._call(
+			save_work_summary,
+			tasks=[
+				{"task": "Visit", "work_description": "3 shops"},
+				{"task": "Collection", "work_description": "2 cheques"},
+			],
+		)
 		frappe.set_user("Administrator")
 		self.assertTrue(res["success"], res)
 		self.assertEqual(len(res["data"]["tasks"]), 2)
@@ -930,8 +955,12 @@ class TestMobileEndpoints(WorkSummaryCase):
 
 		doc = self._send(self._summary())
 		frappe.set_user(OTHER_USER)
-		self.assertEqual(self._call(work_summary_add_remarks, docname=doc.name, remarks="x")["http_status_code"], 403)
-		self.assertEqual(self._call(work_summary_return, docname=doc.name, reason="x")["http_status_code"], 403)
+		self.assertEqual(
+			self._call(work_summary_add_remarks, docname=doc.name, remarks="x")["http_status_code"], 403
+		)
+		self.assertEqual(
+			self._call(work_summary_return, docname=doc.name, reason="x")["http_status_code"], 403
+		)
 		frappe.set_user("Administrator")
 
 	def test_access_tells_the_app_what_to_show(self):
@@ -962,9 +991,7 @@ class TestPermissions(WorkSummaryCase):
 		through add_remarks, which submits as Administrator. Leaving the
 		permission on put a "Submit this document to confirm" banner and a
 		Submit button on every draft, inviting people round the approval."""
-		perms = frappe.get_all(
-			"DocPerm", filters={"parent": "Daily Work Summary"}, fields=["role", "submit"]
-		)
+		perms = frappe.get_all("DocPerm", filters={"parent": "Daily Work Summary"}, fields=["role", "submit"])
 		self.assertTrue(perms)
 		for perm in perms:
 			self.assertFalse(perm.submit, f"{perm.role} still has submit")
@@ -982,7 +1009,8 @@ class TestPermissions(WorkSummaryCase):
 
 	def test_every_role_on_the_doctype_can_create(self):
 		perms = frappe.get_all(
-			"DocPerm", filters={"parent": "Daily Work Summary"},
+			"DocPerm",
+			filters={"parent": "Daily Work Summary"},
 			fields=["role", "create", "read", "write"],
 		)
 		self.assertTrue(perms)
@@ -992,9 +1020,10 @@ class TestPermissions(WorkSummaryCase):
 			self.assertEqual(perm.write, 1, perm.role)
 
 	def test_the_employee_role_is_among_them(self):
-		roles = {p.role for p in frappe.get_all(
-			"DocPerm", filters={"parent": "Daily Work Summary"}, fields=["role"]
-		)}
+		roles = {
+			p.role
+			for p in frappe.get_all("DocPerm", filters={"parent": "Daily Work Summary"}, fields=["role"])
+		}
 		self.assertIn("Employee", roles)
 
 	def test_an_approver_can_create_their_own_summary(self):

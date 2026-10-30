@@ -10,7 +10,9 @@ from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_lis
 from hrms.hr.doctype.attendance.attendance import mark_attendance
 from hrms.hr.doctype.leave_application.test_leave_application import make_allocation_record
 from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
-from chundakadan.chundakadan.report.monthly_attendance_sheet_employees.monthly_attendance_sheet_employees import execute
+from chundakadan.chundakadan.report.monthly_attendance_sheet_employees.monthly_attendance_sheet_employees import (
+	execute,
+)
 from hrms.payroll.doctype.salary_slip.test_salary_slip import (
 	make_holiday_list,
 	make_leave_application,

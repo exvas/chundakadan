@@ -44,8 +44,11 @@ def get_columns(filters):
 	group = GROUPS[filters.group_by]
 	columns = [
 		{
-			"label": group["label"], "fieldname": "group_value",
-			"fieldtype": group["fieldtype"], "options": group.get("options"), "width": 200,
+			"label": group["label"],
+			"fieldname": "group_value",
+			"fieldtype": group["fieldtype"],
+			"options": group.get("options"),
+			"width": 200,
 		},
 		# say it on the label: this one carries the tax, and the Brand Wise
 		# Sales Report does not, so the same brand reads differently there
@@ -210,17 +213,28 @@ def get_data(filters):
 	for row in _sales(filters):
 		key = row.group_value
 		rows[key] = {
-			"group_value": key, "sales": totals.get(key, row.sales) or 0,
+			"group_value": key,
+			"sales": totals.get(key, row.sales) or 0,
 			"invoices": row.invoices or 0,
-			"qty": row.qty or 0, "collection": 0, "receipts": 0,
+			"qty": row.qty or 0,
+			"collection": 0,
+			"receipts": 0,
 			"first_date": row.first_date,
 		}
 	for row in _collection(filters):
 		key = row.group_value
-		entry = rows.setdefault(key, {
-			"group_value": key, "sales": 0, "invoices": 0, "qty": 0,
-			"collection": 0, "receipts": 0, "first_date": row.first_date,
-		})
+		entry = rows.setdefault(
+			key,
+			{
+				"group_value": key,
+				"sales": 0,
+				"invoices": 0,
+				"qty": 0,
+				"collection": 0,
+				"receipts": 0,
+				"first_date": row.first_date,
+			},
+		)
 		entry["collection"] = row.collection or 0
 		entry["receipts"] = row.receipts or 0
 

@@ -54,7 +54,13 @@ def _deliverable_invoice():
 		invoice = frappe.get_doc("Sales Invoice", name)
 		warehouse = invoice.set_warehouse or "Stores - CA"
 		if all(
-			(frappe.db.get_value("Bin", {"item_code": row.item_code, "warehouse": row.warehouse or warehouse}, "actual_qty") or 0) >= row.qty
+			(
+				frappe.db.get_value(
+					"Bin", {"item_code": row.item_code, "warehouse": row.warehouse or warehouse}, "actual_qty"
+				)
+				or 0
+			)
+			>= row.qty
 			for row in invoice.items
 		):
 			return invoice
@@ -119,7 +125,6 @@ class TestAutoDeliveryNote(FrappeTestCase):
 			auto_create_delivery_note(invoice)  # must not raise
 		self.assertEqual(_notes_for(invoice), [])
 
-
 	def test_backfill_dry_run_changes_nothing(self):
 		invoice = _invoice(0)
 		before = frappe.db.count("Delivery Note")
@@ -145,7 +150,6 @@ class TestAutoDeliveryNote(FrappeTestCase):
 		self.assertEqual(again["skipped"], [invoice.name])
 		self.assertEqual(len(_notes_for(invoice)), 1)
 
-
 	def test_a_failed_submit_leaves_nothing_behind(self):
 		"""A half-submitted note (e.g. NegativeStockError on the 2nd item) must
 		not survive: no Delivery Note, no stock entries."""
@@ -157,7 +161,15 @@ class TestAutoDeliveryNote(FrappeTestCase):
 			auto_create_delivery_note(invoice)  # must not raise
 		self.assertEqual(_notes_for(invoice), [])
 		self.assertFalse(
-			frappe.db.exists("Delivery Note", {"customer": invoice.customer, "docstatus": 1, "posting_date": invoice.posting_date, "grand_total": invoice.grand_total})
+			frappe.db.exists(
+				"Delivery Note",
+				{
+					"customer": invoice.customer,
+					"docstatus": 1,
+					"posting_date": invoice.posting_date,
+					"grand_total": invoice.grand_total,
+				},
+			)
 			and False
 		)
 

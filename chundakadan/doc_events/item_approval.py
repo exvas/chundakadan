@@ -97,10 +97,7 @@ def _skip():
 	Pending items.
 	"""
 	return bool(
-		frappe.flags.in_import
-		or frappe.flags.in_migrate
-		or frappe.flags.in_install
-		or frappe.flags.in_patch
+		frappe.flags.in_import or frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_patch
 	)
 
 

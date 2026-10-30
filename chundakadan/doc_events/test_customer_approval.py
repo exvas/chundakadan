@@ -39,8 +39,11 @@ class CustomerApprovalCase(FrappeTestCase):
 
 		import_file_by_path(
 			frappe.get_app_path(
-				"field_sales", "field_sales", "doctype",
-				"chundakadan_settings", "chundakadan_settings.json",
+				"field_sales",
+				"field_sales",
+				"doctype",
+				"chundakadan_settings",
+				"chundakadan_settings.json",
 			),
 			force=True,
 		)
@@ -52,33 +55,43 @@ class CustomerApprovalCase(FrappeTestCase):
 
 	def _make_user(self, email, roles):
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({
-				"doctype": "User", "email": email, "first_name": email.split("@")[0],
-				"send_welcome_email": 0, "user_type": "System User",
-			}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": email.split("@")[0],
+					"send_welcome_email": 0,
+					"user_type": "System User",
+				}
+			).insert()
 		user = frappe.get_doc("User", email)
 		user.add_roles(*roles)
 		return email
 
 	def _settings(self, enabled, role=ROLE):
 		"""Set the two switches for this test."""
-		frappe.db.set_single_value("Chundakadan Settings", {
-			"enable_customer_approval": 1 if enabled else 0,
-			"customer_approval_role": role or "",
-		})
+		frappe.db.set_single_value(
+			"Chundakadan Settings",
+			{
+				"enable_customer_approval": 1 if enabled else 0,
+				"customer_approval_role": role or "",
+			},
+		)
 
 	def _new_customer(self, as_user=CREATOR, **extra):
 		self.counter += 1
 		name = extra.pop("customer_name", f"Approval test customer {frappe.generate_hash(length=6)}")
 		frappe.set_user(as_user)
-		doc = frappe.get_doc({
-			"doctype": "Customer",
-			"customer_name": name,
-			"customer_group": self.customer_group,
-			"territory": self.territory,
-			"customer_type": "Company",
-			**extra,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Customer",
+				"customer_name": name,
+				"customer_group": self.customer_group,
+				"territory": self.territory,
+				"customer_type": "Company",
+				**extra,
+			}
+		)
 		doc.insert(ignore_permissions=True)
 		frappe.set_user("Administrator")
 		return doc
@@ -177,9 +190,7 @@ class TestTheGuard(CustomerApprovalCase):
 		doc.set(api.STATUS_FIELD, api.APPROVED)
 		doc.disabled = 0
 		doc.save(ignore_permissions=True)
-		self.assertEqual(
-			frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.APPROVED
-		)
+		self.assertEqual(frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.APPROVED)
 
 
 class TestApproveAndReject(CustomerApprovalCase):
@@ -193,7 +204,8 @@ class TestApproveAndReject(CustomerApprovalCase):
 		result = api.approve(self.customer.name)
 		self.assertEqual(result["approved"], [self.customer.name])
 		row = frappe.db.get_value(
-			"Customer", self.customer.name,
+			"Customer",
+			self.customer.name,
 			[api.STATUS_FIELD, "disabled", "custom_approved_by", "custom_approved_on"],
 			as_dict=True,
 		)
@@ -215,9 +227,7 @@ class TestApproveAndReject(CustomerApprovalCase):
 		frappe.set_user(APPROVER)
 		with self.assertRaises(frappe.ValidationError):
 			api.approve(self.customer.name, {"disabled": 0})
-		self.assertEqual(
-			frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.PENDING)
 
 	def test_a_correction_needs_a_single_item(self):
 		other = self._new_customer()
@@ -238,8 +248,10 @@ class TestApproveAndReject(CustomerApprovalCase):
 		frappe.set_user(APPROVER)
 		api.reject(self.customer.name, "Duplicate of 0209")
 		row = frappe.db.get_value(
-			"Customer", self.customer.name,
-			[api.STATUS_FIELD, "disabled", "custom_rejection_reason"], as_dict=True,
+			"Customer",
+			self.customer.name,
+			[api.STATUS_FIELD, "disabled", "custom_rejection_reason"],
+			as_dict=True,
 		)
 		self.assertEqual(row.custom_approval_status, api.REJECTED)
 		self.assertEqual(row.disabled, 1)
@@ -250,9 +262,7 @@ class TestApproveAndReject(CustomerApprovalCase):
 		for reason in ("", "   ", None):
 			with self.assertRaises(frappe.ValidationError):
 				api.reject(self.customer.name, reason)
-		self.assertEqual(
-			frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.PENDING)
 
 	def test_an_item_cannot_be_approved_twice(self):
 		frappe.set_user(APPROVER)
@@ -370,9 +380,7 @@ class TestNotification(CustomerApprovalCase):
 	def test_an_approved_item_notifies_nobody(self):
 		customer = self._new_customer(as_user=APPROVER)
 		notify_approvers(customer)
-		self.assertFalse(
-			frappe.get_all("Notification Log", filters={"document_name": customer.name})
-		)
+		self.assertFalse(frappe.get_all("Notification Log", filters={"document_name": customer.name}))
 
 
 class TestBackfillPatch(CustomerApprovalCase):
@@ -382,7 +390,9 @@ class TestBackfillPatch(CustomerApprovalCase):
 		ensure_customer_approval_fields()
 		self._settings(False)
 		open_customer = self._new_customer()
-		frappe.db.set_value("Customer", open_customer.name, "custom_approval_status", None, update_modified=False)
+		frappe.db.set_value(
+			"Customer", open_customer.name, "custom_approval_status", None, update_modified=False
+		)
 		frappe.db.set_value("Customer", open_customer.name, "disabled", 1, update_modified=False)
 
 		execute()
@@ -400,9 +410,7 @@ class TestBackfillPatch(CustomerApprovalCase):
 		self._settings(True)
 		pending = self._new_customer()
 		execute()
-		self.assertEqual(
-			frappe.db.get_value("Customer", pending.name, "custom_approval_status"), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Customer", pending.name, "custom_approval_status"), api.PENDING)
 
 
 class TestMobileEndpoints(CustomerApprovalCase):
@@ -442,7 +450,9 @@ class TestMobileEndpoints(CustomerApprovalCase):
 		from field_sales.Api.auth import approve_customers
 
 		frappe.set_user(APPROVER)
-		self._call(approve_customers, customers=[self.customer.name], changes={"customer_name": "Fixed on mobile"})
+		self._call(
+			approve_customers, customers=[self.customer.name], changes={"customer_name": "Fixed on mobile"}
+		)
 		self.assertEqual(
 			frappe.db.get_value("Customer", self.customer.name, "customer_name"), "Fixed on mobile"
 		)
@@ -467,9 +477,7 @@ class TestMobileEndpoints(CustomerApprovalCase):
 
 		res = self._call(reject_customers, customers=[self.customer.name], reason="no")
 		self.assertEqual(res["http_status_code"], 403)
-		self.assertEqual(
-			frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.PENDING
-		)
+		self.assertEqual(frappe.db.get_value("Customer", self.customer.name, api.STATUS_FIELD), api.PENDING)
 
 	def test_a_bad_request_comes_back_as_500_not_a_crash(self):
 		from field_sales.Api.auth import reject_customers

@@ -43,9 +43,7 @@ class TestTheColumn(AvailableQtyCase):
 
 	def test_the_grid_still_adds_up_to_ten(self):
 		meta = frappe.get_meta(DOCTYPE)
-		width = sum(
-			(f.columns or 0) for f in meta.fields if f.in_list_view and (f.columns or 0)
-		)
+		width = sum((f.columns or 0) for f in meta.fields if f.in_list_view and (f.columns or 0))
 		self.assertLessEqual(width, 10, "the grid is ten columns wide")
 
 	def test_rate_gave_a_column_up(self):
@@ -83,17 +81,21 @@ class TestTheNumber(AvailableQtyCase):
 
 class TestFillingTheRows(AvailableQtyCase):
 	def _invoice(self, docstatus=0, row_warehouse=None, set_warehouse=None):
-		return frappe._dict({
-			"docstatus": docstatus,
-			"set_warehouse": set_warehouse,
-			"items": [
-				frappe._dict({
-					"item_code": self.bin.item_code,
-					"warehouse": row_warehouse,
-					"set": lambda field, value, _row=None: None,
-				})
-			],
-		})
+		return frappe._dict(
+			{
+				"docstatus": docstatus,
+				"set_warehouse": set_warehouse,
+				"items": [
+					frappe._dict(
+						{
+							"item_code": self.bin.item_code,
+							"warehouse": row_warehouse,
+							"set": lambda field, value, _row=None: None,
+						}
+					)
+				],
+			}
+		)
 
 	def _row(self, **kwargs):
 		values = {}

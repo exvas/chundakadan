@@ -94,10 +94,7 @@ def _skip():
 	Pending customers -- which is exactly what the 2026-09 re-import was.
 	"""
 	return bool(
-		frappe.flags.in_import
-		or frappe.flags.in_migrate
-		or frappe.flags.in_install
-		or frappe.flags.in_patch
+		frappe.flags.in_import or frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_patch
 	)
 
 

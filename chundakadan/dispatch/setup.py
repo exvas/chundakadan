@@ -19,9 +19,7 @@ DISPATCH_READ_DOCTYPES = ("Sales Invoice", "Supplier", "Customer")
 def ensure_dispatch_role(*args, **kwargs):
 	if frappe.db.exists("Role", C.ROLE):
 		return
-	frappe.get_doc({"doctype": "Role", "role_name": C.ROLE, "desk_access": 1}).insert(
-		ignore_permissions=True
-	)
+	frappe.get_doc({"doctype": "Role", "role_name": C.ROLE, "desk_access": 1}).insert(ignore_permissions=True)
 
 
 def ensure_sales_invoice_field():

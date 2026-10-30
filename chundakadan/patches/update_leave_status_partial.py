@@ -2,28 +2,20 @@ import frappe
 
 
 def execute():
+	docs = [
+		"HR-LAP-2026-00062",
+		"HR-LAP-2026-00136",
+		"HR-LAP-2026-00135",
+		"HR-LAP-2026-00141",
+	]
 
-    docs = [
-        "HR-LAP-2026-00062",
-        "HR-LAP-2026-00136",
-        "HR-LAP-2026-00135",
-        "HR-LAP-2026-00141",
-    ]
+	for docname in docs:
+		frappe.db.set_value(
+			"Leave Application", docname, "status", "Partially Approved", update_modified=False
+		)
 
-    for docname in docs:
+		print(f"{docname} -> Partially Approved")
 
-        frappe.db.set_value(
-            "Leave Application",
-            docname,
-            "status",
-            "Partially Approved",
-            update_modified=False
-        )
+	frappe.db.commit()
 
-        print(
-            f"{docname} -> Partially Approved"
-        )
-
-    frappe.db.commit()
-
-    print("Done")
+	print("Done")

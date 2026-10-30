@@ -19,7 +19,12 @@ class TestItemListReport(FrappeTestCase):
 		self.sample = self.sample[0]
 
 	def _run(self, **extra):
-		filters = {"company": self.sample.company, "from_date": self.sample.posting_date, "to_date": self.sample.posting_date, **extra}
+		filters = {
+			"company": self.sample.company,
+			"from_date": self.sample.posting_date,
+			"to_date": self.sample.posting_date,
+			**extra,
+		}
 		return execute(filters)
 
 	def _expected(self, item_code, customer, date):
@@ -46,8 +51,13 @@ class TestItemListReport(FrappeTestCase):
 		expected = self._expected(self.sample.item_code, self.sample.customer, self.sample.posting_date)
 		self.assertAlmostEqual(row.qty, expected.qty)
 		self.assertEqual(row.invoices, expected.n)
-		item = frappe.db.get_value("Item", self.sample.item_code, ["brand", "item_group", "stock_uom", "item_name"], as_dict=True)
-		self.assertEqual((row.brand, row.item_group, row.uom, row.item_name), (item.brand, item.item_group, item.stock_uom, item.item_name))
+		item = frappe.db.get_value(
+			"Item", self.sample.item_code, ["brand", "item_group", "stock_uom", "item_name"], as_dict=True
+		)
+		self.assertEqual(
+			(row.brand, row.item_group, row.uom, row.item_name),
+			(item.brand, item.item_group, item.stock_uom, item.item_name),
+		)
 
 	def test_one_row_per_item_and_customer(self):
 		_, data = self._run()
@@ -56,25 +66,53 @@ class TestItemListReport(FrappeTestCase):
 
 	def test_date_range_excludes_other_days(self):
 		day_after = add_days(self.sample.posting_date, 1)
-		_, data = execute({"company": self.sample.company, "from_date": day_after, "to_date": day_after, "item_code": self.sample.item_code})
-		expected = frappe.db.count("Sales Invoice", {"docstatus": 1, "posting_date": day_after, "company": self.sample.company})
+		_, data = execute(
+			{
+				"company": self.sample.company,
+				"from_date": day_after,
+				"to_date": day_after,
+				"item_code": self.sample.item_code,
+			}
+		)
+		expected = frappe.db.count(
+			"Sales Invoice", {"docstatus": 1, "posting_date": day_after, "company": self.sample.company}
+		)
 		if not expected:
 			self.assertEqual(data, [])
 
 	def test_return_reduces_qty(self):
 		# a credit note row carries negative stock_qty and must net off
-		inv = frappe.get_all("Sales Invoice", {"docstatus": 1, "is_return": 1}, ["name", "company", "posting_date", "customer"], limit=1)
+		inv = frappe.get_all(
+			"Sales Invoice",
+			{"docstatus": 1, "is_return": 1},
+			["name", "company", "posting_date", "customer"],
+			limit=1,
+		)
 		if not inv:
 			self.skipTest("no credit notes on this site")
 		inv = inv[0]
 		item = frappe.db.get_value("Sales Invoice Item", {"parent": inv.name}, "item_code")
-		_, data = execute({"company": inv.company, "from_date": inv.posting_date, "to_date": inv.posting_date, "item_code": item, "customer": inv.customer})
+		_, data = execute(
+			{
+				"company": inv.company,
+				"from_date": inv.posting_date,
+				"to_date": inv.posting_date,
+				"item_code": item,
+				"customer": inv.customer,
+			}
+		)
 		expected = self._expected(item, inv.customer, inv.posting_date)
 		self.assertAlmostEqual(data[0].qty, expected.qty)
 
 	def test_invalid_range(self):
 		with self.assertRaises(frappe.ValidationError):
-			execute({"company": self.sample.company, "from_date": getdate("2026-09-10"), "to_date": getdate("2026-09-01")})
+			execute(
+				{
+					"company": self.sample.company,
+					"from_date": getdate("2026-09-10"),
+					"to_date": getdate("2026-09-01"),
+				}
+			)
 
 	def test_roles_can_open_report(self):
 		# query_report.get_report_doc needs the report role AND report permission on ref_doctype
@@ -83,11 +121,21 @@ class TestItemListReport(FrappeTestCase):
 
 		import_file_by_path(os.path.join(os.path.dirname(__file__), "item_list_report.json"), force=True)
 		report = frappe.get_doc("Report", "Item List Report")
-		self.assertEqual({r.role for r in report.roles}, {"Accounts User", "Stock User", "Sales User", "System Manager"})
+		self.assertEqual(
+			{r.role for r in report.roles}, {"Accounts User", "Stock User", "Sales User", "System Manager"}
+		)
 		for role in ("Accounts User", "Stock User", "Sales User"):
 			email = f"ilr.{frappe.scrub(role)}@example.com"
 			if not frappe.db.exists("User", email):
-				frappe.get_doc({"doctype": "User", "email": email, "first_name": role, "send_welcome_email": 0, "user_type": "System User"}).insert()
+				frappe.get_doc(
+					{
+						"doctype": "User",
+						"email": email,
+						"first_name": role,
+						"send_welcome_email": 0,
+						"user_type": "System User",
+					}
+				).insert()
 			user = frappe.get_doc("User", email)
 			user.add_roles(role)
 			frappe.set_user(email)
@@ -97,7 +145,6 @@ class TestItemListReport(FrappeTestCase):
 			finally:
 				frappe.set_user("Administrator")
 		frappe.db.rollback()
-
 
 
 class TestGroupByItem(TestItemListReport):

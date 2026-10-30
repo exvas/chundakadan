@@ -32,22 +32,24 @@ def ensure_workspace(spec):
 	links = [l for l in spec.get("links", []) if l.get("type") == "Card Break" or _target_exists(l)]
 	kept_cards = [c for c in spec.get("cards", []) if frappe.db.exists("Number Card", c)]
 
-	doc = frappe.get_doc({
-		"doctype": "Workspace",
-		"name": name,
-		"title": spec.get("title", name),
-		"label": spec.get("label", name),
-		"module": spec.get("module", "Chundakadan"),
-		"public": 1,
-		"icon": spec.get("icon"),
-		"indicator_color": spec.get("indicator_color"),
-		"sequence_id": spec.get("sequence_id", 10),
-		"content": json.dumps(spec.get("content", [])),
-		"number_cards": [{"label": c, "number_card_name": c} for c in kept_cards],
-		"shortcuts": shortcuts,
-		"links": links,
-		"roles": [{"role": r} for r in spec.get("roles", [])],
-	})
+	doc = frappe.get_doc(
+		{
+			"doctype": "Workspace",
+			"name": name,
+			"title": spec.get("title", name),
+			"label": spec.get("label", name),
+			"module": spec.get("module", "Chundakadan"),
+			"public": 1,
+			"icon": spec.get("icon"),
+			"indicator_color": spec.get("indicator_color"),
+			"sequence_id": spec.get("sequence_id", 10),
+			"content": json.dumps(spec.get("content", [])),
+			"number_cards": [{"label": c, "number_card_name": c} for c in kept_cards],
+			"shortcuts": shortcuts,
+			"links": links,
+			"roles": [{"role": r} for r in spec.get("roles", [])],
+		}
+	)
 	doc.flags.ignore_permissions = True
 	doc.flags.ignore_links = True  # a report or doctype may not exist on every site
 	doc.flags.name_set = True

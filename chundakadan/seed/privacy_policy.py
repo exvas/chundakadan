@@ -135,42 +135,44 @@ HTML_BODY = """<style>
 
 
 def upsert_page():
-    """Create or update the Privacy Policy Web Page at /privacy-policy.
+	"""Create or update the Privacy Policy Web Page at /privacy-policy.
 
-    Idempotent — safe to run on every migrate. Updates the HTML body
-    in place if the page already exists.
-    """
-    existing = frappe.db.exists("Web Page", {"route": ROUTE})
-    if existing:
-        doc = frappe.get_doc("Web Page", existing)
-        doc.title = TITLE
-        doc.main_section = HTML_BODY
-        doc.published = 1
-        doc.content_type = "HTML"
-        doc.show_title = 0  # we render our own <h1>
-        doc.show_sidebar = 0
-        doc.flags.ignore_permissions = True
-        doc.save()
-        print(f"chundakadan.seed.privacy_policy: updated existing Web Page '{existing}'")
-        return existing
+	Idempotent — safe to run on every migrate. Updates the HTML body
+	in place if the page already exists.
+	"""
+	existing = frappe.db.exists("Web Page", {"route": ROUTE})
+	if existing:
+		doc = frappe.get_doc("Web Page", existing)
+		doc.title = TITLE
+		doc.main_section = HTML_BODY
+		doc.published = 1
+		doc.content_type = "HTML"
+		doc.show_title = 0  # we render our own <h1>
+		doc.show_sidebar = 0
+		doc.flags.ignore_permissions = True
+		doc.save()
+		print(f"chundakadan.seed.privacy_policy: updated existing Web Page '{existing}'")
+		return existing
 
-    doc = frappe.get_doc({
-        "doctype": "Web Page",
-        "title": TITLE,
-        "route": ROUTE,
-        "published": 1,
-        "content_type": "HTML",
-        "main_section": HTML_BODY,
-        "show_title": 0,
-        "show_sidebar": 0,
-        "meta_title": "Chundakadan App — Privacy Policy",
-        "meta_description": (
-            "How Chundakadan Agencies collects, uses, and discloses "
-            "information through the Chundakadan App. For internal "
-            "employee use only."
-        ),
-    })
-    doc.flags.ignore_permissions = True
-    doc.insert()
-    print(f"chundakadan.seed.privacy_policy: created Web Page '{doc.name}' at /{ROUTE}")
-    return doc.name
+	doc = frappe.get_doc(
+		{
+			"doctype": "Web Page",
+			"title": TITLE,
+			"route": ROUTE,
+			"published": 1,
+			"content_type": "HTML",
+			"main_section": HTML_BODY,
+			"show_title": 0,
+			"show_sidebar": 0,
+			"meta_title": "Chundakadan App — Privacy Policy",
+			"meta_description": (
+				"How Chundakadan Agencies collects, uses, and discloses "
+				"information through the Chundakadan App. For internal "
+				"employee use only."
+			),
+		}
+	)
+	doc.flags.ignore_permissions = True
+	doc.insert()
+	print(f"chundakadan.seed.privacy_policy: created Web Page '{doc.name}' at /{ROUTE}")
+	return doc.name

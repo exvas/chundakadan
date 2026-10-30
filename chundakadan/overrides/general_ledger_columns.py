@@ -3,8 +3,13 @@
 erpnext 15.124 turned the report's Voucher Type column into a Link to
 ``DocType``::
 
-    {"label": _("Voucher Type"), "fieldname": "voucher_type",
-     "fieldtype": "Link", "options": "DocType", "width": 120}
+    {
+        "label": _("Voucher Type"),
+        "fieldname": "voucher_type",
+        "fieldtype": "Link",
+        "options": "DocType",
+        "width": 120,
+    }
 
 Frappe then counts ``DocType`` among the report's linked doctypes and, in
 ``query_report.get_filtered_data`` → ``get_user_match_filters`` →

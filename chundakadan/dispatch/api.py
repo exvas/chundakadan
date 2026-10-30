@@ -88,7 +88,10 @@ def _count(conditions, or_filters):
 def get_counts(filters=None):
 	frappe.has_permission("Dispatch Log", "read", throw=True)
 	base, or_filters = _base_filters(filters)
-	counts = {tab: _count(base + _tab_filters(tab), or_filters) for tab in ("pending", "followup", "dispatched", "not_delivered")}
+	counts = {
+		tab: _count(base + _tab_filters(tab), or_filters)
+		for tab in ("pending", "followup", "dispatched", "not_delivered")
+	}
 	counts["delivered_today"] = _count(
 		base
 		+ [
@@ -143,14 +146,22 @@ def _set_transport(doc, transporter, vehicle_no, lr_no, lr_date, driver_name, mo
 	doc.lr_date = lr_date or None
 	doc.driver_name = driver_name
 	doc.mode_of_transport = mode_of_transport or "Road"
-	supplier = frappe.db.get_value("Supplier", transporter, ["supplier_name", "gst_transporter_id"], as_dict=True) if transporter else None
+	supplier = (
+		frappe.db.get_value("Supplier", transporter, ["supplier_name", "gst_transporter_id"], as_dict=True)
+		if transporter
+		else None
+	)
 	doc.transporter_name = supplier.supplier_name if supplier else None
 	doc.gst_transporter_id = supplier.gst_transporter_id if supplier else None
 
 
 def _result(doc):
 	doc.reload()
-	return {"name": doc.name, "dispatch_status": doc.dispatch_status, "ewaybill_sync_status": doc.ewaybill_sync_status}
+	return {
+		"name": doc.name,
+		"dispatch_status": doc.dispatch_status,
+		"ewaybill_sync_status": doc.ewaybill_sync_status,
+	}
 
 
 @frappe.whitelist()
@@ -253,7 +264,9 @@ def _transporter_group():
 			{
 				"doctype": "Supplier Group",
 				"supplier_group_name": TRANSPORTER_GROUP,
-				"parent_supplier_group": frappe.db.get_value("Supplier Group", {"is_group": 1, "parent_supplier_group": ["in", ["", None]]}, "name"),
+				"parent_supplier_group": frappe.db.get_value(
+					"Supplier Group", {"is_group": 1, "parent_supplier_group": ["in", ["", None]]}, "name"
+				),
 			}
 		).insert(ignore_permissions=True)
 	return TRANSPORTER_GROUP
@@ -292,4 +305,8 @@ def create_transporter(transporter_name, gst_transporter_id=None):
 				"gst_transporter_id": gst_transporter_id,
 			}
 		).insert(ignore_permissions=True)
-	return {"name": doc.name, "supplier_name": doc.supplier_name, "gst_transporter_id": doc.gst_transporter_id}
+	return {
+		"name": doc.name,
+		"supplier_name": doc.supplier_name,
+		"gst_transporter_id": doc.gst_transporter_id,
+	}

@@ -42,8 +42,7 @@ class TestTheBillingStepIsGone(FrappeTestCase):
 	def test_sending_now_goes_straight_to_sales(self):
 		execute()
 		row = next(
-			r for r in self._wf().transitions
-			if r.state == "Draft" and r.action == "Send for Verification"
+			r for r in self._wf().transitions if r.state == "Draft" and r.action == "Send for Verification"
 		)
 		self.assertEqual(row.next_state, SALES)
 
@@ -60,10 +59,7 @@ class TestTheBillingStepIsGone(FrappeTestCase):
 
 	def test_the_rest_of_the_chain_is_untouched(self):
 		execute()
-		moves = {
-			(r.state, r.action): (r.next_state, r.allowed)
-			for r in self._wf().transitions
-		}
+		moves = {(r.state, r.action): (r.next_state, r.allowed) for r in self._wf().transitions}
 		self.assertEqual(moves[(SALES, "Verify")][0], "Pending Accounts Verification")
 		self.assertEqual(moves[("Pending Accounts Verification", "Verify")][0], "Pending GM Approval")
 		self.assertEqual(moves[("Pending GM Approval", "Approve")][0], "Approved")

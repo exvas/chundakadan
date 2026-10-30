@@ -28,26 +28,26 @@ field is set on a doc with no rows.
 
 import frappe
 
-_TAX_CATEGORY      = "In-State"
-_SALES_TEMPLATE    = "Output GST In-state - CA"
+_TAX_CATEGORY = "In-State"
+_SALES_TEMPLATE = "Output GST In-state - CA"
 _PURCHASE_TEMPLATE = "Input GST In-state - CA"
 
 
 def apply_sales_invoice_defaults(doc, method=None):
-    """before_insert on Sales Invoice."""
-    if not doc.get("tax_category"):
-        if frappe.db.exists("Tax Category", _TAX_CATEGORY):
-            doc.tax_category = _TAX_CATEGORY
-    if not doc.get("taxes_and_charges"):
-        if frappe.db.exists("Sales Taxes and Charges Template", _SALES_TEMPLATE):
-            doc.taxes_and_charges = _SALES_TEMPLATE
+	"""before_insert on Sales Invoice."""
+	if not doc.get("tax_category"):
+		if frappe.db.exists("Tax Category", _TAX_CATEGORY):
+			doc.tax_category = _TAX_CATEGORY
+	if not doc.get("taxes_and_charges"):
+		if frappe.db.exists("Sales Taxes and Charges Template", _SALES_TEMPLATE):
+			doc.taxes_and_charges = _SALES_TEMPLATE
 
 
 def apply_purchase_invoice_defaults(doc, method=None):
-    """before_insert on Purchase Invoice."""
-    if not doc.get("tax_category"):
-        if frappe.db.exists("Tax Category", _TAX_CATEGORY):
-            doc.tax_category = _TAX_CATEGORY
-    if not doc.get("taxes_and_charges"):
-        if frappe.db.exists("Purchase Taxes and Charges Template", _PURCHASE_TEMPLATE):
-            doc.taxes_and_charges = _PURCHASE_TEMPLATE
+	"""before_insert on Purchase Invoice."""
+	if not doc.get("tax_category"):
+		if frappe.db.exists("Tax Category", _TAX_CATEGORY):
+			doc.tax_category = _TAX_CATEGORY
+	if not doc.get("taxes_and_charges"):
+		if frappe.db.exists("Purchase Taxes and Charges Template", _PURCHASE_TEMPLATE):
+			doc.taxes_and_charges = _PURCHASE_TEMPLATE

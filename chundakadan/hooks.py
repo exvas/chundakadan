@@ -44,40 +44,40 @@ app_license = "mit"
 
 # include js in doctype views
 doctype_js = {
-    "Sales Order" : "public/js/sales_order.js",
-    "Payment Entry" : "public/js/payment_entry.js",
-    "Item" : ["public/js/item.js", "public/js/item_approval.js"],
-    "Customer" : "public/js/customer_approval.js",
-    "Address": "public/js/address.js",
-    "Sales Invoice" : "public/js/sales_invoice.js",
-    "Delivery Note" : "public/js/delivery_note.js",
-    "Purchase Order" : "public/js/purchase_order.js",
-    "Purchase Invoice" : "public/js/purchase_invoice.js",
-    "Quotation" : "public/js/quotation.js",
-    "Purchase Receipt" : "public/js/purchase_receipt.js",
-    "Material Request" : "public/js/material_request.js",
-    "Request for Quotation" : "public/js/request_for_quotation.js",
-    "Supplier Quotation" : "public/js/supplier_quotation.js",
-    "Leave Application" : "public/js/leave_application.js",
-    "Exit Interview Form" : "public/js/exit_interview_form.js",
-    "Interview" : "public/js/interview.js",
-    "Period Salary Slip" : "public/js/period_salary_slip.js",
-    "Employee" : "public/js/employee.js",
-    "Expense Claim" : "public/js/expense_approval.js",
-    "Employee Advance" : "public/js/expense_approval.js",
-    "Payment Request" : "public/js/expense_approval.js",
-    "Office Expense Voucher" : "public/js/office_expense_voucher.js",
-    "Employee Transfer" : "public/js/employee_transfer.js",
-    "Additional Salary" : "public/js/additional_salary.js",
-    "Employee Checkin" : "public/js/employee_checkin.js",
+	"Sales Order": "public/js/sales_order.js",
+	"Payment Entry": "public/js/payment_entry.js",
+	"Item": ["public/js/item.js", "public/js/item_approval.js"],
+	"Customer": "public/js/customer_approval.js",
+	"Address": "public/js/address.js",
+	"Sales Invoice": "public/js/sales_invoice.js",
+	"Delivery Note": "public/js/delivery_note.js",
+	"Purchase Order": "public/js/purchase_order.js",
+	"Purchase Invoice": "public/js/purchase_invoice.js",
+	"Quotation": "public/js/quotation.js",
+	"Purchase Receipt": "public/js/purchase_receipt.js",
+	"Material Request": "public/js/material_request.js",
+	"Request for Quotation": "public/js/request_for_quotation.js",
+	"Supplier Quotation": "public/js/supplier_quotation.js",
+	"Leave Application": "public/js/leave_application.js",
+	"Exit Interview Form": "public/js/exit_interview_form.js",
+	"Interview": "public/js/interview.js",
+	"Period Salary Slip": "public/js/period_salary_slip.js",
+	"Employee": "public/js/employee.js",
+	"Expense Claim": "public/js/expense_approval.js",
+	"Employee Advance": "public/js/expense_approval.js",
+	"Payment Request": "public/js/expense_approval.js",
+	"Office Expense Voucher": "public/js/office_expense_voucher.js",
+	"Employee Transfer": "public/js/employee_transfer.js",
+	"Additional Salary": "public/js/additional_salary.js",
+	"Employee Checkin": "public/js/employee_checkin.js",
 }
 doctype_list_js = {
-    "Item": "public/js/item_list.js",
-    "Customer": "public/js/customer_list.js",
-    "Leave Application" : "public/js/leave_application_list.js",
-    "Employee Checkin" : "public/js/employee_checkin_list.js",
-    "Office Expense Voucher": "public/js/office_expense_voucher_list.js",
-    "Employee" : "public/js/employee_list.js",
+	"Item": "public/js/item_list.js",
+	"Customer": "public/js/customer_list.js",
+	"Leave Application": "public/js/leave_application_list.js",
+	"Employee Checkin": "public/js/employee_checkin_list.js",
+	"Office Expense Voucher": "public/js/office_expense_voucher_list.js",
+	"Employee": "public/js/employee_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -116,266 +116,255 @@ doctype_list_js = {
 # Installation
 # ------------
 doc_events = {
-    # NOTE: keep exactly ONE dict entry per doctype — a duplicate key later in
-    # this dict silently OVERWRITES the earlier one (plain Python dict), which
-    # is how the PE cheque-bounce + SI overdue validations went dead until
-    # 2026-07-23. Merge new events into the existing block.
-    "Payment Entry": {
-        "validate":
-        "chundakadan.doc_events.payment_entry.set_custom_sales_person",
-
-        "before_save":
-        "chundakadan.doc_events.payment_entry.set_custom_sales_person",
-        "before_submit": [
-            "chundakadan.doc_events.payment_entry.set_custom_sales_person",
-            "chundakadan.doc_events.payment_entry.validate_check_bounce"
-        ],
-        # When a PE referencing an Office Expense Voucher is submitted or
-        # cancelled, sync the voucher's status (legacy path — keep in
-        # case real PEs ever reference an OEV).
-        "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
-        "on_cancel": [
-            "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
-            # a cancelled payment sends the cheque back a step; it never cancels it
-            "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_payment_entry_cancel",
-        ],
-    },
-    "Sales Order": {
-        "validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"
-    },
+	# NOTE: keep exactly ONE dict entry per doctype — a duplicate key later in
+	# this dict silently OVERWRITES the earlier one (plain Python dict), which
+	# is how the PE cheque-bounce + SI overdue validations went dead until
+	# 2026-07-23. Merge new events into the existing block.
+	"Payment Entry": {
+		"validate": "chundakadan.doc_events.payment_entry.set_custom_sales_person",
+		"before_save": "chundakadan.doc_events.payment_entry.set_custom_sales_person",
+		"before_submit": [
+			"chundakadan.doc_events.payment_entry.set_custom_sales_person",
+			"chundakadan.doc_events.payment_entry.validate_check_bounce",
+		],
+		# When a PE referencing an Office Expense Voucher is submitted or
+		# cancelled, sync the voucher's status (legacy path — keep in
+		# case real PEs ever reference an OEV).
+		"on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+		"on_cancel": [
+			"chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+			# a cancelled payment sends the cheque back a step; it never cancels it
+			"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_payment_entry_cancel",
+		],
+	},
+	"Sales Order": {"validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"},
 	"Sales Invoice": {
-        "autoname": "chundakadan.doc_events.sales_invoice.autoname",
-        "before_validate": "chundakadan.doc_events.sales_invoice.apply_stock_defaults",
-        "validate": [
-            "chundakadan.doc_events.sales_invoice.validate_sales_invoice",
-            "chundakadan.doc_events.sales_invoice.enforce_b2b_billing",
-        ],
-        "on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
-        "on_submit": [
-            "chundakadan.dispatch.events.create_dispatch_log",
-            "chundakadan.doc_events.sales_invoice.auto_create_delivery_note",
-        ],
-        "on_cancel": "chundakadan.dispatch.events.mark_invoice_cancelled",
-        # Auto-apply In-State GST template + tax_category when blank
-        "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults"
-    },
-    # New Employee saved with a User ID (created via the quick "Create User ID"
-    # dialog on the new-employee form) -> auto-assign role profile from
-    # department, user permissions, sales person, manager details.
-    "Employee": {
-        # keep stock create_user_permission checkbox in step with our
-        # provisioning so HR (no User Permission doctype access) never trips
-        # ERPNext's un-permissioned add/remove on save
-        "validate": "chundakadan.chundakadan.api.employee_user_actions.sync_user_permission_flag",
-        "after_insert": "chundakadan.chundakadan.api.employee_user_actions.auto_provision_on_insert"
-    },
-    "Leave Policy": {
-        "before_save": "chundakadan.doc_events.leave_policy.set_annual_allocation_from_leave_type",
-        "validate": "chundakadan.doc_events.leave_policy.validate_leave_policy_details"
-    },
-    "Leave Policy Assignment": {
-        "before_submit": "chundakadan.doc_events.leave_policy_assignment.update_new_leaves_from_max_allowed"
-    },
-    "Leave Application": {
-        "before_validate": "chundakadan.chundakadan.api.leave.convert_conflicting_attendance_to_on_leave",
-        "validate": "chundakadan.chundakadan.api.leave.validate_leave",
-        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
-    },
-    "Employee Checkin": {
-        "after_insert": [
-            "chundakadan.doc_events.employee_checkin.mark_attendance",
-            "chundakadan.doc_events.employee_checkin.resolve_location"
-        ],
-        "on_update": "chundakadan.doc_events.employee_checkin.mark_attendance"
-    },
-    "Employee Transfer": {
-        "on_submit": "chundakadan.doc_events.employee_transfer.apply_chundakadan_side_effects",
-        "before_cancel": "chundakadan.doc_events.employee_transfer.block_cancel"
-    },
-    "Customer Visit Log": {
-        "after_insert": "chundakadan.doc_events.customer_visit_log.resolve_location"
-    },
-    "HR Policy": {
-        "on_update": "chundakadan.doc_events.notifications.hr_policy_updated"
-    },
-    "Newsletter": {
-        "after_insert": "chundakadan.doc_events.notifications.newsletter_sent"
-    },
-    "Salary Slip": {
-        "validate": [
-            "chundakadan.doc_events.salary_slip.apply_payroll_basis",
-            "chundakadan.doc_events.salary_slip.apply_sick_leave_deduction",
-        ]
-    },
-    "Expense Claim": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
-        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
-    },
-    "Employee Advance": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
-        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
-    },
-    "Payment Request": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
-        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
-    },
-    "Office Expense Voucher": {
-        "validate": "chundakadan.chundakadan.api.expense_approval.validate",
-        "after_insert": "chundakadan.chundakadan.api.approval_email.notify_created"
-    },
-    # Auto-apply chundakadan tax defaults on NEW Item / Customer so HR
-    # doesn't have to remember (custom_tax_template + GST 18% - CA /
-    # In-State row on Item; tax_category = In-State on Customer).
-    # Only fills when blank — never overrides explicit values.
-    "Item": {
-        "before_insert": [
-            "chundakadan.doc_events.tax_defaults.apply_item_defaults",
-            # a new Item is held Pending + disabled until the approval role
-            # clears it (off until Chundakadan Settings switches it on)
-            "chundakadan.doc_events.item_approval.hold_new_item",
-        ],
-        "validate": "chundakadan.doc_events.item_approval.guard_approval_fields",
-        "after_insert": "chundakadan.doc_events.item_approval.notify_approvers",
-    },
-    "Customer": {
-        "before_insert": [
-            "chundakadan.doc_events.tax_defaults.apply_customer_defaults",
-            # a new Customer is held Pending + disabled until the approval
-            # role clears it (off until Chundakadan Settings switches it on)
-            "chundakadan.doc_events.customer_approval.hold_new_customer",
-        ],
-        "validate": "chundakadan.doc_events.customer_approval.guard_approval_fields",
-        "after_insert": "chundakadan.doc_events.customer_approval.notify_approvers",
-        # Address Line 2 shows the territory, so it follows a change of one
-        "on_update": "chundakadan.doc_events.address_territory.sync_addresses_to_territory",
-    },
-    "Address": {
-        "validate": "chundakadan.doc_events.address_territory.set_line2_from_territory",
-    },
-    # Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
-    # when blank (the Sales Invoice equivalent lives in the single merged
-    # "Sales Invoice" block above — do NOT re-add a duplicate key here).
-    # a collected cheque that bounced: mirror Cheque Bounce onto the cheque
-    "Cheque Bounce": {
-        "on_submit": "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_cheque_bounce_submit",
-        "on_cancel": "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_cheque_bounce_cancel",
-    },
-    "Purchase Order": {
-        "before_insert": "chundakadan.seed.po_workflow.set_default_workflow_state",
-    },
-    # the Amount of a late-arrival deduction is only the sum of the days still
-    # listed in its table, recomputed here so the browser is never the one
-    # deciding what is cut from someone's salary
-    "Additional Salary": {
-        "validate": "chundakadan.doc_events.additional_salary.sync_late_entry_total",
-    },
-    "Purchase Invoice": {
-        "before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
-        "before_validate": [
-            "chundakadan.doc_events.purchase_invoice.apply_stock_defaults",
-            # rows the user already had: re-date them before ERPNext checks
-            # the due date against the (possibly new) template
-            "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
-            # what is already in the warehouse the goods are going into
-            "chundakadan.doc_events.purchase_invoice_available_qty.set_available_qty",
-        ],
-        # rows ERPNext has just built from the bill date: re-date them too
-        "validate": "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
-    },
-    "Journal Entry": {
-        # When a JV's account row references an OEV (deferred-payment
-        # settlement created via the 'Make Payment' button), flip the
-        # voucher's status to Paid on submit / Unpaid on cancel.
-        "on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
-        "on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment"
-    }
+		"autoname": "chundakadan.doc_events.sales_invoice.autoname",
+		"before_validate": "chundakadan.doc_events.sales_invoice.apply_stock_defaults",
+		"validate": [
+			"chundakadan.doc_events.sales_invoice.validate_sales_invoice",
+			"chundakadan.doc_events.sales_invoice.enforce_b2b_billing",
+		],
+		"on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
+		"on_submit": [
+			"chundakadan.dispatch.events.create_dispatch_log",
+			"chundakadan.doc_events.sales_invoice.auto_create_delivery_note",
+		],
+		"on_cancel": "chundakadan.dispatch.events.mark_invoice_cancelled",
+		# Auto-apply In-State GST template + tax_category when blank
+		"before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_sales_invoice_defaults",
+	},
+	# New Employee saved with a User ID (created via the quick "Create User ID"
+	# dialog on the new-employee form) -> auto-assign role profile from
+	# department, user permissions, sales person, manager details.
+	"Employee": {
+		# keep stock create_user_permission checkbox in step with our
+		# provisioning so HR (no User Permission doctype access) never trips
+		# ERPNext's un-permissioned add/remove on save
+		"validate": "chundakadan.chundakadan.api.employee_user_actions.sync_user_permission_flag",
+		"after_insert": "chundakadan.chundakadan.api.employee_user_actions.auto_provision_on_insert",
+	},
+	"Leave Policy": {
+		"before_save": "chundakadan.doc_events.leave_policy.set_annual_allocation_from_leave_type",
+		"validate": "chundakadan.doc_events.leave_policy.validate_leave_policy_details",
+	},
+	"Leave Policy Assignment": {
+		"before_submit": "chundakadan.doc_events.leave_policy_assignment.update_new_leaves_from_max_allowed"
+	},
+	"Leave Application": {
+		"before_validate": "chundakadan.chundakadan.api.leave.convert_conflicting_attendance_to_on_leave",
+		"validate": "chundakadan.chundakadan.api.leave.validate_leave",
+		"after_insert": "chundakadan.chundakadan.api.approval_email.notify_created",
+	},
+	"Employee Checkin": {
+		"after_insert": [
+			"chundakadan.doc_events.employee_checkin.mark_attendance",
+			"chundakadan.doc_events.employee_checkin.resolve_location",
+		],
+		"on_update": "chundakadan.doc_events.employee_checkin.mark_attendance",
+	},
+	"Employee Transfer": {
+		"on_submit": "chundakadan.doc_events.employee_transfer.apply_chundakadan_side_effects",
+		"before_cancel": "chundakadan.doc_events.employee_transfer.block_cancel",
+	},
+	"Customer Visit Log": {"after_insert": "chundakadan.doc_events.customer_visit_log.resolve_location"},
+	"HR Policy": {"on_update": "chundakadan.doc_events.notifications.hr_policy_updated"},
+	"Newsletter": {"after_insert": "chundakadan.doc_events.notifications.newsletter_sent"},
+	"Salary Slip": {
+		"validate": [
+			"chundakadan.doc_events.salary_slip.apply_payroll_basis",
+			"chundakadan.doc_events.salary_slip.apply_sick_leave_deduction",
+		]
+	},
+	"Expense Claim": {
+		"validate": "chundakadan.chundakadan.api.expense_approval.validate",
+		"after_insert": "chundakadan.chundakadan.api.approval_email.notify_created",
+	},
+	"Employee Advance": {
+		"validate": "chundakadan.chundakadan.api.expense_approval.validate",
+		"after_insert": "chundakadan.chundakadan.api.approval_email.notify_created",
+	},
+	"Payment Request": {
+		"validate": "chundakadan.chundakadan.api.expense_approval.validate",
+		"after_insert": "chundakadan.chundakadan.api.approval_email.notify_created",
+	},
+	"Office Expense Voucher": {
+		"validate": "chundakadan.chundakadan.api.expense_approval.validate",
+		"after_insert": "chundakadan.chundakadan.api.approval_email.notify_created",
+	},
+	# Auto-apply chundakadan tax defaults on NEW Item / Customer so HR
+	# doesn't have to remember (custom_tax_template + GST 18% - CA /
+	# In-State row on Item; tax_category = In-State on Customer).
+	# Only fills when blank — never overrides explicit values.
+	"Item": {
+		"before_insert": [
+			"chundakadan.doc_events.tax_defaults.apply_item_defaults",
+			# a new Item is held Pending + disabled until the approval role
+			# clears it (off until Chundakadan Settings switches it on)
+			"chundakadan.doc_events.item_approval.hold_new_item",
+		],
+		"validate": "chundakadan.doc_events.item_approval.guard_approval_fields",
+		"after_insert": "chundakadan.doc_events.item_approval.notify_approvers",
+	},
+	"Customer": {
+		"before_insert": [
+			"chundakadan.doc_events.tax_defaults.apply_customer_defaults",
+			# a new Customer is held Pending + disabled until the approval
+			# role clears it (off until Chundakadan Settings switches it on)
+			"chundakadan.doc_events.customer_approval.hold_new_customer",
+		],
+		"validate": "chundakadan.doc_events.customer_approval.guard_approval_fields",
+		"after_insert": "chundakadan.doc_events.customer_approval.notify_approvers",
+		# Address Line 2 shows the territory, so it follows a change of one
+		"on_update": "chundakadan.doc_events.address_territory.sync_addresses_to_territory",
+	},
+	"Address": {
+		"validate": "chundakadan.doc_events.address_territory.set_line2_from_territory",
+	},
+	# Auto-apply In-State GST template + tax_category on NEW Purchase Invoices
+	# when blank (the Sales Invoice equivalent lives in the single merged
+	# "Sales Invoice" block above — do NOT re-add a duplicate key here).
+	# a collected cheque that bounced: mirror Cheque Bounce onto the cheque
+	"Cheque Bounce": {
+		"on_submit": "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_cheque_bounce_submit",
+		"on_cancel": "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_cheque_bounce_cancel",
+	},
+	"Purchase Order": {
+		"before_insert": "chundakadan.seed.po_workflow.set_default_workflow_state",
+	},
+	# the Amount of a late-arrival deduction is only the sum of the days still
+	# listed in its table, recomputed here so the browser is never the one
+	# deciding what is cut from someone's salary
+	"Additional Salary": {
+		"validate": "chundakadan.doc_events.additional_salary.sync_late_entry_total",
+	},
+	"Purchase Invoice": {
+		"before_insert": "chundakadan.doc_events.invoice_tax_defaults.apply_purchase_invoice_defaults",
+		"before_validate": [
+			"chundakadan.doc_events.purchase_invoice.apply_stock_defaults",
+			# rows the user already had: re-date them before ERPNext checks
+			# the due date against the (possibly new) template
+			"chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
+			# what is already in the warehouse the goods are going into
+			"chundakadan.doc_events.purchase_invoice_available_qty.set_available_qty",
+		],
+		# rows ERPNext has just built from the bill date: re-date them too
+		"validate": "chundakadan.doc_events.purchase_invoice.refresh_payment_schedule",
+	},
+	"Journal Entry": {
+		# When a JV's account row references an OEV (deferred-payment
+		# settlement created via the 'Make Payment' button), flip the
+		# voucher's status to Paid on submit / Unpaid on cancel.
+		"on_submit": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+		"on_cancel": "chundakadan.chundakadan.doctype.office_expense_voucher.office_expense_voucher.update_voucher_status_on_payment",
+	},
 }
 # Install / migrate hooks. Idempotent — they no-op when there's
 # nothing to do (already installed, field already exists).
 before_install = [
-    "chundakadan.install.ensure_firebase_admin_installed",
-    "chundakadan.install.ensure_holidays_library_installed",
-    "chundakadan.install.ensure_fcm_credentials_field",
-    "chundakadan.install.ensure_visit_log_location_field",
-    "chundakadan.install.ensure_visit_log_visit_type_field",
-    "chundakadan.install.ensure_visit_log_sales_user_create_perm",
-    "chundakadan.install.ensure_user_permission_hr_access",
-    "chundakadan.install.ensure_additional_salary_fields",
-    "chundakadan.install.ensure_checkin_notification_field",
-    "chundakadan.install.ensure_employee_checkin_readonly",
-    "chundakadan.install.ensure_item_fields_visible",
-    "chundakadan.install.ensure_sick_leave_deduction_component",
-    "chundakadan.install.ensure_employee_payroll_fields",
-    "chundakadan.install.ensure_payroll_config_fields",
-    "chundakadan.install.ensure_sick_leave_deduction_toggle",
-    "chundakadan.install.ensure_expense_approval_fields",
-    "chundakadan.install.ensure_employee_advance_defaults",
-    "chundakadan.install.ensure_expense_payable_account",
-    "chundakadan.install.ensure_oev_settings_fields",
-    "chundakadan.install.ensure_oev_workspace_pin",
-    "chundakadan.install.ensure_je_oev_reference_option",
-    "chundakadan.install.ensure_employee_transfer_custom_fields",
-    "chundakadan.install.ensure_payroll_entry_form_defaults",
+	"chundakadan.install.ensure_firebase_admin_installed",
+	"chundakadan.install.ensure_holidays_library_installed",
+	"chundakadan.install.ensure_fcm_credentials_field",
+	"chundakadan.install.ensure_visit_log_location_field",
+	"chundakadan.install.ensure_visit_log_visit_type_field",
+	"chundakadan.install.ensure_visit_log_sales_user_create_perm",
+	"chundakadan.install.ensure_user_permission_hr_access",
+	"chundakadan.install.ensure_additional_salary_fields",
+	"chundakadan.install.ensure_checkin_notification_field",
+	"chundakadan.install.ensure_employee_checkin_readonly",
+	"chundakadan.install.ensure_item_fields_visible",
+	"chundakadan.install.ensure_sick_leave_deduction_component",
+	"chundakadan.install.ensure_employee_payroll_fields",
+	"chundakadan.install.ensure_payroll_config_fields",
+	"chundakadan.install.ensure_sick_leave_deduction_toggle",
+	"chundakadan.install.ensure_expense_approval_fields",
+	"chundakadan.install.ensure_employee_advance_defaults",
+	"chundakadan.install.ensure_expense_payable_account",
+	"chundakadan.install.ensure_oev_settings_fields",
+	"chundakadan.install.ensure_oev_workspace_pin",
+	"chundakadan.install.ensure_je_oev_reference_option",
+	"chundakadan.install.ensure_employee_transfer_custom_fields",
+	"chundakadan.install.ensure_payroll_entry_form_defaults",
 ]
 before_migrate = [
-    "chundakadan.dispatch.setup.ensure_dispatch_role",
-    "chundakadan.install.ensure_firebase_admin_installed",
-    "chundakadan.install.ensure_holidays_library_installed",
-    "chundakadan.install.ensure_fcm_credentials_field",
-    "chundakadan.install.ensure_visit_log_location_field",
-    "chundakadan.install.ensure_visit_log_visit_type_field",
-    "chundakadan.install.ensure_visit_log_sales_user_create_perm",
-    "chundakadan.install.ensure_user_permission_hr_access",
-    "chundakadan.install.ensure_additional_salary_fields",
-    "chundakadan.install.ensure_checkin_notification_field",
-    "chundakadan.install.ensure_employee_checkin_readonly",
-    "chundakadan.install.ensure_item_fields_visible",
-    "chundakadan.install.ensure_sick_leave_deduction_component",
-    "chundakadan.install.ensure_employee_payroll_fields",
-    "chundakadan.install.ensure_payroll_config_fields",
-    "chundakadan.install.ensure_sick_leave_deduction_toggle",
-    "chundakadan.seed.privacy_policy.upsert_page",
-    "chundakadan.seed.role_profiles.seed_profiles",
-    "chundakadan.seed.payroll_period.ensure_current_fy_period",
-    "chundakadan.seed.leave_config.seed_leave_config",
-    "chundakadan.seed.holiday_list.ensure_current_and_next_year",
-    "chundakadan.seed.expense_ledgers.seed_expense_ledgers",
-    "chundakadan.install.ensure_expense_approval_fields",
-    "chundakadan.install.ensure_employee_advance_defaults",
-    "chundakadan.install.ensure_expense_payable_account",
-    "chundakadan.install.ensure_oev_settings_fields",
-    "chundakadan.install.ensure_oev_workspace_pin",
-    "chundakadan.install.ensure_je_oev_reference_option",
-    "chundakadan.install.ensure_employee_transfer_custom_fields",
-    "chundakadan.install.ensure_payroll_entry_form_defaults",
+	"chundakadan.dispatch.setup.ensure_dispatch_role",
+	"chundakadan.install.ensure_firebase_admin_installed",
+	"chundakadan.install.ensure_holidays_library_installed",
+	"chundakadan.install.ensure_fcm_credentials_field",
+	"chundakadan.install.ensure_visit_log_location_field",
+	"chundakadan.install.ensure_visit_log_visit_type_field",
+	"chundakadan.install.ensure_visit_log_sales_user_create_perm",
+	"chundakadan.install.ensure_user_permission_hr_access",
+	"chundakadan.install.ensure_additional_salary_fields",
+	"chundakadan.install.ensure_checkin_notification_field",
+	"chundakadan.install.ensure_employee_checkin_readonly",
+	"chundakadan.install.ensure_item_fields_visible",
+	"chundakadan.install.ensure_sick_leave_deduction_component",
+	"chundakadan.install.ensure_employee_payroll_fields",
+	"chundakadan.install.ensure_payroll_config_fields",
+	"chundakadan.install.ensure_sick_leave_deduction_toggle",
+	"chundakadan.seed.privacy_policy.upsert_page",
+	"chundakadan.seed.role_profiles.seed_profiles",
+	"chundakadan.seed.payroll_period.ensure_current_fy_period",
+	"chundakadan.seed.leave_config.seed_leave_config",
+	"chundakadan.seed.holiday_list.ensure_current_and_next_year",
+	"chundakadan.seed.expense_ledgers.seed_expense_ledgers",
+	"chundakadan.install.ensure_expense_approval_fields",
+	"chundakadan.install.ensure_employee_advance_defaults",
+	"chundakadan.install.ensure_expense_payable_account",
+	"chundakadan.install.ensure_oev_settings_fields",
+	"chundakadan.install.ensure_oev_workspace_pin",
+	"chundakadan.install.ensure_je_oev_reference_option",
+	"chundakadan.install.ensure_employee_transfer_custom_fields",
+	"chundakadan.install.ensure_payroll_entry_form_defaults",
 ]
 
 # Runs AFTER doctypes sync — needed for the Additional Salary custom Table
 # field whose child doctype (Late Entry Detail) ships with this app, since
 # before_migrate runs before the child doctype exists on a fresh bootstrap.
 after_migrate = [
-    "chundakadan.install.ensure_additional_salary_fields",
-    "chundakadan.install.ensure_checkin_notification_field",
-    "chundakadan.install.ensure_employee_checkin_readonly",
-    "chundakadan.install.ensure_item_fields_visible",
-    "chundakadan.install.ensure_sick_leave_deduction_component",
-    "chundakadan.dispatch.setup.ensure_dispatch_setup",
-    "chundakadan.dispatch.workspace.ensure_dispatch_number_cards",
-    "chundakadan.doc_events.stock_control.ensure_update_stock_settings",
-    "chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
-    "chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
-    "chundakadan.doc_events.interview_status.ensure_interview_on_hold_status",
-    "chundakadan.chundakadan.api.grievance.ensure_grievance_permissions",
-    "chundakadan.seed.stock_reports.ensure_stock_count_link",
-    "chundakadan.doc_events.item_approval.ensure_item_approval_fields",
-    "chundakadan.doc_events.customer_approval.ensure_customer_approval_fields",
-    "chundakadan.patches.hide_invoice_fields.execute",
-    "chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
-    "chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",
-    "chundakadan.doc_events.purchase_invoice_available_qty.ensure_purchase_invoice_available_qty",
-    "chundakadan.seed.po_workflow.ensure_po_workflow",
-    "chundakadan.seed.approvals.ensure_approvals_workspace",
-    "chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.ensure_payment_entry_field",
+	"chundakadan.install.ensure_additional_salary_fields",
+	"chundakadan.install.ensure_checkin_notification_field",
+	"chundakadan.install.ensure_employee_checkin_readonly",
+	"chundakadan.install.ensure_item_fields_visible",
+	"chundakadan.install.ensure_sick_leave_deduction_component",
+	"chundakadan.dispatch.setup.ensure_dispatch_setup",
+	"chundakadan.dispatch.workspace.ensure_dispatch_number_cards",
+	"chundakadan.doc_events.stock_control.ensure_update_stock_settings",
+	"chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
+	"chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
+	"chundakadan.doc_events.interview_status.ensure_interview_on_hold_status",
+	"chundakadan.chundakadan.api.grievance.ensure_grievance_permissions",
+	"chundakadan.seed.stock_reports.ensure_stock_count_link",
+	"chundakadan.doc_events.item_approval.ensure_item_approval_fields",
+	"chundakadan.doc_events.customer_approval.ensure_customer_approval_fields",
+	"chundakadan.patches.hide_invoice_fields.execute",
+	"chundakadan.doc_events.print_format_defaults.ensure_default_print_formats",
+	"chundakadan.doc_events.purchase_invoice_discount.ensure_purchase_invoice_discount_columns",
+	"chundakadan.doc_events.purchase_invoice_available_qty.ensure_purchase_invoice_available_qty",
+	"chundakadan.seed.po_workflow.ensure_po_workflow",
+	"chundakadan.seed.approvals.ensure_approvals_workspace",
+	"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.ensure_payment_entry_field",
 ]
 
 # Uninstallation
@@ -416,29 +405,29 @@ after_migrate = [
 # adds doctypes specific to chundakadan flows. Combined via Frappe's
 # hooks merger.
 ignore_links_on_delete = [
-    "GL Entry",
-    "Payment Ledger Entry",
+	"GL Entry",
+	"Payment Ledger Entry",
 ]
 
 permission_query_conditions = {
-    "Daily Work Summary": "chundakadan.chundakadan.api.work_summary.get_permission_query_conditions",
-    # a grievance is read by the GM and HR Manager, and by whoever raised it
-    "Employee Grievance": "chundakadan.chundakadan.api.grievance.get_permission_query_conditions",
-    "Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
-    "Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",
-    "Employee Advance": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_employee_advance",
-    "Payment Request": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_payment_request",
-    "Office Expense Voucher": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_office_expense_voucher",
+	"Daily Work Summary": "chundakadan.chundakadan.api.work_summary.get_permission_query_conditions",
+	# a grievance is read by the GM and HR Manager, and by whoever raised it
+	"Employee Grievance": "chundakadan.chundakadan.api.grievance.get_permission_query_conditions",
+	"Leave Application": "chundakadan.chundakadan.api.leave.get_permission_query_conditions",
+	"Expense Claim": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_expense_claim",
+	"Employee Advance": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_employee_advance",
+	"Payment Request": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_payment_request",
+	"Office Expense Voucher": "chundakadan.chundakadan.api.expense_approval.get_permission_query_conditions_office_expense_voucher",
 }
 
 has_permission = {
-    "Daily Work Summary": "chundakadan.chundakadan.api.work_summary.has_permission",
-    "Employee Grievance": "chundakadan.chundakadan.api.grievance.has_permission",
-    "Leave Application": "chundakadan.chundakadan.api.leave.has_permission",
-    "Expense Claim": "chundakadan.chundakadan.api.expense_approval.has_permission",
-    "Employee Advance": "chundakadan.chundakadan.api.expense_approval.has_permission",
-    "Payment Request": "chundakadan.chundakadan.api.expense_approval.has_permission",
-    "Office Expense Voucher": "chundakadan.chundakadan.api.expense_approval.has_permission",
+	"Daily Work Summary": "chundakadan.chundakadan.api.work_summary.has_permission",
+	"Employee Grievance": "chundakadan.chundakadan.api.grievance.has_permission",
+	"Leave Application": "chundakadan.chundakadan.api.leave.has_permission",
+	"Expense Claim": "chundakadan.chundakadan.api.expense_approval.has_permission",
+	"Employee Advance": "chundakadan.chundakadan.api.expense_approval.has_permission",
+	"Payment Request": "chundakadan.chundakadan.api.expense_approval.has_permission",
+	"Office Expense Voucher": "chundakadan.chundakadan.api.expense_approval.has_permission",
 }
 
 # DocType Class
@@ -447,11 +436,10 @@ has_permission = {
 
 override_doctype_class = {
 	"Leave Policy Assignment": "chundakadan.overrides.leave_policy_assignment.CustomLeavePolicyAssignment",
-	"Leave Application":
-    "chundakadan.overrides.leave_application.CustomLeaveApplication",
-    "Employee Checkin": "chundakadan.overrides.employee_checkin.CustomEmployeeCheckin",
-    "Purchase Invoice": "chundakadan.overrides.purchase_invoice.CustomPurchaseInvoice",
-    "Sales Invoice": "chundakadan.overrides.sales_invoice.CustomSalesInvoice",
+	"Leave Application": "chundakadan.overrides.leave_application.CustomLeaveApplication",
+	"Employee Checkin": "chundakadan.overrides.employee_checkin.CustomEmployeeCheckin",
+	"Purchase Invoice": "chundakadan.overrides.purchase_invoice.CustomPurchaseInvoice",
+	"Sales Invoice": "chundakadan.overrides.sales_invoice.CustomSalesInvoice",
 }
 
 
@@ -474,11 +462,11 @@ override_doctype_class = {
 # the app package was never otherwise imported (get_hooks serves from the redis
 # cache without importing app code). See overrides/session_healing.py.
 before_request = [
-    "chundakadan.overrides.session_healing.install",
-    # erpnext 15.124 made the GL Voucher Type column a Link to DocType,
-    # which stops every non-System-Manager with "No permission to read
-    # DocType"; upstream already reverted it to a Select
-    "chundakadan.overrides.general_ledger_columns.install",
+	"chundakadan.overrides.session_healing.install",
+	# erpnext 15.124 made the GL Voucher Type column a Link to DocType,
+	# which stops every non-System-Manager with "No permission to read
+	# DocType"; upstream already reverted it to a Select
+	"chundakadan.overrides.general_ledger_columns.install",
 ]
 
 scheduler_events = {
@@ -506,15 +494,11 @@ scheduler_events = {
 		"30 8 * * *": [
 			"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.send_due_reminders"
 		],
-		"0 1 * * *": [
-			"chundakadan.chundakadan.api.leave.maybe_auto_allocate"
-		],
+		"0 1 * * *": ["chundakadan.chundakadan.api.leave.maybe_auto_allocate"],
 		# Dec 31 at 23:00 — append the upcoming year's holidays to the
 		# existing `CA` Holiday List, so leave + payroll keep working
 		# across the Jan 1 rollover.
-		"0 23 31 12 *": [
-			"chundakadan.seed.holiday_list.annual_holiday_refresh"
-		]
+		"0 23 31 12 *": ["chundakadan.seed.holiday_list.annual_holiday_refresh"],
 	}
 }
 
@@ -595,80 +579,34 @@ before_tests = "chundakadan.install.before_tests"
 # }
 
 fixtures = [
-    # --- Display Tracking (Phase 1) ---
-    # Workspace ships as a module file (display_tracking/workspace/); number
-    # cards are seeded via patch (seed_display_number_cards) to avoid clobbering
-    # the shared number_card.json fixture.
-    {"doctype": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
-    {"doctype": "Role", "filters": [["name", "in", ["Display Manager", "Display User"]]]},
-    {"doctype": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
-    {
-        "doctype": "Report",
-        "filters": [
-            [
-                "module",
-                "=",
-                "Chundakadan"
-            ]
-        ]
-    },
-    {
-        "doctype": "Custom Field",
-        "filters": [
-            [
-                "module",
-                "in",
-                "Chundakadan"
-            ]
-        ]
-    },
-    {
-        "doctype": "Property Setter",
-        "filters": [
-            [
-                "module",
-                "in",
-                "Chundakadan"
-            ]
-        ]
-    },
-    {
-        "doctype": "Client Script",
-        "filters": [
-            [
-                "module",
-                "in",
-                "Chundakadan"
-            ]
-        ]
-    },
-    {
-        "doctype": "Document Naming Rule",
-        "filters": [
-            [
-                "document_type",
-                "in",
-                [
-                    "Performance Feedback Form",
-                    "Management Feedback Form",
-                    "Peer Feedback Form",
-                    "Coordinator Feedback Form",
-                    "Customer Feedback Form",
-                    "Self Assessment Form",
-                    "Period Salary Slip"
-                ]
-            ]
-        ]
-    },
-    {
-        "doctype": "Print Format",
-        "filters": [
-            [
-                "module",
-                "=",
-                "Chundakadan"
-            ]
-        ]
-    }
-
+	# --- Display Tracking (Phase 1) ---
+	# Workspace ships as a module file (display_tracking/workspace/); number
+	# cards are seeded via patch (seed_display_number_cards) to avoid clobbering
+	# the shared number_card.json fixture.
+	{"doctype": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
+	{"doctype": "Role", "filters": [["name", "in", ["Display Manager", "Display User"]]]},
+	{"doctype": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
+	{"doctype": "Report", "filters": [["module", "=", "Chundakadan"]]},
+	{"doctype": "Custom Field", "filters": [["module", "in", "Chundakadan"]]},
+	{"doctype": "Property Setter", "filters": [["module", "in", "Chundakadan"]]},
+	{"doctype": "Client Script", "filters": [["module", "in", "Chundakadan"]]},
+	{
+		"doctype": "Document Naming Rule",
+		"filters": [
+			[
+				"document_type",
+				"in",
+				[
+					"Performance Feedback Form",
+					"Management Feedback Form",
+					"Peer Feedback Form",
+					"Coordinator Feedback Form",
+					"Customer Feedback Form",
+					"Self Assessment Form",
+					"Period Salary Slip",
+				],
+			]
+		],
+	},
+	{"doctype": "Print Format", "filters": [["module", "=", "Chundakadan"]]},
 ]

@@ -89,7 +89,9 @@ class TestDispatch(FrappeTestCase):
 
 	def _dispatched_log_with_ewaybill(self, gst_transporter_id=None):
 		log = fresh_log(self.invoices[0])
-		frappe.db.set_value("Sales Invoice", log.sales_invoice, "ewaybill", "331000000001", update_modified=False)
+		frappe.db.set_value(
+			"Sales Invoice", log.sales_invoice, "ewaybill", "331000000001", update_modified=False
+		)
 		log.transporter = self.transporter
 		log.gst_transporter_id = gst_transporter_id
 		log.vehicle_no = "KL10AB1234"
@@ -100,21 +102,29 @@ class TestDispatch(FrappeTestCase):
 
 	def test_sync_with_ewaybill_updates_vehicle_on_portal(self):
 		log = self._dispatched_log_with_ewaybill()
-		with patch(f"{E_WAYBILL}.update_vehicle_info") as vehicle, patch(f"{E_WAYBILL}.update_transporter") as transporter:
+		with (
+			patch(f"{E_WAYBILL}.update_vehicle_info") as vehicle,
+			patch(f"{E_WAYBILL}.update_transporter") as transporter,
+		):
 			log.save()
 		vehicle.assert_called_once()
 		values = vehicle.call_args.kwargs["values"]
 		self.assertEqual(values["vehicle_no"], "KL10AB1234")
 		self.assertEqual(values["lr_no"], "LR-1")
 		transporter.assert_not_called()  # no GST transporter id
-		self.assertEqual(frappe.db.get_value("Sales Invoice", log.sales_invoice, "transporter"), self.transporter)
+		self.assertEqual(
+			frappe.db.get_value("Sales Invoice", log.sales_invoice, "transporter"), self.transporter
+		)
 		self.assertEqual(frappe.db.get_value("Dispatch Log", log.name, "ewaybill_sync_status"), "Synced")
 
 	def test_sync_calls_update_transporter_when_id_present(self):
 		log = self._dispatched_log_with_ewaybill()
 		# Every save/sync of a log whose invoice has an e-Waybill must stay patched:
 		# unpatched calls would reach the live e-Waybill portal.
-		with patch(f"{E_WAYBILL}.update_vehicle_info"), patch(f"{E_WAYBILL}.update_transporter") as transporter:
+		with (
+			patch(f"{E_WAYBILL}.update_vehicle_info"),
+			patch(f"{E_WAYBILL}.update_transporter") as transporter,
+		):
 			log.save()
 			transporter.reset_mock()
 			# fetch_from blanks the id on save, so set it after saving and sync directly
@@ -127,7 +137,12 @@ class TestDispatch(FrappeTestCase):
 		log = self._dispatched_log_with_ewaybill()
 		with patch(f"{E_WAYBILL}.update_vehicle_info", side_effect=Exception("portal down")):
 			log.save()
-		row = frappe.db.get_value("Dispatch Log", log.name, ["dispatch_status", "ewaybill_sync_status", "ewaybill_sync_error"], as_dict=True)
+		row = frappe.db.get_value(
+			"Dispatch Log",
+			log.name,
+			["dispatch_status", "ewaybill_sync_status", "ewaybill_sync_error"],
+			as_dict=True,
+		)
 		self.assertEqual(row.dispatch_status, C.DISPATCHED)
 		self.assertEqual(row.ewaybill_sync_status, "Failed")
 		self.assertIn("portal down", row.ewaybill_sync_error)
@@ -200,7 +215,9 @@ class TestDispatch(FrappeTestCase):
 
 	def test_create_transporter_flags_existing_supplier(self):
 		name = f"Test Plain Supplier {frappe.generate_hash(length=6)}"
-		plain = frappe.get_doc({"doctype": "Supplier", "supplier_name": name, "supplier_group": api._transporter_group()}).insert()
+		plain = frappe.get_doc(
+			{"doctype": "Supplier", "supplier_name": name, "supplier_group": api._transporter_group()}
+		).insert()
 		self.assertEqual(plain.is_transporter, 0)
 		result = api.create_transporter(name)
 		self.assertEqual(result["name"], plain.name)
@@ -219,7 +236,9 @@ class TestDispatch(FrappeTestCase):
 		if not user:
 			user = "dispatch.test@example.com"
 			if not frappe.db.exists("User", user):
-				frappe.get_doc({"doctype": "User", "email": user, "first_name": "Dispatch Test", "send_welcome_email": 0}).insert()
+				frappe.get_doc(
+					{"doctype": "User", "email": user, "first_name": "Dispatch Test", "send_welcome_email": 0}
+				).insert()
 			frappe.get_doc("User", user).add_roles(C.ROLE)
 		self.assertFalse(frappe.has_permission("Supplier", "create", user=user))
 		frappe.set_user(user)
@@ -227,4 +246,3 @@ class TestDispatch(FrappeTestCase):
 		self.assertTrue(frappe.db.get_value("Supplier", result["name"], "is_transporter"))
 		frappe.set_user("Administrator")
 		frappe.db.rollback()
-

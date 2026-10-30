@@ -25,9 +25,7 @@ class DispatchLog(Document):
 		new_status = self.dispatch_status or C.PENDING
 
 		if new_status not in ALLOWED_TRANSITIONS.get(old_status, set()):
-			frappe.throw(
-				_("Dispatch status cannot change from {0} to {1}.").format(old_status, new_status)
-			)
+			frappe.throw(_("Dispatch status cannot change from {0} to {1}.").format(old_status, new_status))
 
 		if new_status == C.DISPATCHED:
 			self._validate_dispatch(old_status, previous)

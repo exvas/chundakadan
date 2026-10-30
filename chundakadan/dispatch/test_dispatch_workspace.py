@@ -10,14 +10,20 @@ from frappe.utils import add_days, now_datetime, nowdate
 from chundakadan.dispatch import constants as C
 from chundakadan.dispatch.workspace import CARDS, ensure_dispatch_number_cards
 
-WORKSPACE_FILE = frappe.get_app_path("chundakadan", "chundakadan", "workspace", "dispatch_center", "dispatch_center.json")
+WORKSPACE_FILE = frappe.get_app_path(
+	"chundakadan", "chundakadan", "workspace", "dispatch_center", "dispatch_center.json"
+)
 
 
 class TestDispatchWorkspace(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		self.invoices = frappe.get_all(
-			"Sales Invoice", filters={"docstatus": 1, "is_return": 0}, pluck="name", limit=4, order_by="creation desc"
+			"Sales Invoice",
+			filters={"docstatus": 1, "is_return": 0},
+			pluck="name",
+			limit=4,
+			order_by="creation desc",
 		)
 		frappe.db.delete("Dispatch Log", {"sales_invoice": ["in", self.invoices]})
 
@@ -25,7 +31,9 @@ class TestDispatchWorkspace(FrappeTestCase):
 		frappe.db.rollback()
 
 	def _log(self, invoice, **values):
-		doc = frappe.get_doc({"doctype": "Dispatch Log", "sales_invoice": invoice, "grand_total": 100, **values})
+		doc = frappe.get_doc(
+			{"doctype": "Dispatch Log", "sales_invoice": invoice, "grand_total": 100, **values}
+		)
 		doc.flags.ignore_validate = True
 		doc.flags.ignore_links = True
 		doc.db_insert()
@@ -48,7 +56,10 @@ class TestDispatchWorkspace(FrappeTestCase):
 
 	def test_card_counts_follow_status(self):
 		ensure_dispatch_number_cards()
-		before = {label: self._count(label) for label in ("Pending Dispatch", "In Transit", "Dispatched Today", "Not Delivered")}
+		before = {
+			label: self._count(label)
+			for label in ("Pending Dispatch", "In Transit", "Dispatched Today", "Not Delivered")
+		}
 		self._log(self.invoices[0], dispatch_status=C.PENDING, posting_date=nowdate())
 		self._log(self.invoices[1], dispatch_status=C.DISPATCHED, dispatched_on=now_datetime())
 		self._log(self.invoices[2], dispatch_status=C.NOT_DELIVERED)
@@ -63,7 +74,9 @@ class TestDispatchWorkspace(FrappeTestCase):
 		ensure_dispatch_number_cards()
 		card = self._card("Pending Over 2 Days")
 		# dashboard_utils.js turns the JS expression into a date before calling get_result
-		filters = json.loads(card.filters_json) + [["Dispatch Log", "posting_date", "<", add_days(nowdate(), -2)]]
+		filters = json.loads(card.filters_json) + [
+			["Dispatch Log", "posting_date", "<", add_days(nowdate(), -2)]
+		]
 		before = get_result(card, json.dumps(filters))
 		self._log(self.invoices[0], dispatch_status=C.PENDING, posting_date=add_days(nowdate(), -5))
 		self._log(self.invoices[1], dispatch_status=C.PENDING, posting_date=nowdate())
@@ -90,4 +103,6 @@ class TestDispatchWorkspace(FrappeTestCase):
 		import_file_by_path(WORKSPACE_FILE, force=True)
 		ws = frappe.get_doc("Workspace", "Dispatch Center")
 		self.assertEqual(len(ws.number_cards), len(CARDS))
-		self.assertEqual({r.role for r in ws.roles}, {C.ROLE, "System Manager", "Accounts Manager", "Sales Manager"})
+		self.assertEqual(
+			{r.role for r in ws.roles}, {C.ROLE, "System Manager", "Accounts Manager", "Sales Manager"}
+		)

@@ -32,7 +32,9 @@ def ensure_doctypes():
 	base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 	for name in ("post_dated_cheque_reference", "post_dated_cheque"):
 		import_file_by_path(os.path.join(base, name, f"{name}.json"), force=True)
-	report = os.path.join(os.path.dirname(base), "report", "post_dated_cheque_report", "post_dated_cheque_report.json")
+	report = os.path.join(
+		os.path.dirname(base), "report", "post_dated_cheque_report", "post_dated_cheque_report.json"
+	)
 	import_file_by_path(report, force=True)
 
 
@@ -51,24 +53,30 @@ class TestPostDatedCheque(FrappeTestCase):
 		if not self.invoice:
 			self.skipTest("no outstanding Sales Invoice on this site")
 		self.invoice = self.invoice[0]
-		self.bank = frappe.db.get_value("Account", {"company": COMPANY, "account_type": "Bank", "is_group": 0}, "name")
-		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
+		self.bank = frappe.db.get_value(
+			"Account", {"company": COMPANY, "account_type": "Bank", "is_group": 0}, "name"
+		)
+		self.bank_account = create_customer_bank_account(
+			self.invoice.customer, "Test Bank", bank_account_no="111000"
+		)["name"]
 
 	def tearDown(self):
 		frappe.db.rollback()
 
 	def _cheque(self, submit=True, amount=None, **values):
-		doc = frappe.get_doc({
-			"doctype": "Post Dated Cheque",
-			"company": COMPANY,
-			"customer": self.invoice.customer,
-			"posting_date": nowdate(),
-			"cheque_no": frappe.generate_hash(length=8),
-			"cheque_date": add_days(nowdate(), 30),
-			"amount": amount or flt(self.invoice.outstanding_amount),
-			"bank_account": self.bank_account,
-			**values,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Post Dated Cheque",
+				"company": COMPANY,
+				"customer": self.invoice.customer,
+				"posting_date": nowdate(),
+				"cheque_no": frappe.generate_hash(length=8),
+				"cheque_date": add_days(nowdate(), 30),
+				"amount": amount or flt(self.invoice.outstanding_amount),
+				"bank_account": self.bank_account,
+				**values,
+			}
+		)
 		doc.insert()
 		if submit:
 			doc.submit()
@@ -79,11 +87,16 @@ class TestPostDatedCheque(FrappeTestCase):
 		return frappe.db.count("GL Entry")
 
 	def test_entry_does_not_touch_the_ledger(self):
-		before_gl, before_outstanding = self._gl_count(), frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")
+		before_gl, before_outstanding = (
+			self._gl_count(),
+			frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"),
+		)
 		doc = self._cheque()
 		self.assertEqual(doc.status, "Pending")
 		self.assertEqual(self._gl_count(), before_gl)
-		self.assertEqual(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"), before_outstanding)
+		self.assertEqual(
+			frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"), before_outstanding
+		)
 		self.assertFalse(frappe.db.exists("Payment Entry", {"reference_no": doc.cheque_no}))
 
 	def test_reference_allocation_defaults_and_validates(self):
@@ -99,7 +112,9 @@ class TestPostDatedCheque(FrappeTestCase):
 			self._cheque(cheque_no=doc.cheque_no)
 
 	def test_duplicate_blocked_across_customers_too(self):
-		other = frappe.db.get_value("Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name")
+		other = frappe.db.get_value(
+			"Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name"
+		)
 		if not other:
 			self.skipTest("only one customer")
 		doc = self._cheque()
@@ -113,12 +128,16 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertEqual(again.cheque_no, doc.cheque_no)
 
 	def test_collect_creates_payment_entry_and_settles_invoice(self):
-		outstanding_before = flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount"))
+		outstanding_before = flt(
+			frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")
+		)
 		doc = self._cheque(references=[{"sales_invoice": self.invoice.name}])
 		result = collect(doc.name, bank_account=self.bank, posting_date=nowdate())
 		payment = frappe.get_doc("Payment Entry", result["payment_entry"])
 		self.assertEqual(payment.docstatus, 1)
-		self.assertEqual((payment.party, payment.payment_type, payment.paid_to), (doc.customer, "Receive", self.bank))
+		self.assertEqual(
+			(payment.party, payment.payment_type, payment.paid_to), (doc.customer, "Receive", self.bank)
+		)
 		self.assertEqual(flt(payment.paid_amount), flt(doc.amount))
 		self.assertEqual(payment.reference_no, doc.cheque_no)
 		doc.reload()
@@ -169,7 +188,9 @@ class TestPostDatedCheque(FrappeTestCase):
 		for field in ("cheque_date", "customer_name", "amount", "posting_date", "status"):
 			self.assertIn(field, names)
 		row = next(r for r in data if r["name"] == doc.name)
-		self.assertEqual((row["cheque_no"], flt(row["amount"]), row["status"]), (doc.cheque_no, flt(doc.amount), "Pending"))
+		self.assertEqual(
+			(row["cheque_no"], flt(row["amount"]), row["status"]), (doc.cheque_no, flt(doc.amount), "Pending")
+		)
 		self.assertEqual(row["invoices"], self.invoice.name)
 		self.assertEqual(row["days_to_due"], 30)
 
@@ -220,7 +241,9 @@ class TestPostDatedCheque(FrappeTestCase):
 
 	def _reminder_run(self, cheque_date):
 		# the caller rolls back between runs, so the bank account is gone too
-		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
+		self.bank_account = create_customer_bank_account(
+			self.invoice.customer, "Test Bank", bank_account_no="111000"
+		)["name"]
 		self._cheque(cheque_date=cheque_date)
 		with patch("chundakadan.utils.push.send_to_users") as push:
 			result = send_due_reminders()
@@ -262,11 +285,24 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertFalse(doc.bank_name)
 
 	def test_create_customer_bank_account_links_the_customer(self):
-		result = create_customer_bank_account(self.invoice.customer, "Test Bank 2", account_name="Test A/C", bank_account_no="222333", ifsc="sbin0001234", branch="Calicut")
+		result = create_customer_bank_account(
+			self.invoice.customer,
+			"Test Bank 2",
+			account_name="Test A/C",
+			bank_account_no="222333",
+			ifsc="sbin0001234",
+			branch="Calicut",
+		)
 		account = frappe.get_doc("Bank Account", result["name"])
 		self.assertTrue(result["created"])
-		self.assertEqual((account.party_type, account.party, account.bank), ("Customer", self.invoice.customer, "Test Bank 2"))
-		self.assertEqual((account.bank_account_no, account.custom_ifsc, account.custom_branch), ("222333", "SBIN0001234", "Calicut"))
+		self.assertEqual(
+			(account.party_type, account.party, account.bank),
+			("Customer", self.invoice.customer, "Test Bank 2"),
+		)
+		self.assertEqual(
+			(account.bank_account_no, account.custom_ifsc, account.custom_branch),
+			("222333", "SBIN0001234", "Calicut"),
+		)
 		self.assertEqual(account.is_company_account, 0)
 		self.assertTrue(frappe.db.exists("Bank", "Test Bank 2"))
 
@@ -277,7 +313,9 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertFalse(again["created"])
 
 	def test_bank_account_of_another_customer_blocked(self):
-		other = frappe.db.get_value("Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name")
+		other = frappe.db.get_value(
+			"Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name"
+		)
 		if not other:
 			self.skipTest("only one customer")
 		theirs = create_customer_bank_account(other, "Test Bank 4", bank_account_no="4444")["name"]
@@ -305,7 +343,17 @@ class TestPostDatedCheque(FrappeTestCase):
 	def _orphan_account(self, name="Orphan Bank"):
 		if not frappe.db.exists("Bank", name):
 			frappe.get_doc({"doctype": "Bank", "bank_name": name}).insert()
-		return frappe.get_doc({"doctype": "Bank Account", "account_name": f"Orphan {frappe.generate_hash(length=5)}", "bank": name}).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Bank Account",
+					"account_name": f"Orphan {frappe.generate_hash(length=5)}",
+					"bank": name,
+				}
+			)
+			.insert()
+			.name
+		)
 
 	def test_unowned_bank_account_is_adopted(self):
 		# made through the link field's own create dialog, so it has no party
@@ -321,9 +369,20 @@ class TestPostDatedCheque(FrappeTestCase):
 	def test_query_lists_own_and_unowned_accounts(self):
 		mine = self.bank_account
 		orphan = self._orphan_account()
-		other = frappe.db.get_value("Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name")
-		theirs = create_customer_bank_account(other, "Someone Elses Bank", bank_account_no="7777")["name"] if other else None
-		names = [row[0] for row in customer_bank_accounts("Bank Account", "", "name", 0, 50, {"customer": self.invoice.customer})]
+		other = frappe.db.get_value(
+			"Customer", {"name": ["!=", self.invoice.customer], "disabled": 0}, "name"
+		)
+		theirs = (
+			create_customer_bank_account(other, "Someone Elses Bank", bank_account_no="7777")["name"]
+			if other
+			else None
+		)
+		names = [
+			row[0]
+			for row in customer_bank_accounts(
+				"Bank Account", "", "name", 0, 50, {"customer": self.invoice.customer}
+			)
+		]
 		self.assertIn(mine, names)
 		self.assertIn(orphan, names)
 		if theirs:
@@ -333,21 +392,28 @@ class TestPostDatedCheque(FrappeTestCase):
 
 	def _cheque_bounce_doc(self, pdc, charge=0):
 		company = COMPANY
-		return frappe.get_doc({
-			"doctype": "Cheque Bounce",
-			"payment_entry": pdc.payment_entry,
-			"customer": pdc.customer,
-			"bounce_date": nowdate(),
-			"cheque_no": pdc.cheque_no,
-			"cheque_date": pdc.cheque_date,
-			"original_amount": pdc.amount,
-			"mode_of_payment": "Cheque",
-			"bounce_reason": "Insufficient Funds",
-			"bounce_charge_amount": charge,
-			"charge_to_customer": 0,
-			"bank_account": self.bank,
-			"bank_charges_account": frappe.db.get_value("Account", {"company": company, "account_name": ["like", "%Bank Charges%"], "is_group": 0}, "name") or self.bank,
-		})
+		return frappe.get_doc(
+			{
+				"doctype": "Cheque Bounce",
+				"payment_entry": pdc.payment_entry,
+				"customer": pdc.customer,
+				"bounce_date": nowdate(),
+				"cheque_no": pdc.cheque_no,
+				"cheque_date": pdc.cheque_date,
+				"original_amount": pdc.amount,
+				"mode_of_payment": "Cheque",
+				"bounce_reason": "Insufficient Funds",
+				"bounce_charge_amount": charge,
+				"charge_to_customer": 0,
+				"bank_account": self.bank,
+				"bank_charges_account": frappe.db.get_value(
+					"Account",
+					{"company": company, "account_name": ["like", "%Bank Charges%"], "is_group": 0},
+					"name",
+				)
+				or self.bank,
+			}
+		)
 
 	def test_cheque_bounce_marks_the_cheque_bounced(self):
 		if not frappe.db.exists("DocType", "Cheque Bounce"):
@@ -382,7 +448,9 @@ class TestPostDatedCheque(FrappeTestCase):
 	# ---- deposit account from the mode of payment ---------------------
 
 	def _mode_with_account(self):
-		mode = frappe.db.get_value("Mode of Payment Account", {"company": COMPANY, "default_account": ["is", "set"]}, "parent")
+		mode = frappe.db.get_value(
+			"Mode of Payment Account", {"company": COMPANY, "default_account": ["is", "set"]}, "parent"
+		)
 		if not mode:
 			self.skipTest("no mode of payment has an account for this company")
 		return mode
@@ -390,7 +458,12 @@ class TestPostDatedCheque(FrappeTestCase):
 	def test_mode_of_payment_account_lookup(self):
 		mode = self._mode_with_account()
 		account = mode_of_payment_account(mode, COMPANY)
-		self.assertEqual(account, frappe.db.get_value("Mode of Payment Account", {"parent": mode, "company": COMPANY}, "default_account"))
+		self.assertEqual(
+			account,
+			frappe.db.get_value(
+				"Mode of Payment Account", {"parent": mode, "company": COMPANY}, "default_account"
+			),
+		)
 
 	def test_collect_uses_the_mode_of_payment_account(self):
 		mode = self._mode_with_account()
@@ -402,7 +475,17 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertEqual(payment.mode_of_payment, mode)
 
 	def test_collect_without_an_account_for_the_mode(self):
-		mode = frappe.get_doc({"doctype": "Mode of Payment", "mode_of_payment": f"No Account {frappe.generate_hash(length=4)}", "type": "Bank"}).insert().name
+		mode = (
+			frappe.get_doc(
+				{
+					"doctype": "Mode of Payment",
+					"mode_of_payment": f"No Account {frappe.generate_hash(length=4)}",
+					"type": "Bank",
+				}
+			)
+			.insert()
+			.name
+		)
 		doc = self._cheque()
 		with self.assertRaises(frappe.ValidationError):
 			collect(doc.name, mode_of_payment=mode)
@@ -415,7 +498,9 @@ class TestPostDatedCheque(FrappeTestCase):
 		doc = self._cheque()
 		collect(doc.name, posting_date=nowdate())
 		doc.reload()
-		self.assertEqual(frappe.db.get_value("Payment Entry", doc.payment_entry, "custom_post_dated_cheque"), doc.name)
+		self.assertEqual(
+			frappe.db.get_value("Payment Entry", doc.payment_entry, "custom_post_dated_cheque"), doc.name
+		)
 
 		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
 		found = {row["doctype"]: row for row in counts["count"]["external_links_found"]}
@@ -423,18 +508,24 @@ class TestPostDatedCheque(FrappeTestCase):
 
 		result = mark_returned(doc.name, reason="Returned by bank")
 		self.assertEqual(
-			frappe.db.get_value("Payment Entry", result["return_payment_entry"], "custom_post_dated_cheque"), doc.name
+			frappe.db.get_value("Payment Entry", result["return_payment_entry"], "custom_post_dated_cheque"),
+			doc.name,
 		)
 		counts = get_open_count("Post Dated Cheque", doc.name, ["Payment Entry", "Cheque Bounce"])
 		found = {row["doctype"]: row for row in counts["count"]["external_links_found"]}
 		self.assertEqual(found["Payment Entry"]["count"], 2)
 
-
 	def _reminder_with_mail(self, cheque_date):
-		self.bank_account = create_customer_bank_account(self.invoice.customer, "Test Bank", bank_account_no="111000")["name"]
+		self.bank_account = create_customer_bank_account(
+			self.invoice.customer, "Test Bank", bank_account_no="111000"
+		)["name"]
 		doc = self._cheque(cheque_date=cheque_date)
 		# Administrator is skipped on purpose, so pose as a real user
-		owner = frappe.db.get_value("User", {"enabled": 1, "user_type": "System User", "name": ["not in", ["Administrator", "Guest"]]}, "name")
+		owner = frappe.db.get_value(
+			"User",
+			{"enabled": 1, "user_type": "System User", "name": ["not in", ["Administrator", "Guest"]]},
+			"name",
+		)
 		if not owner:
 			self.skipTest("no ordinary user on this site")
 		frappe.db.set_value("Post Dated Cheque", doc.name, "owner", owner, update_modified=False)
@@ -443,7 +534,6 @@ class TestPostDatedCheque(FrappeTestCase):
 			send_due_reminders()
 		return doc, mail
 
-    
 	def test_creator_is_emailed_the_day_before_and_on_the_day(self):
 		for days in (1, 0):
 			frappe.db.rollback()
@@ -452,7 +542,9 @@ class TestPostDatedCheque(FrappeTestCase):
 			sent = [c for c in mail.call_args_list if c.kwargs.get("reference_name") == doc.name]
 			self.assertEqual(len(sent), 1, f"{days} days")
 			kwargs = sent[0].kwargs
-			self.assertEqual(kwargs["recipients"], [frappe.db.get_value("User", doc.owner, "email") or doc.owner])
+			self.assertEqual(
+				kwargs["recipients"], [frappe.db.get_value("User", doc.owner, "email") or doc.owner]
+			)
 			self.assertIn(doc.cheque_no, kwargs["subject"])
 			self.assertIn("today" if days == 0 else "tomorrow", kwargs["subject"])
 			self.assertIn(doc.cheque_no, kwargs["message"])
@@ -500,20 +592,29 @@ class TestPostDatedCheque(FrappeTestCase):
 		self.assertEqual(payment.references, [])
 		self.assertAlmostEqual(flt(payment.unallocated_amount), flt(doc.amount), places=2)
 		self.assertAlmostEqual(
-			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")), outstanding, places=2
+			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")),
+			outstanding,
+			places=2,
 		)
 
 	def test_allocation_over_the_cheque_amount_is_refused(self):
 		doc = self._cheque(amount=100)
 		with self.assertRaises(frappe.ValidationError):
-			collect(doc.name, references=json.dumps([{"sales_invoice": self.invoice.name, "allocated_amount": 500}]))
+			collect(
+				doc.name,
+				references=json.dumps([{"sales_invoice": self.invoice.name, "allocated_amount": 500}]),
+			)
 		doc.reload()
 		self.assertEqual(doc.status, "Pending")
 
 	def test_another_customers_invoice_is_refused(self):
 		other = frappe.get_all(
 			"Sales Invoice",
-			filters={"docstatus": 1, "customer": ["!=", self.invoice.customer], "outstanding_amount": [">", 0]},
+			filters={
+				"docstatus": 1,
+				"customer": ["!=", self.invoice.customer],
+				"outstanding_amount": [">", 0],
+			},
 			pluck="name",
 			limit=1,
 		)
@@ -556,14 +657,17 @@ class TestPostDatedCheque(FrappeTestCase):
 		rows = frappe.db.sql(
 			"""select sum(debit) - sum(credit) as balance from `tabGL Entry`
 			where party_type = 'Customer' and party = %s and is_cancelled = 0""",
-			customer, as_dict=True,
+			customer,
+			as_dict=True,
 		)
 		return flt(rows[0].balance)
 
 	def test_return_posts_the_bank_charge(self):
 		doc = self._cheque()
 		collect(doc.name, posting_date=nowdate())
-		account = frappe.db.get_value("Account", {"company": COMPANY, "account_name": ["like", "%Bank Charges%"], "is_group": 0}, "name")
+		account = frappe.db.get_value(
+			"Account", {"company": COMPANY, "account_name": ["like", "%Bank Charges%"], "is_group": 0}, "name"
+		)
 		if not account:
 			self.skipTest("no bank charges account")
 		result = mark_returned(doc.name, reason="Returned", bank_charge=50, bank_charges_account=account)
@@ -596,13 +700,17 @@ class TestPostDatedCheque(FrappeTestCase):
 			references=json.dumps([{"sales_invoice": self.invoice.name, "allocated_amount": part}]),
 		)
 		self.assertAlmostEqual(
-			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")), outstanding - part, places=2
+			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")),
+			outstanding - part,
+			places=2,
 		)
 
 		doc.reload()
 		mark_returned(doc.name, reason="Returned by bank")
 		self.assertAlmostEqual(
-			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")), outstanding, places=2
+			flt(frappe.db.get_value("Sales Invoice", self.invoice.name, "outstanding_amount")),
+			outstanding,
+			places=2,
 		)
 		self.assertEqual(frappe.db.get_value("Payment Entry", doc.payment_entry, "docstatus"), 1)
 

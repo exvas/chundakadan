@@ -69,9 +69,7 @@ def available_qty(item_code: str | None = None, warehouse: str | None = None):
 	"""
 	if not (item_code and warehouse):
 		return 0.0
-	return flt(
-		frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty")
-	)
+	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
 
 
 def set_available_qty(doc, method=None):

@@ -61,7 +61,12 @@ class CustomerFollowUp(Document):
 		"""One running chase per customer: the new entry replaces the old."""
 		previous = frappe.get_all(
 			"Customer Follow Up",
-			filters={"customer": self.customer, "company": self.company, "status": OPEN, "name": ["!=", self.name]},
+			filters={
+				"customer": self.customer,
+				"company": self.company,
+				"status": OPEN,
+				"name": ["!=", self.name],
+			},
 			pluck="name",
 		)
 		for name in previous:
@@ -73,15 +78,17 @@ class CustomerFollowUp(Document):
 		if self.status == CLOSED or not self.next_follow_up_date:
 			return
 		amount = frappe.format_value(self.outstanding_amount, {"fieldtype": "Currency"})
-		todo = frappe.get_doc({
-			"doctype": "ToDo",
-			"description": _("Follow up · {0} ({1})").format(self.customer_name or self.customer, amount),
-			"reference_type": self.doctype,
-			"reference_name": self.name,
-			"date": self.next_follow_up_date,
-			"allocated_to": self.owner,
-			"priority": "Medium",
-		}).insert(ignore_permissions=True)
+		todo = frappe.get_doc(
+			{
+				"doctype": "ToDo",
+				"description": _("Follow up · {0} ({1})").format(self.customer_name or self.customer, amount),
+				"reference_type": self.doctype,
+				"reference_name": self.name,
+				"date": self.next_follow_up_date,
+				"allocated_to": self.owner,
+				"priority": "Medium",
+			}
+		).insert(ignore_permissions=True)
 		self.db_set("todo", todo.name)
 
 	def close_task(self):
@@ -126,7 +133,17 @@ def chase_history(customer, company=None, limit=10):
 	return frappe.get_all(
 		"Customer Follow Up",
 		filters=filters,
-		fields=["name", "follow_up_date", "outcome", "status", "outstanding_amount", "promised_amount", "paid_amount", "remarks", "next_follow_up_date"],
+		fields=[
+			"name",
+			"follow_up_date",
+			"outcome",
+			"status",
+			"outstanding_amount",
+			"promised_amount",
+			"paid_amount",
+			"remarks",
+			"next_follow_up_date",
+		],
 		order_by="follow_up_date desc, creation desc",
 		limit=int(limit),
 	)

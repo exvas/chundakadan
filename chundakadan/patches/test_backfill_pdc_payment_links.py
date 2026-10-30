@@ -33,16 +33,18 @@ class TestBackfillPDCPaymentLinks(FrappeTestCase):
 		frappe.db.rollback()
 
 	def test_links_both_payments_back_to_the_cheque(self):
-		doc = frappe.get_doc({
-			"doctype": "Post Dated Cheque",
-			"company": COMPANY,
-			"customer": self.customer,
-			"posting_date": nowdate(),
-			"cheque_no": frappe.generate_hash(length=8),
-			"cheque_date": add_days(nowdate(), 5),
-			"amount": 500,
-			"sales_person": frappe.db.get_value("Sales Person", {"enabled": 1}, "name"),
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Post Dated Cheque",
+				"company": COMPANY,
+				"customer": self.customer,
+				"posting_date": nowdate(),
+				"cheque_no": frappe.generate_hash(length=8),
+				"cheque_date": add_days(nowdate(), 5),
+				"amount": 500,
+				"sales_person": frappe.db.get_value("Sales Person", {"enabled": 1}, "name"),
+			}
+		)
 		doc.insert()
 		doc.submit()
 		collect(doc.name, posting_date=nowdate())

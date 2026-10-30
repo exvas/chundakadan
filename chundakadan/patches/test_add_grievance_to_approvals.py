@@ -27,8 +27,7 @@ class TestGrievanceOnTheApprovalsWorkspace(FrappeTestCase):
 			if row.type == "Card Break" and row.label == "Approvals":
 				row.link_count = max((row.link_count or 1) - 1, 0)
 		content = [
-			b for b in json.loads(ws.content or "[]")
-			if b.get("data", {}).get("number_card_name") != CARD
+			b for b in json.loads(ws.content or "[]") if b.get("data", {}).get("number_card_name") != CARD
 		]
 		ws.content = json.dumps(content)
 		ws.save(ignore_permissions=True)
@@ -44,20 +43,15 @@ class TestGrievanceOnTheApprovalsWorkspace(FrappeTestCase):
 	def test_the_card_is_on_the_dashboard(self):
 		execute()
 		content = json.loads(self._ws().content)
-		self.assertTrue(any(
-			b.get("data", {}).get("number_card_name") == CARD for b in content
-		))
+		self.assertTrue(any(b.get("data", {}).get("number_card_name") == CARD for b in content))
 
 	def test_the_card_sits_with_the_other_cards(self):
 		"""Not after the link sections, where nobody would see it."""
 		execute()
 		content = json.loads(self._ws().content)
 		types = [b["type"] for b in content]
-		index = next(
-			i for i, b in enumerate(content)
-			if b.get("data", {}).get("number_card_name") == CARD
-		)
-		after = types[index + 1:]
+		index = next(i for i, b in enumerate(content) if b.get("data", {}).get("number_card_name") == CARD)
+		after = types[index + 1 :]
 		self.assertNotIn("number_card", after, "a card ended up after the lists")
 
 	def test_the_list_link_is_added(self):
@@ -98,8 +92,6 @@ class TestGrievanceOnTheApprovalsWorkspace(FrappeTestCase):
 		before = self._ws()
 		execute()
 		after = self._ws()
-		self.assertEqual(
-			len([r for r in after.number_cards if r.number_card_name == CARD]), 1
-		)
+		self.assertEqual(len([r for r in after.number_cards if r.number_card_name == CARD]), 1)
 		self.assertEqual(len([r for r in after.links if r.link_to == DOCTYPE]), 1)
 		self.assertEqual(len(after.links), len(before.links))

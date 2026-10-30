@@ -53,6 +53,4 @@ class TestPreparedReports(FrappeTestCase):
 	def test_no_report_is_left_in_background_mode(self):
 		ensure_prepared_reports_disabled()
 		self.assertEqual(frappe.db.count("Report", {"prepared_report": 1}), 0)
-		self.assertEqual(
-			frappe.db.count("Report", {"disable_prepared_report_automation": 0}), 0
-		)
+		self.assertEqual(frappe.db.count("Report", {"disable_prepared_report_automation": 0}), 0)

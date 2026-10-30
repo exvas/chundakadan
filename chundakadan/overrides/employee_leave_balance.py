@@ -210,7 +210,7 @@ def get_allocated_leaves(from_date, to_date, employee, leave_type):
 			& (ledger.transaction_type == "Leave Allocation")
 			& (ledger.employee == employee)
 			& (ledger.leave_type == leave_type)
-			& (ledger.from_date[from_date:to_date]) # Changed to only check from_date
+			& (ledger.from_date[from_date:to_date])  # Changed to only check from_date
 			& ((ledger.is_expired == 0) & (ledger.is_carry_forward == 0))
 		)
 	).run()[0][0]

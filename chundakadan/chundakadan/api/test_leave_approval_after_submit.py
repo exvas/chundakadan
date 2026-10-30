@@ -28,7 +28,11 @@ def submitted_pending_leave():
 def clear_chain_property_setters():
 	frappe.db.delete(
 		"Property Setter",
-		{"doc_type": CHILD, "property": "allow_on_submit", "field_name": ["in", list(chain_patch.CHAIN_FIELDS)]},
+		{
+			"doc_type": CHILD,
+			"property": "allow_on_submit",
+			"field_name": ["in", list(chain_patch.CHAIN_FIELDS)],
+		},
 	)
 	frappe.clear_cache(doctype=CHILD)
 

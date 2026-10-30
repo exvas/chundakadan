@@ -2,27 +2,14 @@ import frappe
 
 
 def execute():
+	meta = frappe.get_doc("DocField", {"parent": "Leave Application", "fieldname": "status"})
 
-    meta = frappe.get_doc(
-        "DocField",
-        {
-            "parent": "Leave Application",
-            "fieldname": "status"
-        }
-    )
+	meta.options = "\n".join(
+		["Open", "Pending", "Partially Approved", "Approved", "Rejected", "Draft", "Cancelled"]
+	)
 
-    meta.options = "\n".join([
-        "Open",
-        "Pending",
-        "Partially Approved",
-        "Approved",
-        "Rejected",
-        "Draft",
-        "Cancelled"
-    ])
+	meta.save()
 
-    meta.save()
+	frappe.clear_cache()
 
-    frappe.clear_cache()
-
-    print("Status options updated")
+	print("Status options updated")

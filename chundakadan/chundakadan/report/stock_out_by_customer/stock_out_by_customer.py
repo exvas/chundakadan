@@ -24,17 +24,35 @@ def execute(filters=None):
 
 def get_columns():
 	return [
-		{"label": _("Item Code"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 110},
+		{
+			"label": _("Item Code"),
+			"fieldname": "item_code",
+			"fieldtype": "Link",
+			"options": "Item",
+			"width": 110,
+		},
 		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 240},
 		{"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 110},
-		{"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 100},
+		{
+			"label": _("Customer"),
+			"fieldname": "customer",
+			"fieldtype": "Link",
+			"options": "Customer",
+			"width": 100,
+		},
 		{"label": _("Customer Name"), "fieldname": "customer_name", "fieldtype": "Data", "width": 230},
 		{"label": _("Qty Out"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
 		{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 70},
 		{"label": _("Value"), "fieldname": "value", "fieldtype": "Currency", "width": 120},
 		{"label": _("Vouchers"), "fieldname": "vouchers", "fieldtype": "Int", "width": 90},
 		{"label": _("Last Out On"), "fieldname": "last_out_on", "fieldtype": "Date", "width": 100},
-		{"label": _("Warehouse"), "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 130},
+		{
+			"label": _("Warehouse"),
+			"fieldname": "warehouse",
+			"fieldtype": "Link",
+			"options": "Warehouse",
+			"width": 130,
+		},
 	]
 
 

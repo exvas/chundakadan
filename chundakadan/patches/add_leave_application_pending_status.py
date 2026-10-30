@@ -2,45 +2,28 @@ import frappe
 
 
 def execute():
+	options = "Open\n" "Pending\n" "Approved\n" "Rejected\n" "Cancelled"
 
-    options = (
-        "Open\n"
-        "Pending\n"
-        "Approved\n"
-        "Rejected\n"
-        "Cancelled"
-    )
+	ps_name = "Leave Application-status-options"
 
-    ps_name = "Leave Application-status-options"
+	if frappe.db.exists("Property Setter", ps_name):
+		ps = frappe.get_doc("Property Setter", ps_name)
 
-    if frappe.db.exists(
-        "Property Setter",
-        ps_name
-    ):
+		ps.value = options
 
-        ps = frappe.get_doc(
-            "Property Setter",
-            ps_name
-        )
+		ps.save(ignore_permissions=True)
 
-        ps.value = options
+	else:
+		frappe.get_doc(
+			{
+				"doctype": "Property Setter",
+				"doctype_or_field": "DocField",
+				"doc_type": "Leave Application",
+				"field_name": "status",
+				"property": "options",
+				"property_type": "Text",
+				"value": options,
+			}
+		).insert(ignore_permissions=True)
 
-        ps.save(
-            ignore_permissions=True
-        )
-
-    else:
-
-        frappe.get_doc({
-            "doctype": "Property Setter",
-            "doctype_or_field": "DocField",
-            "doc_type": "Leave Application",
-            "field_name": "status",
-            "property": "options",
-            "property_type": "Text",
-            "value": options
-        }).insert(
-            ignore_permissions=True
-        )
-
-    frappe.clear_cache()
+	frappe.clear_cache()

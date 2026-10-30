@@ -5,7 +5,12 @@ import frappe
 from frappe.desk.doctype.number_card.number_card import get_result
 from frappe.tests.utils import FrappeTestCase
 
-from chundakadan.seed.approvals import CARDS, WORKSPACE, ensure_approval_number_cards, ensure_approvals_workspace
+from chundakadan.seed.approvals import (
+	CARDS,
+	WORKSPACE,
+	ensure_approval_number_cards,
+	ensure_approvals_workspace,
+)
 
 
 class TestApprovalsWorkspace(FrappeTestCase):
@@ -34,8 +39,14 @@ class TestApprovalsWorkspace(FrappeTestCase):
 			# workflow role, an Item by the approval role, and a grievance
 			# by its own permission query -- the GM and the HR Manager count
 			# every open one, everybody else their own.
-			if doctype in ("Post Dated Cheque", "Customer Follow Up", "Purchase Order",
-			               "Item", "Customer", "Employee Grievance"):
+			if doctype in (
+				"Post Dated Cheque",
+				"Customer Follow Up",
+				"Purchase Order",
+				"Item",
+				"Customer",
+				"Employee Grievance",
+			):
 				continue
 			if not frappe.db.exists("DocType", doctype):
 				continue

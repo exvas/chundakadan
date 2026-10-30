@@ -20,8 +20,18 @@ PROPERTIES = {
 	"item_code": {"columns": (2, "Int")},
 	"qty": {"columns": (1, "Int")},
 	"price_list_rate": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "label": ("List Price", "Data")},
-	"discount_percentage": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Disc %", "Data")},
-	"discount_amount": {"in_list_view": (1, "Check"), "columns": (1, "Int"), "depends_on": ("", "Data"), "label": ("Disc Amnt", "Data")},
+	"discount_percentage": {
+		"in_list_view": (1, "Check"),
+		"columns": (1, "Int"),
+		"depends_on": ("", "Data"),
+		"label": ("Disc %", "Data"),
+	},
+	"discount_amount": {
+		"in_list_view": (1, "Check"),
+		"columns": (1, "Int"),
+		"depends_on": ("", "Data"),
+		"label": ("Disc Amnt", "Data"),
+	},
 	# one column, not two: Avail. Qty (purchase_invoice_available_qty) takes
 	# the other one and the grid is only ten wide
 	"rate": {"columns": (1, "Int")},
@@ -58,8 +68,12 @@ def ensure_purchase_invoice_discount_columns(*args, **kwargs):
 		if not meta.get_field(fieldname):
 			continue
 		for prop, (value, prop_type) in properties.items():
-			make_property_setter(DOCTYPE, fieldname, prop, value, prop_type, validate_fields_for_doctype=False)
+			make_property_setter(
+				DOCTYPE, fieldname, prop, value, prop_type, validate_fields_for_doctype=False
+			)
 	for fieldname in RATE_FIELDS:
 		if meta.get_field(fieldname):
-			make_property_setter(DOCTYPE, fieldname, "precision", RATE_PRECISION, "Select", validate_fields_for_doctype=False)
+			make_property_setter(
+				DOCTYPE, fieldname, "precision", RATE_PRECISION, "Select", validate_fields_for_doctype=False
+			)
 	frappe.clear_cache(doctype="Purchase Invoice")

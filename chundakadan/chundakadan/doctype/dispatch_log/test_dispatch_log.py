@@ -100,17 +100,13 @@ class TestDispatchLog(FrappeTestCase):
 		log = self._dispatch(fresh_log(self.invoices[0]), expected_delivery="2 Days")
 		self.assertEqual(log.dispatched_by, "Administrator")
 		self.assertIsNotNone(log.dispatched_on)
-		self.assertEqual(
-			getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 2)
-		)
+		self.assertEqual(getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 2))
 
 	def test_changing_option_recomputes_date(self):
 		log = self._dispatch(fresh_log(self.invoices[0]), expected_delivery="Next Day")
 		log.expected_delivery = "After 2 Days"
 		log.save()
-		self.assertEqual(
-			getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 3)
-		)
+		self.assertEqual(getdate(log.expected_delivery_date), add_days(getdate(log.dispatched_on), 3))
 
 	def test_invalid_transition_rejected(self):
 		log = fresh_log(self.invoices[0])
@@ -149,4 +145,6 @@ class TestDispatchLog(FrappeTestCase):
 		self.assertEqual(invoice.transporter, self.transporter)
 		self.assertEqual(invoice.vehicle_no, "KL10XY9999")
 		self.assertEqual(invoice.dispatch_status, C.DISPATCHED)
-		self.assertEqual(frappe.db.get_value("Dispatch Log", log.name, "ewaybill_sync_status"), "Not Required")
+		self.assertEqual(
+			frappe.db.get_value("Dispatch Log", log.name, "ewaybill_sync_status"), "Not Required"
+		)

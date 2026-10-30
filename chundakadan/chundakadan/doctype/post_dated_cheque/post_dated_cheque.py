@@ -27,7 +27,13 @@ class PostDatedCheque(Document):
 		if flt(self.amount) <= 0:
 			frappe.throw(_("Amount must be greater than zero."))
 		if self.cheque_date and self.posting_date and getdate(self.cheque_date) < getdate(self.posting_date):
-			frappe.msgprint(_("Cheque Date {0} is before the Posting Date; this cheque is not post dated.").format(self.cheque_date), indicator="orange", alert=True)
+			frappe.msgprint(
+				_("Cheque Date {0} is before the Posting Date; this cheque is not post dated.").format(
+					self.cheque_date
+				),
+				indicator="orange",
+				alert=True,
+			)
 		self.validate_bank_account()
 		self.validate_duplicate()
 		self.validate_references()
@@ -58,7 +64,9 @@ class PostDatedCheque(Document):
 			if latest:
 				self.sales_person = latest[0].custom_sales_person
 				return
-		self.sales_person = frappe.db.get_value("Sales Team", {"parent": self.customer, "parenttype": "Customer"}, "sales_person")
+		self.sales_person = frappe.db.get_value(
+			"Sales Team", {"parent": self.customer, "parenttype": "Customer"}, "sales_person"
+		)
 
 	def validate_bank_account(self):
 		"""Keep the account tied to this customer, linking it if nobody owns it.
@@ -68,15 +76,18 @@ class PostDatedCheque(Document):
 		"""
 		if not self.bank_account:
 			return
-		account = frappe.db.get_value("Bank Account", self.bank_account, ["party_type", "party", "bank"], as_dict=True)
+		account = frappe.db.get_value(
+			"Bank Account", self.bank_account, ["party_type", "party", "bank"], as_dict=True
+		)
 		if not account:
 			frappe.throw(_("Bank Account {0} does not exist.").format(self.bank_account))
 		if account.party and not (account.party_type == "Customer" and account.party == self.customer):
 			frappe.throw(_("Bank Account {0} belongs to {1}.").format(self.bank_account, account.party))
 		if not account.party:
-			frappe.db.set_value("Bank Account", self.bank_account, {"party_type": "Customer", "party": self.customer})
+			frappe.db.set_value(
+				"Bank Account", self.bank_account, {"party_type": "Customer", "party": self.customer}
+			)
 		self.bank_name = account.bank
-
 
 	def validate_duplicate(self):
 		"""Cheque number is unique across all cheques, not just per customer.
@@ -91,22 +102,39 @@ class PostDatedCheque(Document):
 			as_dict=True,
 		)
 		if existing:
-			frappe.throw(_("Cheque No {0} is already entered in {1} ({2}).").format(self.cheque_no, existing.name, existing.customer_name or ""))
+			frappe.throw(
+				_("Cheque No {0} is already entered in {1} ({2}).").format(
+					self.cheque_no, existing.name, existing.customer_name or ""
+				)
+			)
 
 	def validate_references(self):
 		total = 0
 		for row in self.references:
-			invoice = frappe.db.get_value("Sales Invoice", row.sales_invoice, ["customer", "docstatus", "outstanding_amount"], as_dict=True)
+			invoice = frappe.db.get_value(
+				"Sales Invoice",
+				row.sales_invoice,
+				["customer", "docstatus", "outstanding_amount"],
+				as_dict=True,
+			)
 			if not invoice or invoice.docstatus != 1:
-				frappe.throw(_("Row #{0}: Sales Invoice {1} is not submitted.").format(row.idx, row.sales_invoice))
+				frappe.throw(
+					_("Row #{0}: Sales Invoice {1} is not submitted.").format(row.idx, row.sales_invoice)
+				)
 			if invoice.customer != self.customer:
-				frappe.throw(_("Row #{0}: Sales Invoice {1} belongs to {2}.").format(row.idx, row.sales_invoice, invoice.customer))
+				frappe.throw(
+					_("Row #{0}: Sales Invoice {1} belongs to {2}.").format(
+						row.idx, row.sales_invoice, invoice.customer
+					)
+				)
 			row.outstanding_amount = invoice.outstanding_amount
 			if not flt(row.allocated_amount):
 				row.allocated_amount = min(flt(invoice.outstanding_amount), flt(self.amount) - total)
 			total += flt(row.allocated_amount)
 		if self.references and flt(total, 2) > flt(self.amount, 2):
-			frappe.throw(_("Allocated amount {0} is more than the cheque amount {1}.").format(total, self.amount))
+			frappe.throw(
+				_("Allocated amount {0} is more than the cheque amount {1}.").format(total, self.amount)
+			)
 
 	def on_submit(self):
 		self.db_set("status", PENDING)
@@ -120,11 +148,22 @@ class PostDatedCheque(Document):
 		if self.docstatus != 1:
 			frappe.throw(_("Submit the cheque first."))
 		if self.status != PENDING:
-			frappe.throw(_("Cheque {0} is {1}; only a Pending cheque can be updated.").format(self.name, self.status))
+			frappe.throw(
+				_("Cheque {0} is {1}; only a Pending cheque can be updated.").format(self.name, self.status)
+			)
 
 
 @frappe.whitelist()
-def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, reference_no=None, reference_date=None, remarks=None, references=None):
+def collect(
+	cheque,
+	bank_account=None,
+	posting_date=None,
+	mode_of_payment=None,
+	reference_no=None,
+	reference_date=None,
+	remarks=None,
+	references=None,
+):
 	"""One click: cheque cleared → Payment Entry against the customer."""
 	doc = frappe.get_doc("Post Dated Cheque", cheque)
 	doc.check_permission("write")
@@ -134,7 +173,9 @@ def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, 
 	bank_account = bank_account or mode_of_payment_account(mode_of_payment, doc.company)
 	if not bank_account:
 		frappe.throw(
-			_("Mode of Payment {0} has no account for {1}. Set it in Mode of Payment.").format(mode_of_payment, doc.company)
+			_("Mode of Payment {0} has no account for {1}. Set it in Mode of Payment.").format(
+				mode_of_payment, doc.company
+			)
 		)
 
 	posting_date = posting_date or doc.cheque_date or nowdate()
@@ -155,11 +196,14 @@ def collect(cheque, bank_account=None, posting_date=None, mode_of_payment=None, 
 		payment.reference_date = reference_date or doc.cheque_date
 		payment.remarks = remarks or _("Post Dated Cheque {0}").format(doc.name)
 		for row in _allocations(doc, references):
-			payment.append("references", {
-				"reference_doctype": "Sales Invoice",
-				"reference_name": row["sales_invoice"],
-				"allocated_amount": flt(row["allocated_amount"]),
-			})
+			payment.append(
+				"references",
+				{
+					"reference_doctype": "Sales Invoice",
+					"reference_name": row["sales_invoice"],
+					"allocated_amount": flt(row["allocated_amount"]),
+				},
+			)
 		payment.setup_party_account_field()
 		payment.set_missing_values()
 		payment.set_exchange_rate()
@@ -256,7 +300,18 @@ def send_due_reminders():
 	cheques = frappe.get_all(
 		"Post Dated Cheque",
 		filters={"docstatus": 1, "status": PENDING},
-		fields=["name", "cheque_no", "cheque_date", "customer", "customer_name", "amount", "sales_person", "bank_name", "company", "owner"],
+		fields=[
+			"name",
+			"cheque_no",
+			"cheque_date",
+			"customer",
+			"customer_name",
+			"amount",
+			"sales_person",
+			"bank_name",
+			"company",
+			"owner",
+		],
 	)
 	sent = 0
 	for cheque in cheques:
@@ -268,12 +323,24 @@ def send_due_reminders():
 		users = reminder_recipients(cheque)
 		if not users:
 			continue
-		when = _("today") if days == 0 else (_("in {0} days").format(days) if days > 0 else _("yesterday; it is overdue"))
+		when = (
+			_("today")
+			if days == 0
+			else (_("in {0} days").format(days) if days > 0 else _("yesterday; it is overdue"))
+		)
 		send_to_users(
 			list(users),
 			_("Cheque due {0}").format(when),
-			_("{0} — cheque {1} for {2}").format(cheque.customer_name, cheque.cheque_no, frappe.format_value(cheque.amount, {"fieldtype": "Currency"})),
-			{"route": f"/app/post-dated-cheque/{cheque.name}", "doctype": "Post Dated Cheque", "name": cheque.name},
+			_("{0} — cheque {1} for {2}").format(
+				cheque.customer_name,
+				cheque.cheque_no,
+				frappe.format_value(cheque.amount, {"fieldtype": "Currency"}),
+			),
+			{
+				"route": f"/app/post-dated-cheque/{cheque.name}",
+				"doctype": "Post Dated Cheque",
+				"name": cheque.name,
+			},
 		)
 		sent += 1
 	return {"reminded": sent, "checked": len(cheques)}
@@ -287,7 +354,9 @@ def email_creator(cheque, days):
 	recipient = frappe.db.get_value("User", owner, "email") or owner
 	when = _("today") if days == 0 else _("tomorrow")
 	amount = frappe.format_value(cheque.amount, {"fieldtype": "Currency"})
-	subject = _("Cheque due {0}: {1} — {2}").format(when, cheque.customer_name or cheque.customer, cheque.cheque_no)
+	subject = _("Cheque due {0}: {1} — {2}").format(
+		when, cheque.customer_name or cheque.customer, cheque.cheque_no
+	)
 	rows = [
 		(_("Customer"), cheque.customer_name or cheque.customer),
 		(_("Cheque No"), cheque.cheque_no),
@@ -320,7 +389,9 @@ def reminder_recipients(cheque):
 		user = frappe.db.get_value("Employee", employee, "user_id") if employee else None
 		if user:
 			users.add(user)
-	for user in frappe.get_all("Has Role", filters={"role": "Accounts Manager", "parenttype": "User"}, pluck="parent"):
+	for user in frappe.get_all(
+		"Has Role", filters={"role": "Accounts Manager", "parenttype": "User"}, pluck="parent"
+	):
 		if frappe.db.get_value("User", user, "enabled"):
 			users.add(user)
 	if cheque.get("owner") and frappe.db.get_value("User", cheque.owner, "enabled"):
@@ -330,7 +401,9 @@ def reminder_recipients(cheque):
 
 
 @frappe.whitelist()
-def create_customer_bank_account(customer, bank, account_name=None, bank_account_no=None, ifsc=None, branch=None):
+def create_customer_bank_account(
+	customer, bank, account_name=None, bank_account_no=None, ifsc=None, branch=None
+):
 	"""Add the customer's bank account without leaving the cheque form.
 
 	It is a normal Bank Account linked to the customer, so it shows on the
@@ -346,7 +419,9 @@ def create_customer_bank_account(customer, bank, account_name=None, bank_account
 	if not frappe.db.exists("Bank", bank):
 		frappe.get_doc({"doctype": "Bank", "bank_name": bank}).insert(ignore_permissions=True)
 
-	account_name = (account_name or frappe.db.get_value("Customer", customer, "customer_name") or customer).strip()
+	account_name = (
+		account_name or frappe.db.get_value("Customer", customer, "customer_name") or customer
+	).strip()
 	bank_account_no = (bank_account_no or "").strip() or None
 
 	existing = frappe.db.get_value(
@@ -357,17 +432,19 @@ def create_customer_bank_account(customer, bank, account_name=None, bank_account
 	if existing:
 		return {"name": existing, "bank": bank, "created": False}
 
-	doc = frappe.get_doc({
-		"doctype": "Bank Account",
-		"account_name": account_name,
-		"bank": bank,
-		"party_type": "Customer",
-		"party": customer,
-		"is_company_account": 0,
-		"bank_account_no": bank_account_no,
-		"custom_ifsc": (ifsc or "").strip().upper() or None,
-		"custom_branch": (branch or "").strip() or None,
-	}).insert(ignore_permissions=True)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Bank Account",
+			"account_name": account_name,
+			"bank": bank,
+			"party_type": "Customer",
+			"party": customer,
+			"is_company_account": 0,
+			"bank_account_no": bank_account_no,
+			"custom_ifsc": (ifsc or "").strip().upper() or None,
+			"custom_branch": (branch or "").strip() or None,
+		}
+	).insert(ignore_permissions=True)
 	return {"name": doc.name, "bank": bank, "created": True}
 
 
@@ -412,19 +489,25 @@ def on_cheque_bounce_submit(doc, method=None):
 	It cancels the Payment Entry and books the bank charge; here we only
 	mirror the outcome onto the cheque this Payment Entry came from.
 	"""
-	cheque = frappe.db.get_value("Post Dated Cheque", {"payment_entry": doc.payment_entry, "docstatus": 1}, "name")
+	cheque = frappe.db.get_value(
+		"Post Dated Cheque", {"payment_entry": doc.payment_entry, "docstatus": 1}, "name"
+	)
 	if not cheque:
 		# the payment was just cancelled by this bounce, so the link is gone
 		reset = frappe.flags.get("pdc_reset_by_payment_cancel") or []
 		cheque = reset[0] if reset else None
 	if not cheque:
 		return
-	frappe.db.set_value("Post Dated Cheque", cheque, {
-		"status": BOUNCED,
-		"bounce_reason": doc.get("bounce_reason"),
-		"cheque_bounce": doc.name,
-		"payment_entry": doc.payment_entry,
-	})
+	frappe.db.set_value(
+		"Post Dated Cheque",
+		cheque,
+		{
+			"status": BOUNCED,
+			"bounce_reason": doc.get("bounce_reason"),
+			"cheque_bounce": doc.name,
+			"payment_entry": doc.payment_entry,
+		},
+	)
 
 
 def on_cheque_bounce_cancel(doc, method=None):
@@ -447,7 +530,9 @@ def mode_of_payment_account(mode_of_payment, company):
 
 
 @frappe.whitelist()
-def mark_returned(cheque, return_date=None, reason=None, bank_charge=0, bank_charges_account=None, remarks=None):
+def mark_returned(
+	cheque, return_date=None, reason=None, bank_charge=0, bank_charges_account=None, remarks=None
+):
 	"""The bank returned a cheque we had already banked.
 
 	Both records are kept: the Payment Entry that brought the money in
@@ -495,17 +580,21 @@ def mark_returned(cheque, return_date=None, reason=None, bank_charge=0, bank_cha
 
 		charge_entry = None
 		if flt(bank_charge):
-			charge_entry = _post_bank_charge(doc, original, return_date, flt(bank_charge), bank_charges_account)
+			charge_entry = _post_bank_charge(
+				doc, original, return_date, flt(bank_charge), bank_charges_account
+			)
 	except Exception:
 		frappe.db.rollback(save_point=savepoint)
 		raise
 
-	doc.db_set({
-		"status": RETURNED,
-		"return_payment_entry": reversal.name,
-		"returned_on": return_date,
-		"bounce_reason": reason,
-	})
+	doc.db_set(
+		{
+			"status": RETURNED,
+			"return_payment_entry": reversal.name,
+			"returned_on": return_date,
+			"bounce_reason": reason,
+		}
+	)
 	return {"status": RETURNED, "return_payment_entry": reversal.name, "bank_charge_entry": charge_entry}
 
 
@@ -558,15 +647,18 @@ def _reconcile_against(doc, receipt, reversal):
 		if not (payment and invoice):
 			return None
 
-		reconciliation.append("allocation", {
-			"reference_type": payment.reference_type,
-			"reference_name": payment.reference_name,
-			"invoice_type": invoice.invoice_type,
-			"invoice_number": invoice.invoice_number,
-			"allocated_amount": min(flt(payment.amount), flt(invoice.outstanding_amount)),
-			"amount": payment.amount,
-			"unreconciled_amount": payment.amount,
-		})
+		reconciliation.append(
+			"allocation",
+			{
+				"reference_type": payment.reference_type,
+				"reference_name": payment.reference_name,
+				"invoice_type": invoice.invoice_type,
+				"invoice_number": invoice.invoice_number,
+				"allocated_amount": min(flt(payment.amount), flt(invoice.outstanding_amount)),
+				"amount": payment.amount,
+				"unreconciled_amount": payment.amount,
+			},
+		)
 		reconciliation.reconcile()
 		return True
 	except Exception:

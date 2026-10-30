@@ -99,9 +99,7 @@ def approver_users():
 	role = approval_role()
 	if not role:
 		return []
-	holders = frappe.get_all(
-		"Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent"
-	)
+	holders = frappe.get_all("Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent")
 	if not holders:
 		return []
 	return frappe.get_all(

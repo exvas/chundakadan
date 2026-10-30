@@ -40,8 +40,13 @@ def get_columns():
 	return [
 		{"label": _("SlNo"), "fieldname": "sl_no", "fieldtype": "Data", "width": 60},
 		{"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 95},
-		{"label": _("Voucher No"), "fieldname": "voucher_no", "fieldtype": "Link",
-		 "options": "Sales Invoice", "width": 150},
+		{
+			"label": _("Voucher No"),
+			"fieldname": "voucher_no",
+			"fieldtype": "Link",
+			"options": "Sales Invoice",
+			"width": 150,
+		},
 		{"label": _("Party Name"), "fieldname": "party_name", "fieldtype": "Data", "width": 220},
 		{"label": _("City"), "fieldname": "city", "fieldtype": "Data", "width": 120},
 		{"label": _("State"), "fieldname": "state", "fieldtype": "Data", "width": 110},
@@ -123,9 +128,7 @@ def get_data(filters):
 	for i, row in enumerate(rows, start=1):
 		row.sl_no = str(i)
 		row.state_code = _state_code(row)
-		row.total = (
-			flt(row.amount) + flt(row.cgst) + flt(row.sgst) + flt(row.igst) + flt(row.cess)
-		)
+		row.total = flt(row.amount) + flt(row.cgst) + flt(row.sgst) + flt(row.igst) + flt(row.cess)
 		for field in ("sgst_rate", "cgst_rate", "igst_rate"):
 			row[field] = _rate(row.get(field))
 		row.pop("place_of_supply", None)

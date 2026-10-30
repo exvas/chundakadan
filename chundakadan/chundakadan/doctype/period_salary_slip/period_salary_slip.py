@@ -29,7 +29,9 @@ class PeriodSalarySlip(Document):
 			)
 			if existing:
 				frappe.throw(
-					_("A Period Salary Slip ({0}) already exists for Employee {1} between {2} and {3}.").format(
+					_(
+						"A Period Salary Slip ({0}) already exists for Employee {1} between {2} and {3}."
+					).format(
 						frappe.bold(existing),
 						frappe.bold(self.employee),
 						frappe.bold(self.from_date),

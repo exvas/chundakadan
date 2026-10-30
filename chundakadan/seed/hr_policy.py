@@ -14,36 +14,35 @@ from frappe import _
 
 
 def _read_html_file(filename):
-    here = os.path.dirname(__file__)
-    with open(os.path.join(here, filename), "r", encoding="utf-8") as f:
-        return f.read()
+	here = os.path.dirname(__file__)
+	with open(os.path.join(here, filename), "r", encoding="utf-8") as f:
+		return f.read()
 
 
 def seed_policy():
-    """Load chundakadan/seed/cdn_policy.html into HR Policy.policy_html
-    and save. on_update hook will fire the 'HR Policy Updated' push to
-    every Active employee.
-    """
-    html = _read_html_file("cdn_policy.html")
-    doc = frappe.get_single("HR Policy")
-    doc.policy_html = html
-    # First-time save without a PDF — uncheck notify if you want to
-    # avoid pinging everyone during initial setup. Default is on.
-    doc.flags.ignore_permissions = True
-    doc.save()
-    frappe.db.commit()
-    print(f"✓ HR Policy seeded — version {doc.version}, "
-          f"{len(html)} characters of HTML.")
-    return {"version": doc.version, "html_length": len(html)}
+	"""Load chundakadan/seed/cdn_policy.html into HR Policy.policy_html
+	and save. on_update hook will fire the 'HR Policy Updated' push to
+	every Active employee.
+	"""
+	html = _read_html_file("cdn_policy.html")
+	doc = frappe.get_single("HR Policy")
+	doc.policy_html = html
+	# First-time save without a PDF — uncheck notify if you want to
+	# avoid pinging everyone during initial setup. Default is on.
+	doc.flags.ignore_permissions = True
+	doc.save()
+	frappe.db.commit()
+	print(f"✓ HR Policy seeded — version {doc.version}, " f"{len(html)} characters of HTML.")
+	return {"version": doc.version, "html_length": len(html)}
 
 
 def seed_test_newsletter():
-    """Create a sample Newsletter so HR can verify the mobile push +
-    listing work end-to-end. Safe to run repeatedly — creates a new
-    Newsletter each time (Frappe auto-names them).
-    """
-    subject = "Welcome to the Chundakadan Mobile App"
-    message = """
+	"""Create a sample Newsletter so HR can verify the mobile push +
+	listing work end-to-end. Safe to run repeatedly — creates a new
+	Newsletter each time (Frappe auto-names them).
+	"""
+	subject = "Welcome to the Chundakadan Mobile App"
+	message = """
     <h2>👋 Welcome to the new Chundakadan mobile app!</h2>
     <p>Hello team,</p>
     <p>This is a test newsletter to confirm the in-app Newsletter
@@ -76,19 +75,21 @@ def seed_test_newsletter():
     <p>— Chundakadan HR</p>
     """
 
-    doc = frappe.get_doc({
-        "doctype": "Newsletter",
-        "subject": subject,
-        "sender_name": "Chundakadan HR",
-        "sender_email": frappe.session.user if frappe.session.user != "Guest"
-                        else "noreply@chundakadan.in",
-        "message": message,
-    })
-    doc.flags.ignore_permissions = True
-    doc.insert()
-    frappe.db.commit()
-    print(f"✓ Test Newsletter created: {doc.name}")
-    print(f"  Subject: {subject}")
-    print(f"  Mobile push will fire via the after_insert hook for every "
-          f"Active employee.")
-    return {"name": doc.name, "subject": subject}
+	doc = frappe.get_doc(
+		{
+			"doctype": "Newsletter",
+			"subject": subject,
+			"sender_name": "Chundakadan HR",
+			"sender_email": frappe.session.user
+			if frappe.session.user != "Guest"
+			else "noreply@chundakadan.in",
+			"message": message,
+		}
+	)
+	doc.flags.ignore_permissions = True
+	doc.insert()
+	frappe.db.commit()
+	print(f"✓ Test Newsletter created: {doc.name}")
+	print(f"  Subject: {subject}")
+	print(f"  Mobile push will fire via the after_insert hook for every " f"Active employee.")
+	return {"name": doc.name, "subject": subject}
