@@ -16,7 +16,7 @@ from datetime import timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, get_last_day
+from frappe.utils import flt, get_last_day, getdate
 
 DAYS_IN_MONTH = 30  # chundakadan payroll_basis = Fixed 30 Days
 LATE_COMPONENT = "Late Arrival Deduction"

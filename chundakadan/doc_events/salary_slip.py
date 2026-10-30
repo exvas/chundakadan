@@ -8,7 +8,7 @@
 # Settings.payroll_basis = 'Fixed 30 Days'.
 
 import frappe
-from frappe.utils import flt, rounded, getdate
+from frappe.utils import flt, getdate, rounded
 
 SICK_LEAVE_TYPE = "Sick Leave"
 SICK_LEAVE_DEDUCTION = "Sick Leave Deduction"

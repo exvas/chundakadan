@@ -73,8 +73,9 @@ def _geocode_and_save(doctype, name, lat, lon, location_field="custom_location")
 	non-200 responses + exceptions so silent failures are visible in
 	the Error Log.
 	"""
-	import requests
 	import time
+
+	import requests
 
 	try:
 		res = requests.get(

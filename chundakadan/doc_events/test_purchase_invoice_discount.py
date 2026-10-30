@@ -108,7 +108,7 @@ class TestPurchaseInvoiceDiscountColumns(FrappeTestCase):
 		ensure_purchase_invoice_discount_columns()
 		frappe.clear_cache(doctype="Purchase Invoice")
 		pi = self._sheet_invoice()
-		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET):
+		for row, (qty, list_price, pct, disc, rate, amount) in zip(pi.items, self.SHEET, strict=False):
 			self.assertAlmostEqual(row.discount_amount, disc, places=4, msg=qty)
 			self.assertAlmostEqual(row.rate, rate, places=4, msg=qty)
 			self.assertAlmostEqual(row.amount, amount, places=2, msg=qty)

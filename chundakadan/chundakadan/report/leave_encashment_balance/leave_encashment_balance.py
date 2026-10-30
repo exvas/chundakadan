@@ -145,7 +145,7 @@ def get_data(filters):
 	# Add date range filter to catch allocations created by Leave Policy Assignment
 	# that might not have leave_period set
 	date_conditions = f"""
-        (leave_period = '{leave_period}' 
+        (leave_period = '{leave_period}'
          OR (from_date <= '{to_date}' AND to_date >= '{from_date}'))
     """
 
@@ -158,13 +158,13 @@ def get_data(filters):
 
 	# Fetch Leave Allocations using SQL to handle complex date conditions
 	allocation_query = """
-        SELECT 
+        SELECT
             employee, employee_name, department, leave_type,
             total_leaves_allocated, total_leaves_encashed
         FROM `tabLeave Allocation`
         WHERE docstatus = 1
         AND leave_type IN %(leave_types)s
-        AND (leave_period = %(leave_period)s 
+        AND (leave_period = %(leave_period)s
              OR (from_date <= %(to_date)s AND to_date >= %(from_date)s))
         {employee_filter}
         {department_filter}
@@ -498,6 +498,7 @@ def bulk_create_additional_salary(
 	    Dictionary with creation results
 	"""
 	import json
+
 	from frappe.utils import getdate
 
 	# Parse employees_data if it's a string
@@ -536,7 +537,7 @@ def bulk_create_additional_salary(
 			# Validate employee ID
 			if not employee:
 				results["failed"] += 1
-				results["errors"].append(f"Missing employee ID in data")
+				results["errors"].append("Missing employee ID in data")
 				continue
 
 			# Validate amount
@@ -566,10 +567,10 @@ def bulk_create_additional_salary(
 
 			except Exception as e:
 				results["failed"] += 1
-				results["errors"].append(f"{employee}: Error fetching employee - {str(e)}")
+				results["errors"].append(f"{employee}: Error fetching employee - {e!s}")
 				frappe.log_error(
 					title=f"Employee Fetch Error - {employee}",
-					message=f"Error: {str(e)}\nEmployee: {employee}\nData: {json.dumps(emp_data, indent=2)}",
+					message=f"Error: {e!s}\nEmployee: {employee}\nData: {json.dumps(emp_data, indent=2)}",
 				)
 				continue
 
@@ -620,19 +621,19 @@ def bulk_create_additional_salary(
 
 			except Exception as e:
 				results["failed"] += 1
-				error_msg = f"{employee_name} ({employee}): {str(e)}"
+				error_msg = f"{employee_name} ({employee}): {e!s}"
 				results["errors"].append(error_msg)
 				frappe.log_error(
 					title=f"Additional Salary Creation Error - {employee}",
-					message=f"Employee: {employee}\nEmployee Name: {employee_name}\nCompany: {company}\nAmount: {amount}\nError: {str(e)}\nFull Data: {json.dumps(emp_data, indent=2)}",
+					message=f"Employee: {employee}\nEmployee Name: {employee_name}\nCompany: {company}\nAmount: {amount}\nError: {e!s}\nFull Data: {json.dumps(emp_data, indent=2)}",
 				)
 
 		except Exception as e:
 			results["failed"] += 1
-			error_msg = f"{employee_name or employee or 'Unknown'}: {str(e)}"
+			error_msg = f"{employee_name or employee or 'Unknown'}: {e!s}"
 			results["errors"].append(error_msg)
 			frappe.log_error(
-				title=f"Bulk Additional Salary - Unexpected Error",
+				title="Bulk Additional Salary - Unexpected Error",
 				message=f"Employee: {employee}\nError: {error_msg}\nData: {json.dumps(emp_data, indent=2)}",
 			)
 

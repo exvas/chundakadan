@@ -117,6 +117,7 @@ class TestItemListReport(FrappeTestCase):
 	def test_roles_can_open_report(self):
 		# query_report.get_report_doc needs the report role AND report permission on ref_doctype
 		import os
+
 		from frappe.modules.import_file import import_file_by_path
 
 		import_file_by_path(os.path.join(os.path.dirname(__file__), "item_list_report.json"), force=True)

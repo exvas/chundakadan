@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate, today, flt
+from frappe.utils import flt, getdate, today
 
 
 class WarningLetter(Document):
@@ -66,15 +66,15 @@ class WarningLetter(Document):
 
 		if self.violation_type == "Negligence of Duty":
 			content += """
-			<p>This letter serves as a formal warning regarding your failure to adhere to the assigned route plan for 
-			visiting retail and hardware shops on July 19, 2025. As identified by your reporting officer and Sales 
-			Executive, it is mandatory to follow the pre-planned route map set by the company management. Your 
-			unauthorized decision to deviate from this route plan without informing your reporting officer constitutes 
+			<p>This letter serves as a formal warning regarding your failure to adhere to the assigned route plan for
+			visiting retail and hardware shops on July 19, 2025. As identified by your reporting officer and Sales
+			Executive, it is mandatory to follow the pre-planned route map set by the company management. Your
+			unauthorized decision to deviate from this route plan without informing your reporting officer constitutes
 			negligence of duty.</p>
-			
-			<p>This breach of protocol has been noted, and as a consequence, you are hereby issued a {0}, 
-			along with a deduction of {1} day's salary. Please be informed that any further instances of duty 
-			negligence will result in serious disciplinary action, which may include termination of employment, 
+
+			<p>This breach of protocol has been noted, and as a consequence, you are hereby issued a {0},
+			along with a deduction of {1} day's salary. Please be informed that any further instances of duty
+			negligence will result in serious disciplinary action, which may include termination of employment,
 			in accordance with company policy and applicable labor laws.</p>
 			""".format(
 				self.warning_type.lower() if self.warning_type else "warning",
@@ -83,9 +83,9 @@ class WarningLetter(Document):
 		else:
 			content += f"""
 			<p>This letter serves as a formal warning regarding your {self.violation_type.lower()} on {self.warning_date}.</p>
-			
+
 			<p>{self.violation_details or 'Details of the violation have been documented.'}</p>
-			
+
 			<p>This breach has been noted, and as a consequence, you are hereby issued a {self.warning_type.lower() if self.warning_type else 'warning'}."""
 
 			if self.penalty_type == "Salary Deduction":
@@ -96,14 +96,14 @@ class WarningLetter(Document):
 			content += """</p>"""
 
 		content += """
-		<p>We expect you to strictly adhere to company policies and fulfill your responsibilities diligently 
-		moving forward. Should you have any concerns or require clarification regarding your duties, you are 
+		<p>We expect you to strictly adhere to company policies and fulfill your responsibilities diligently
+		moving forward. Should you have any concerns or require clarification regarding your duties, you are
 		advised to discuss them with your reporting officer immediately.</p>
-		
-		<p>This warning is issued to ensure compliance with company policies and to maintain the expected 
-		standards of performance. We trust you will take this matter seriously and take corrective measures to 
+
+		<p>This warning is issued to ensure compliance with company policies and to maintain the expected
+		standards of performance. We trust you will take this matter seriously and take corrective measures to
 		avoid future violations.</p>
-		
+
 		<p>Sincerely,<br>
 		{0}</p>
 		""".format(self.company or "Your Company Name")

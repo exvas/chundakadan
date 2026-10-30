@@ -52,7 +52,10 @@ function open_update_time_dialog(frm) {
 				fieldname: "info",
 				options: `<div class="text-muted" style="margin-bottom:8px">${__(
 					"Correcting the check-in time for <b>{0}</b>. Current: <b>{1}</b>. A notification email is sent to HR and the employee.",
-					[frappe.utils.escape_html(frm.doc.employee_name || frm.doc.employee), frm.doc.time]
+					[
+						frappe.utils.escape_html(frm.doc.employee_name || frm.doc.employee),
+						frm.doc.time,
+					]
 				)}</div>`,
 			},
 			{

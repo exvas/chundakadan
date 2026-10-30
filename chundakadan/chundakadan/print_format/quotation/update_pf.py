@@ -1,4 +1,6 @@
-import frappe, json
+import json
+
+import frappe
 
 
 def update():

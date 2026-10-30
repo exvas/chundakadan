@@ -1,5 +1,6 @@
 import frappe
 from frappe.model.document import Document
+
 from chundakadan.display_tracking.transitions import LOCATION_DOCTYPE
 
 

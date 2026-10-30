@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, add_months, get_last_day
+from frappe.utils import add_months, flt, get_last_day, getdate
 from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
 
 
@@ -150,7 +150,7 @@ def get_data(filters):
 	# Fetch ONLY the active Leave Allocation that covers the 'to_date' (Reference Date)
 	# This prevents adding up leaves from previous years/periods.
 	allocation_query = """
-        SELECT 
+        SELECT
             name, employee, employee_name, department, leave_type,
             total_leaves_allocated, total_leaves_encashed, from_date, to_date
         FROM `tabLeave Allocation`

@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate, today, flt, formatdate
+from frappe.utils import flt, formatdate, getdate, today
 
 
 class PromotionLetter(Document):
@@ -80,31 +80,31 @@ class PromotionLetter(Document):
 		{self.employee_name}<br>
 		ID No: {self.employee_id or 'N/A'}<br>
 		<strong>Subject:</strong> {self.subject}</p>
-		
+
 		<p>Dear {self.employee_name},</p>
-		
-		<p>We are pleased to inform you that, in recognition of your dedication, hard work, and 
-		outstanding performance at {self.company or 'Chundakadan'} Agencies, you have been promoted to the position 
+
+		<p>We are pleased to inform you that, in recognition of your dedication, hard work, and
+		outstanding performance at {self.company or 'Chundakadan'} Agencies, you have been promoted to the position
 		of <strong>{self.new_position}</strong>. Effective from {effective_date_str}.</p>
-		
-		<p>Your consistent commitment to maintaining high standards in {self.new_department or 'your'} services, along 
-		with your leadership skills and ability to work effectively with your team, has made you a 
-		valuable asset to our organization. We are confident that you will excel in this new role and 
+
+		<p>Your consistent commitment to maintaining high standards in {self.new_department or 'your'} services, along
+		with your leadership skills and ability to work effectively with your team, has made you a
+		valuable asset to our organization. We are confident that you will excel in this new role and
 		continue to contribute to the success of {self.company or 'Chundakadan'} Agencies.</p>
-		
+
 		<p><strong>Details of Your New Role:</strong></p>
 		<ul>
 			<li><strong>Position:</strong> {self.new_position}</li>
 			<li><strong>Department:</strong> {self.new_department or 'N/A'}</li>
 			<li><strong>Reporting to:</strong> {frappe.db.get_value('Employee', self.reporting_to, 'employee_name') if self.reporting_to else 'N/A'}</li>
 		</ul>
-		
-		<p>As a {self.new_position}, you will be responsible for {self.get_role_description()}. 
+
+		<p>As a {self.new_position}, you will be responsible for {self.get_role_description()}.
 		We believe your skills and experience will greatly enhance the team's performance in this capacity.</p>
-		
-		<p>Once again, congratulations on your well-deserved promotion. We look forward to your 
+
+		<p>Once again, congratulations on your well-deserved promotion. We look forward to your
 		continued contributions to {self.company or 'Chundakadan'} Agencies.</p>
-		
+
 		<p>Sincerely,<br>
 		<strong>General Manager</strong></p>
 		"""

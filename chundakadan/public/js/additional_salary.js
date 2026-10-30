@@ -22,7 +22,9 @@ function chundakadan_sync_late_total(frm) {
 	frm.set_value("amount", Math.round(total));
 
 	// keep the existing period, only restate the counts
-	const period = (frm.doc.custom_reason || "").match(/(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})/);
+	const period = (frm.doc.custom_reason || "").match(
+		/(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})/
+	);
 	if (period) {
 		frm.set_value(
 			"custom_reason",
@@ -57,7 +59,9 @@ frappe.ui.form.on("Additional Salary", {
 				return;
 			}
 			if (!frm.doc.payroll_date) {
-				frappe.msgprint(__("Set the Payroll Date first — the whole month around it is used."));
+				frappe.msgprint(
+					__("Set the Payroll Date first — the whole month around it is used.")
+				);
 				return;
 			}
 			frappe.call({

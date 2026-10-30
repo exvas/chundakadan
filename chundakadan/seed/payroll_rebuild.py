@@ -25,7 +25,6 @@ from datetime import datetime
 
 import frappe
 
-
 COMPANY = "Chundakadan Agencies"
 SSA_FROM_DATE = "2026-05-01"  # so May becomes first proper payroll month
 BACKUP_DIR = "/tmp/chundakadan_payroll_backup"

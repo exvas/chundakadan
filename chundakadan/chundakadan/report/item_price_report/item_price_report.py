@@ -58,7 +58,7 @@ def get_data(filters):
 
 	# Get all items based on filters with UOM
 	item_query = f"""
-        SELECT 
+        SELECT
             item_code,
             item_name,
             item_group,
@@ -85,12 +85,12 @@ def get_data(filters):
 		price_list_placeholders = ", ".join(["%s"] * len(price_list_names))
 
 		price_query = f"""
-            SELECT 
+            SELECT
                 item_code,
                 price_list,
                 price_list_rate
             FROM `tabItem Price`
-            WHERE item_code IN ({item_placeholders}) 
+            WHERE item_code IN ({item_placeholders})
             AND price_list IN ({price_list_placeholders})
             AND selling = 1
         """
@@ -116,7 +116,7 @@ def get_data(filters):
 		item_placeholders = ", ".join(["%s"] * len(item_codes))
 
 		valuation_query = f"""
-            SELECT 
+            SELECT
                 item_code,
                 valuation_rate,
                 warehouse

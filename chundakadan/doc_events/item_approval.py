@@ -11,7 +11,6 @@ from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now
 
-from chundakadan.utils.fields import field_changed
 from chundakadan.chundakadan.api.item_approval import (
 	APPROVED,
 	PENDING,
@@ -20,6 +19,7 @@ from chundakadan.chundakadan.api.item_approval import (
 	is_approver,
 	is_enabled,
 )
+from chundakadan.utils.fields import field_changed
 
 #: fields only the approver may move
 GUARDED_FIELDS = (

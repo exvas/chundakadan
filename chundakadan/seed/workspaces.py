@@ -9,7 +9,6 @@ import json
 
 import frappe
 
-
 TARGET_DOCTYPE = {"DocType": "DocType", "Report": "Report", "Page": "Page", "Dashboard": "Dashboard"}
 
 

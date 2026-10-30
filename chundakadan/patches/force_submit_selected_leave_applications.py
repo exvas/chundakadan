@@ -65,7 +65,7 @@ def execute():
 				skipped += 1
 
 		except Exception as e:
-			print(f"[{docname}] Error: {str(e)}")
+			print(f"[{docname}] Error: {e!s}")
 
 	frappe.db.commit()
 

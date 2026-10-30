@@ -1,67 +1,73 @@
-frappe.ui.form.on('Item', {
-    refresh: function (frm) {
-        if (!frm.is_new() && frappe.boot.user.can_read.includes("Customer")) {
-            frm.add_custom_button(__("Customers Sold To"), () => {
-                frappe.set_route("query-report", "Item List Report", { item_code: frm.doc.name });
-            }, __("View"));
-        }
-    },
+frappe.ui.form.on("Item", {
+	refresh: function (frm) {
+		if (!frm.is_new() && frappe.boot.user.can_read.includes("Customer")) {
+			frm.add_custom_button(
+				__("Customers Sold To"),
+				() => {
+					frappe.set_route("query-report", "Item List Report", {
+						item_code: frm.doc.name,
+					});
+				},
+				__("View")
+			);
+		}
+	},
 
-    custom_tax_template: function(frm) {
-        if (frm.doc.custom_tax_template) {
-            frappe.call({
-                method: 'frappe.client.get',
-                args: {
-                    doctype: 'Tax Template',
-                    name: frm.doc.custom_tax_template
-                },
-                callback: function(r) {
-                    if (r.message) {
-                        const item_tax_template = r.message.taxes;
-                        
-                        frm.clear_table('taxes');
-                        
-                        $.each(item_tax_template, function(index, row) {
-                            let child = frm.add_child('taxes');
-                            child.item_tax_template = row.item_tax_template; 
-                            child.tax_category = row.tax_category;
-                            child.valid_from = row.valid_from;
-                            child.minimum_net_rate = row.minimum_net_rate;
-                            child.maximum_net_rate = row.maximum_net_rate;
-                        });
-        
-                        frm.refresh_field('taxes');
-                    }
-                }
-            });
-        } else {
-            frm.clear_table('taxes');
-            frm.refresh_field('taxes');
-        }
-    },
-    setup: function (frm) {
-        frm.set_query("custom_size", function () {
-            return {
-                filters: {
-                    "item_group": frm.doc.item_group
-                }
-            };
-        });
-        frm.set_query("custom_finish", function () {
-            return {
-                filters: {
-                    "item_group": frm.doc.item_group
-                }
-            };
-        });
-    },
-    validate: function(frm) {
+	custom_tax_template: function (frm) {
+		if (frm.doc.custom_tax_template) {
+			frappe.call({
+				method: "frappe.client.get",
+				args: {
+					doctype: "Tax Template",
+					name: frm.doc.custom_tax_template,
+				},
+				callback: function (r) {
+					if (r.message) {
+						const item_tax_template = r.message.taxes;
 
-        if (frm.doc.item_group && frm.doc.custom_size && frm.doc.custom_finish) {
-            let item_name = frm.doc.item_group + ' ' + frm.doc.custom_size + ' ' + frm.doc.custom_finish;
-            frm.set_value('item_name', item_name);
-        } else {
-            console.log("Some fields are missing, item name not set.");
-        }
-    }
+						frm.clear_table("taxes");
+
+						$.each(item_tax_template, function (index, row) {
+							let child = frm.add_child("taxes");
+							child.item_tax_template = row.item_tax_template;
+							child.tax_category = row.tax_category;
+							child.valid_from = row.valid_from;
+							child.minimum_net_rate = row.minimum_net_rate;
+							child.maximum_net_rate = row.maximum_net_rate;
+						});
+
+						frm.refresh_field("taxes");
+					}
+				},
+			});
+		} else {
+			frm.clear_table("taxes");
+			frm.refresh_field("taxes");
+		}
+	},
+	setup: function (frm) {
+		frm.set_query("custom_size", function () {
+			return {
+				filters: {
+					item_group: frm.doc.item_group,
+				},
+			};
+		});
+		frm.set_query("custom_finish", function () {
+			return {
+				filters: {
+					item_group: frm.doc.item_group,
+				},
+			};
+		});
+	},
+	validate: function (frm) {
+		if (frm.doc.item_group && frm.doc.custom_size && frm.doc.custom_finish) {
+			let item_name =
+				frm.doc.item_group + " " + frm.doc.custom_size + " " + frm.doc.custom_finish;
+			frm.set_value("item_name", item_name);
+		} else {
+			console.log("Some fields are missing, item name not set.");
+		}
+	},
 });

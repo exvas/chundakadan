@@ -22,13 +22,14 @@ Payable / Aging reports (which only show party-based payables).
 from __future__ import annotations
 
 import frappe
-from frappe import _
-from frappe.utils import flt
-from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.accounts.general_ledger import (
 	make_gl_entries,
 	make_reverse_gl_entries,
 )
+from erpnext.controllers.accounts_controller import AccountsController
+from frappe import _
+from frappe.utils import flt
+
 from chundakadan.install import get_oev_defaults_for_company
 
 
@@ -223,8 +224,9 @@ class OfficeExpenseVoucher(AccountsController):
 		constructed "Paid to <vendor> for <first line>" fallback.
 		The description fields are rich-text (Text Editor), so strip HTML.
 		"""
-		from frappe.utils import strip_html
 		from html import unescape
+
+		from frappe.utils import strip_html
 
 		text = (
 			unescape(strip_html(line_desc or "")).strip()

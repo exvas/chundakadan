@@ -1,7 +1,8 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from chundakadan.display_tracking.transitions import resolve_transition, LOCATION_DOCTYPE
+
+from chundakadan.display_tracking.transitions import LOCATION_DOCTYPE, resolve_transition
 
 
 class DisplayMovement(Document):

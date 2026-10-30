@@ -417,7 +417,7 @@ def _enforce_monthly_cap(doc):
 		return
 	if not doc.employee or not doc.from_date:
 		return
-	from frappe.utils import getdate, flt
+	from frappe.utils import flt, getdate
 
 	d = getdate(doc.from_date)
 	# Cap by total DAYS per calendar month (not application count), so two

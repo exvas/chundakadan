@@ -15,9 +15,9 @@
 # Fixed-date holidays (Republic Day, Independence Day, Christmas, etc.)
 # are auto-handled — no manual entry needed.
 
-import frappe
 from datetime import date, timedelta
 
+import frappe
 
 COMPANY = "Chundakadan Agencies"
 HOLIDAY_LIST_NAME = "CA"  # we maintain ONE Holiday List, append yearly

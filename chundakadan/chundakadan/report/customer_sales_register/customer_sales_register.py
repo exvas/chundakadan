@@ -3,12 +3,6 @@
 
 
 import frappe
-from frappe import _, msgprint
-from frappe.model.meta import get_field_precision
-from frappe.query_builder.custom import ConstantColumn
-from frappe.utils import flt, getdate
-from pypika import Order
-
 from erpnext.accounts.party import get_party_account
 from erpnext.accounts.report.utils import (
 	apply_common_conditions,
@@ -21,6 +15,11 @@ from erpnext.accounts.report.utils import (
 	get_taxes_query,
 	get_values_for_columns,
 )
+from frappe import _, msgprint
+from frappe.model.meta import get_field_precision
+from frappe.query_builder.custom import ConstantColumn
+from frappe.utils import flt, getdate
+from pypika import Order
 
 
 def execute(filters=None):
@@ -345,7 +344,7 @@ def get_customer_territory_map(customers):
 
 	customer_data = frappe.db.sql(
 		"""
-        SELECT 
+        SELECT
             name as customer,
             territory
         FROM `tabCustomer`

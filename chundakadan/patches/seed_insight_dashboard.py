@@ -6,6 +6,7 @@ dashboard_utils.js), NOT Python — e.g. frappe.datetime.month_start().
 """
 
 import json
+
 import frappe
 
 MODULE = "Chundakadan"

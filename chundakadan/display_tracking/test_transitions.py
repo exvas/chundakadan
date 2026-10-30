@@ -1,9 +1,11 @@
 import unittest
+
 import frappe
+
 from chundakadan.display_tracking.transitions import (
-	resolve_transition,
-	TRANSITIONS,
 	LOCATION_DOCTYPE,
+	TRANSITIONS,
+	resolve_transition,
 )
 
 

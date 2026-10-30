@@ -6,8 +6,6 @@ file wires them to Customer's save cycle and creates the custom fields.
 """
 
 import frappe
-
-from chundakadan.utils.fields import field_changed
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now
@@ -20,6 +18,7 @@ from chundakadan.chundakadan.api.customer_approval import (
 	is_approver,
 	is_enabled,
 )
+from chundakadan.utils.fields import field_changed
 
 GUARDED_FIELDS = (
 	STATUS_FIELD,

@@ -14,7 +14,6 @@ from __future__ import annotations
 import frappe
 from frappe.utils import flt, fmt_money, format_date
 
-
 # Map doctype → URL slug for the deep link in the CTA
 _DOCTYPE_SLUG = {
 	"Leave Application": "leave-application",

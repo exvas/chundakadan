@@ -4,12 +4,13 @@ Debug script to check what employee codes CrossChex is sending
 and which employees don't have attendance_device_id mapped
 """
 
-import frappe
-from frappe.utils import now_datetime, get_datetime
-from datetime import datetime, timedelta
-import requests
-import uuid
 import json
+import uuid
+from datetime import datetime, timedelta
+
+import frappe
+import requests
+from frappe.utils import get_datetime, now_datetime
 
 
 def debug_crosschex_sync():
@@ -131,7 +132,7 @@ def debug_crosschex_sync():
 			print(f"✗ {emp_code}: NOT FOUND - No employee has attendance_device_id = '{emp_code}'")
 
 	# Show sample records
-	print(f"\n=== Sample Attendance Records (first 3) ===")
+	print("\n=== Sample Attendance Records (first 3) ===")
 	for i, record in enumerate(records[:3], 1):
 		print(f"\nRecord {i}:")
 		print(f"  emp_code: {record.get('emp_code')}")

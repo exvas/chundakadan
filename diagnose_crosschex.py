@@ -1,7 +1,8 @@
-import frappe
-import requests
 import uuid
 from datetime import datetime, timedelta
+
+import frappe
+import requests
 
 
 @frappe.whitelist()
@@ -57,7 +58,7 @@ def diagnose():
 
 		token_data = response.json()
 		if "payload" not in token_data or "token" not in token_data["payload"]:
-			print(f"ERROR: Invalid token response")
+			print("ERROR: Invalid token response")
 			print(f"Response: {token_data}")
 			return
 
@@ -65,7 +66,7 @@ def diagnose():
 		print("✓ Token obtained successfully")
 
 	except Exception as e:
-		print(f"ERROR: Exception getting token - {str(e)}")
+		print(f"ERROR: Exception getting token - {e!s}")
 		return
 
 	# Step 2: Fetch Attendance Records
@@ -112,7 +113,7 @@ def diagnose():
 		print(f"✓ Found {len(records)} attendance records")
 
 	except Exception as e:
-		print(f"ERROR: Exception fetching attendance - {str(e)}")
+		print(f"ERROR: Exception fetching attendance - {e!s}")
 		return
 
 	if len(records) == 0:
@@ -147,7 +148,7 @@ def diagnose():
 			print(f"  ✗ Device ID '{emp_code}': NO EMPLOYEE MAPPED - {count} records")
 
 	# Step 4: Show sample records
-	print(f"\n[Step 4] Sample Records (first 5):")
+	print("\n[Step 4] Sample Records (first 5):")
 	print("-" * 80)
 
 	for i, record in enumerate(records[:5], 1):
@@ -160,7 +161,7 @@ def diagnose():
 		print(f"  uuid: {record.get('uuid')}")
 
 	# Step 5: Check existing check-ins
-	print(f"\n[Step 5] Checking existing Employee Checkins from CrossChex...")
+	print("\n[Step 5] Checking existing Employee Checkins from CrossChex...")
 
 	existing = frappe.db.sql(
 		"""
@@ -187,13 +188,13 @@ def diagnose():
 	print(f"Employees NOT mapped: {unmapped}")
 
 	if unmapped > 0:
-		print(f"\n⚠️  ACTION REQUIRED:")
+		print("\n⚠️  ACTION REQUIRED:")
 		print(f"   {unmapped} employee(s) don't have attendance_device_id set")
-		print(f"   Update the 'Attendance Device ID' field for these employees")
+		print("   Update the 'Attendance Device ID' field for these employees")
 	else:
-		print(f"\n✓ All employees are mapped!")
-		print(f"  If sync is still showing 0 records, check:")
-		print(f"  - All records might be duplicates (already synced)")
-		print(f"  - Check frappe.log for detailed errors")
+		print("\n✓ All employees are mapped!")
+		print("  If sync is still showing 0 records, check:")
+		print("  - All records might be duplicates (already synced)")
+		print("  - Check frappe.log for detailed errors")
 
 	print("=" * 80)

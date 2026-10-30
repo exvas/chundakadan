@@ -30,7 +30,6 @@ from frappe.utils import getdate, nowdate, validate_email_address
 # Transfer applies when someone moves into that department.
 from chundakadan.doc_events.employee_transfer import DEPT_TO_STRUCTURE
 
-
 # ---------- Permission guard ---------------------------------------------------
 
 
@@ -242,7 +241,7 @@ def _add_to_manager_details(employee, allow_edit=1, allow_submit=1, workflow_app
 		},
 	)
 	cs.save(ignore_permissions=True)
-	log.append(f"Added to Chundakadan Settings → manager_details")
+	log.append("Added to Chundakadan Settings → manager_details")
 
 
 def _remove_from_manager_details(employee, log):
@@ -252,7 +251,7 @@ def _remove_from_manager_details(employee, log):
 	after = len(cs.manager_details)
 	if before != after:
 		cs.save(ignore_permissions=True)
-		log.append(f"Removed from Chundakadan Settings → manager_details")
+		log.append("Removed from Chundakadan Settings → manager_details")
 
 
 # ---------- User Permission helpers -------------------------------------------
@@ -365,7 +364,7 @@ def _apply_user_permissions(user_id, emp, log):
 		)
 	elif emp.company and n_companies <= 1:
 		log.append(
-			f"Single-company bench — skipping Company user permission " f"(no other companies to filter out)"
+			"Single-company bench — skipping Company user permission " "(no other companies to filter out)"
 		)
 
 
@@ -1198,7 +1197,7 @@ def disable_employee_user(employee, relieving_date=None, reason=None):
 	# Audit
 	emp.add_comment(
 		"Info",
-		f"<b>Employee exit via HR Action</b><br>"
+		"<b>Employee exit via HR Action</b><br>"
 		+ "<br>".join("• " + ln for ln in log)
 		+ (f"<br>• Reason: {reason}" if reason else "")
 		+ f"<br><br><i>By {frappe.session.user}</i>",

@@ -15,7 +15,7 @@ from frappe import _
 
 def _read_html_file(filename):
 	here = os.path.dirname(__file__)
-	with open(os.path.join(here, filename), "r", encoding="utf-8") as f:
+	with open(os.path.join(here, filename), encoding="utf-8") as f:
 		return f.read()
 
 
@@ -91,5 +91,5 @@ def seed_test_newsletter():
 	frappe.db.commit()
 	print(f"✓ Test Newsletter created: {doc.name}")
 	print(f"  Subject: {subject}")
-	print(f"  Mobile push will fire via the after_insert hook for every " f"Active employee.")
+	print("  Mobile push will fire via the after_insert hook for every " "Active employee.")
 	return {"name": doc.name, "subject": subject}

@@ -8,7 +8,6 @@ import frappe
 from frappe import _
 from frappe.query_builder.functions import Abs, Sum
 from frappe.utils import add_days, cint, flt, get_last_day, getdate
-
 from hrms.hr.doctype.leave_allocation.leave_allocation import get_previous_allocation
 from hrms.hr.doctype.leave_application.leave_application import (
 	get_leave_balance_on,

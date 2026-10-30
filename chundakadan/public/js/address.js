@@ -30,7 +30,9 @@ function offer_state_fix(frm, ask) {
 		frm.dashboard.clear_headline();
 		frm.dashboard.set_headline(message, "orange");
 
-		frm.add_custom_button(__("Set State to {0}", [state]), () => frm.set_value("state", state));
+		frm.add_custom_button(__("Set State to {0}", [state]), () =>
+			frm.set_value("state", state)
+		);
 
 		if (ask) {
 			frappe.confirm(`${message}<br><br>${__("Change the State to {0}?", [state])}`, () =>

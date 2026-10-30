@@ -7,15 +7,21 @@ frappe.ui.form.on("Period Salary Slip", {
 		frm.page.wrapper.find(".actions-btn-group").hide();
 
 		// Always show Fetch Salary Slips
-		let fetch_btn = frm.add_custom_button(__("Fetch Salary Slips"), () => fetch_salary_slips(frm));
-		fetch_btn.html('<i class="fa fa-refresh" style="margin-right: 5px;"></i> ' + __("Fetch Salary Slips"));
-		fetch_btn.removeClass('btn-default').addClass('btn-primary');
+		let fetch_btn = frm.add_custom_button(__("Fetch Salary Slips"), () =>
+			fetch_salary_slips(frm)
+		);
+		fetch_btn.html(
+			'<i class="fa fa-refresh" style="margin-right: 5px;"></i> ' + __("Fetch Salary Slips")
+		);
+		fetch_btn.removeClass("btn-default").addClass("btn-primary");
 
 		// Show View Print button only when salary slips are loaded
 		if (frm.doc.salary_slips && frm.doc.salary_slips.length) {
 			let print_btn = frm.add_custom_button(__("View Print"), () => view_print_dialog(frm));
-			print_btn.html('<i class="fa fa-eye" style="margin-right: 5px;"></i> ' + __("View Print"));
-			print_btn.removeClass('btn-default').addClass('btn-secondary');
+			print_btn.html(
+				'<i class="fa fa-eye" style="margin-right: 5px;"></i> ' + __("View Print")
+			);
+			print_btn.removeClass("btn-default").addClass("btn-secondary");
 		}
 	},
 
@@ -47,19 +53,35 @@ function validate_date_range(frm) {
 
 function fetch_salary_slips(frm) {
 	if (!frm.doc.employee) {
-		frappe.msgprint({ title: __("Missing Field"), message: __("Please select an Employee."), indicator: "orange" });
+		frappe.msgprint({
+			title: __("Missing Field"),
+			message: __("Please select an Employee."),
+			indicator: "orange",
+		});
 		return;
 	}
 	if (!frm.doc.from_date) {
-		frappe.msgprint({ title: __("Missing Field"), message: __("Please set the From Date."), indicator: "orange" });
+		frappe.msgprint({
+			title: __("Missing Field"),
+			message: __("Please set the From Date."),
+			indicator: "orange",
+		});
 		return;
 	}
 	if (!frm.doc.to_date) {
-		frappe.msgprint({ title: __("Missing Field"), message: __("Please set the To Date."), indicator: "orange" });
+		frappe.msgprint({
+			title: __("Missing Field"),
+			message: __("Please set the To Date."),
+			indicator: "orange",
+		});
 		return;
 	}
 	if (frm.doc.from_date > frm.doc.to_date) {
-		frappe.msgprint({ title: __("Invalid Date Range"), message: __("From Date cannot be later than To Date."), indicator: "red" });
+		frappe.msgprint({
+			title: __("Invalid Date Range"),
+			message: __("From Date cannot be later than To Date."),
+			indicator: "red",
+		});
 		return;
 	}
 
@@ -78,7 +100,9 @@ function fetch_salary_slips(frm) {
 			if (!r.message || r.message.length === 0) {
 				frappe.msgprint({
 					title: __("No Records Found"),
-					message: __("No submitted salary slips found for the selected employee and date range."),
+					message: __(
+						"No submitted salary slips found for the selected employee and date range."
+					),
 					indicator: "blue",
 				});
 				frm.refresh_field("salary_slips");
@@ -88,9 +112,9 @@ function fetch_salary_slips(frm) {
 			r.message.forEach((slip) => {
 				let row = frm.add_child("salary_slips");
 				row.salary_slip = slip.salary_slip;
-				row.start_date  = slip.start_date;
-				row.end_date    = slip.end_date;
-				row.net_pay     = slip.net_pay;
+				row.start_date = slip.start_date;
+				row.end_date = slip.end_date;
+				row.net_pay = slip.net_pay;
 			});
 
 			frm.refresh_field("salary_slips");
@@ -117,13 +141,15 @@ function view_print_dialog(frm) {
 	}
 
 	// Build the Frappe printview URL
-	const print_url = "/printview?" + $.param({
-		doctype : "Period Salary Slip",
-		name    : frm.doc.name,
-		format  : "Period Salary Slip",
-		no_letterhead: 1,
-		_lang   : frappe.boot.lang || "en",
-	});
+	const print_url =
+		"/printview?" +
+		$.param({
+			doctype: "Period Salary Slip",
+			name: frm.doc.name,
+			format: "Period Salary Slip",
+			no_letterhead: 1,
+			_lang: frappe.boot.lang || "en",
+		});
 
 	const iframe_html = `
 		<div style="height: 65vh; width: 100%; border: 1px solid #d1d8dd; border-radius: 4px; overflow: hidden;">
@@ -137,9 +163,7 @@ function view_print_dialog(frm) {
 			frappe.datetime.str_to_user(frm.doc.to_date),
 		]),
 		size: "extra-large",
-		fields: [
-			{ fieldtype: "HTML", fieldname: "print_preview", options: iframe_html },
-		],
+		fields: [{ fieldtype: "HTML", fieldname: "print_preview", options: iframe_html }],
 		primary_action_label: __("🖨 Open in New Tab"),
 		primary_action() {
 			// Open print preview in new tab

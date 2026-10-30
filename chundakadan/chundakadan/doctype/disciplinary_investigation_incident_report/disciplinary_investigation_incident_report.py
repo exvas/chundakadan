@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import today, getdate
+from frappe.utils import getdate, today
 
 
 class DisciplinaryInvestigationIncidentReport(Document):
@@ -101,7 +101,7 @@ def get_employee_incident_history(employee):
 		"""
 		SELECT DISTINCT ie.parent, dir.date_of_incident, dir.place_of_incident, dir.status
 		FROM `tabIncident Employee` ie
-		INNER JOIN `tabDisciplinary Investigation Incident Report` dir 
+		INNER JOIN `tabDisciplinary Investigation Incident Report` dir
 			ON ie.parent = dir.name
 		WHERE ie.employee_name = %s
 		AND ie.parenttype = 'Disciplinary Investigation Incident Report'

@@ -21,7 +21,6 @@
 
 import frappe
 
-
 # ─────────────────────────────────────────────────────────────────────
 # CANONICAL MODULE LIST
 # Everything ERPNext + the chundakadan bench exposes. If you install a

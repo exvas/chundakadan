@@ -1,11 +1,11 @@
-frappe.pages['stock-qty'].on_page_load = function(wrapper) {
-    var page = frappe.ui.make_app_page({
-        parent: wrapper,
-        title: 'Stock Quantity Details',
-        single_column: true
-    });
+frappe.pages["stock-qty"].on_page_load = function (wrapper) {
+	var page = frappe.ui.make_app_page({
+		parent: wrapper,
+		title: "Stock Quantity Details",
+		single_column: true,
+	});
 
-    let filter_html = `
+	let filter_html = `
         <div class="stock-qty-filters row mb-3">
             <div class="col-sm-3 mb-2">
                 <select class="form-control" id="so_filter">
@@ -23,12 +23,12 @@ frappe.pages['stock-qty'].on_page_load = function(wrapper) {
             </div>
         </div>
     `;
-    $(page.body).append(filter_html);
+	$(page.body).append(filter_html);
 
-    $(page.body).append(`
+	$(page.body).append(`
         <style>
-        .stock-qty-filters select, 
-        .stock-qty-filters input, 
+        .stock-qty-filters select,
+        .stock-qty-filters input,
         .stock-qty-filters button {
             border-radius: 4px;
         }
@@ -50,46 +50,46 @@ frappe.pages['stock-qty'].on_page_load = function(wrapper) {
         </div>
     `);
 
-    // Populate Sales Order dropdown on load
-    frappe.call({
-        method: 'chundakadan.chundakadan.page.stock_qty.stock_qty.get_sales_order_list',
-        callback: function(r) {
-            if(r.message && $.isArray(r.message)) {
-                const so_filter = $("#so_filter");
-                r.message.forEach(so => {
-                    so_filter.append(`<option value="${so.name}">${so.name}</option>`);
-                });
-            }
-        }
-    });
+	// Populate Sales Order dropdown on load
+	frappe.call({
+		method: "chundakadan.chundakadan.page.stock_qty.stock_qty.get_sales_order_list",
+		callback: function (r) {
+			if (r.message && $.isArray(r.message)) {
+				const so_filter = $("#so_filter");
+				r.message.forEach((so) => {
+					so_filter.append(`<option value="${so.name}">${so.name}</option>`);
+				});
+			}
+		},
+	});
 
-    // Bind filter button click
-    $('#apply_filters').on('click', function() {
-        get_and_display_data();
-    });
+	// Bind filter button click
+	$("#apply_filters").on("click", function () {
+		get_and_display_data();
+	});
 
-    // Initial load
-    get_and_display_data();
+	// Initial load
+	get_and_display_data();
 };
 
 function get_and_display_data() {
-    let filters = {
-        sales_order: $('#so_filter').val(),
-        from_date: $('#from_date').val(),
-        to_date: $('#to_date').val()
-    };
+	let filters = {
+		sales_order: $("#so_filter").val(),
+		from_date: $("#from_date").val(),
+		to_date: $("#to_date").val(),
+	};
 
-    frappe.call({
-        method: 'chundakadan.chundakadan.page.stock_qty.stock_qty.get_so_details',
-        args: { filters: filters },
-        callback: function(r) {
-            display_data(r.message || []);
-        }
-    });
+	frappe.call({
+		method: "chundakadan.chundakadan.page.stock_qty.stock_qty.get_so_details",
+		args: { filters: filters },
+		callback: function (r) {
+			display_data(r.message || []);
+		},
+	});
 }
 
 function display_data(data) {
-    let html = `
+	let html = `
         <table class="table table-bordered table-sm">
             <thead>
                 <tr>
@@ -107,14 +107,14 @@ function display_data(data) {
             </thead>
             <tbody>
     `;
-    if (!data.length) {
-        html += `<tr><td colspan="10" class="text-center text-muted">No Records Found</td></tr>`;
-    } else {
-        data.forEach(row => {
-            html += `
+	if (!data.length) {
+		html += `<tr><td colspan="10" class="text-center text-muted">No Records Found</td></tr>`;
+	} else {
+		data.forEach((row) => {
+			html += `
                 <tr>
                     <td>${row.sales_order}</td>
-                    <td>${row.status || ''}</td>
+                    <td>${row.status || ""}</td>
                     <td>${row.customer}</td>
                     <td>${frappe.datetime.str_to_user(row.date)}</td>
                     <td>${row.item_code}</td>
@@ -125,8 +125,8 @@ function display_data(data) {
                     <td>${row.qty_to_invoice}</td>
                 </tr>
             `;
-        });
-    }
-    html += '</tbody></table>';
-    $('#stock_qty_data').html(html);
+		});
+	}
+	html += "</tbody></table>";
+	$("#stock_qty_data").html(html);
 }

@@ -1,12 +1,13 @@
 # Copyright (c) 2025, Chundakadan and contributors
 # For license information, please see license.txt
 
-import frappe
-from frappe.model.document import Document
-from frappe.utils import now_datetime, get_datetime
-import requests
 import json
 from datetime import datetime, timedelta
+
+import frappe
+import requests
+from frappe.model.document import Document
+from frappe.utils import get_datetime, now_datetime
 
 
 class CrosschexSettings(Document):
@@ -69,7 +70,7 @@ class CrosschexSettings(Document):
 
 					except Exception as e:
 						total_errors += 1
-						sync_results.append(f"{config.configuration_name}: Exception - {str(e)}")
+						sync_results.append(f"{config.configuration_name}: Exception - {e!s}")
 
 				# Update sync status
 				status_message = f"Manual sync: Processed {total_processed} records from {len(self.api_configurations)} devices"
@@ -82,7 +83,7 @@ class CrosschexSettings(Document):
 				return {"success": False, "error": "No API configurations found"}
 
 		except Exception as e:
-			error_msg = f"Sync failed: {str(e)}"
+			error_msg = f"Sync failed: {e!s}"
 			self.db_set("last_sync_status", error_msg, update_modified=False)
 			frappe.db.commit()
 
@@ -100,7 +101,7 @@ class CrosschexSettings(Document):
 			return {"success": True, "message": "Token has been reset"}
 
 		except Exception as e:
-			return {"success": False, "error": f"Failed to reset token: {str(e)}"}
+			return {"success": False, "error": f"Failed to reset token: {e!s}"}
 
 	@frappe.whitelist()
 	def clear_logs(self):
@@ -126,7 +127,7 @@ class CrosschexSettings(Document):
 			}
 
 		except Exception as e:
-			return {"success": False, "error": f"Failed to clear logs: {str(e)}"}
+			return {"success": False, "error": f"Failed to clear logs: {e!s}"}
 
 
 @frappe.whitelist()
@@ -140,7 +141,7 @@ def test_individual_api_config(api_url, api_key, config_row_name, config_name=No
 			config_doc = frappe.get_doc("CrossChex API Configuration", config_row_name)
 			api_secret = config_doc.get_password("api_secret")
 		except Exception as e:
-			return {"success": False, "error": f"Failed to retrieve API Secret: {str(e)}"}
+			return {"success": False, "error": f"Failed to retrieve API Secret: {e!s}"}
 
 		if not api_secret:
 			return {
@@ -232,7 +233,7 @@ def get_crosschex_status():
 		}
 
 	except Exception as e:
-		return {"error": f"Error getting status: {str(e)}"}
+		return {"error": f"Error getting status: {e!s}"}
 
 
 @frappe.whitelist()
@@ -246,7 +247,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 			config_doc = frappe.get_doc("CrossChex API Configuration", config_row_name)
 			api_secret = config_doc.get_password("api_secret")
 		except Exception as e:
-			return {"success": False, "error": f"Failed to retrieve API Secret: {str(e)}"}
+			return {"success": False, "error": f"Failed to retrieve API Secret: {e!s}"}
 
 		if not api_secret:
 			return {
@@ -265,7 +266,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 		try:
 			token = config_doc.get_password("token")
 		except Exception as e:
-			frappe.logger().info(f"Token not found for config {config_row_name}: {str(e)}")
+			frappe.logger().info(f"Token not found for config {config_row_name}: {e!s}")
 
 		try:
 			token_expires = config_doc.token_expires
@@ -507,7 +508,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 
 				except Exception as time_error:
 					errors.append(f"Invalid datetime format: {check_time}")
-					frappe.logger().error(f"CrossChec time parsing error: {str(time_error)}")
+					frappe.logger().error(f"CrossChec time parsing error: {time_error!s}")
 					continue
 
 				# Map checktype using logMap
@@ -549,7 +550,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 					processed_count += 1
 
 				except Exception as insert_error:
-					error_msg = f"Failed to create checkin for {employee.employee_name} at {check_datetime}: {str(insert_error)}"
+					error_msg = f"Failed to create checkin for {employee.employee_name} at {check_datetime}: {insert_error!s}"
 					errors.append(error_msg)
 					frappe.logger().error(f"CrossChex Insert Error: {error_msg}")
 					# Log full traceback for debugging
@@ -559,8 +560,8 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 					continue
 
 			except Exception as e:
-				errors.append(f"Error processing record: {str(e)}")
-				frappe.logger().error(f"CrossChex sync error: {str(e)}")
+				errors.append(f"Error processing record: {e!s}")
+				frappe.logger().error(f"CrossChex sync error: {e!s}")
 				continue
 
 		# Log summary
@@ -599,7 +600,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 		}
 
 	except Exception as e:
-		frappe.log_error(f"Individual device sync failed: {str(e)}", "CrossChex Sync Error")
+		frappe.log_error(f"Individual device sync failed: {e!s}", "CrossChex Sync Error")
 		return {"success": False, "error": str(e)}
 
 
@@ -614,7 +615,7 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
 			config_doc = frappe.get_doc("CrossChex API Configuration", config_row_name)
 			api_secret = config_doc.get_password("api_secret")
 		except Exception as e:
-			return {"success": False, "error": f"Failed to retrieve API Secret: {str(e)}"}
+			return {"success": False, "error": f"Failed to retrieve API Secret: {e!s}"}
 
 		if not api_secret:
 			return {"success": False, "error": "API Secret not found"}
@@ -749,8 +750,8 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
 					check_datetime = convert_utc_to_system_timezone(check_datetime)
 				else:
 					# If no timezone info, assume it's UTC and convert
-					from frappe.utils import convert_utc_to_system_timezone
 					import pytz
+					from frappe.utils import convert_utc_to_system_timezone
 
 					utc_dt = pytz.UTC.localize(check_datetime)
 					check_datetime = convert_utc_to_system_timezone(utc_dt)
@@ -781,7 +782,7 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
 				processed_count += 1
 
 			except Exception as e:
-				frappe.logger().error(f"Error in full resync: {str(e)}")
+				frappe.logger().error(f"Error in full resync: {e!s}")
 				continue
 
 		# Normalize IN/OUT by time order for the synced window (biometric
@@ -811,7 +812,7 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
 		}
 
 	except Exception as e:
-		frappe.log_error(f"Full resync failed: {str(e)}", "CrossChex Full Resync Error")
+		frappe.log_error(f"Full resync failed: {e!s}", "CrossChex Full Resync Error")
 		return {"success": False, "error": str(e)}
 
 
@@ -853,8 +854,8 @@ def scheduled_attendance_sync():
 
 				except Exception as e:
 					total_errors += 1
-					sync_results.append(f"{config.configuration_name}: Exception - {str(e)}")
-					frappe.logger().error(f"Error syncing device {config.configuration_name}: {str(e)}")
+					sync_results.append(f"{config.configuration_name}: Exception - {e!s}")
+					frappe.logger().error(f"Error syncing device {config.configuration_name}: {e!s}")
 
 			# Update settings with sync summary
 			status_message = f"Auto-sync: Processed {total_processed} records from {len(settings.api_configurations)} devices"
@@ -863,7 +864,7 @@ def scheduled_attendance_sync():
 			frappe.db.commit()
 
 	except Exception as e:
-		frappe.logger().error(f"Error in scheduled_attendance_sync: {str(e)}")
+		frappe.logger().error(f"Error in scheduled_attendance_sync: {e!s}")
 
 
 def check_and_refresh_token():
@@ -916,7 +917,7 @@ def check_and_refresh_token():
 						)
 
 				except Exception as e:
-					frappe.logger().error(f"Error refreshing token for {config.configuration_name}: {str(e)}")
+					frappe.logger().error(f"Error refreshing token for {config.configuration_name}: {e!s}")
 
 	except Exception as e:
-		frappe.logger().error(f"Error in check_and_refresh_token: {str(e)}")
+		frappe.logger().error(f"Error in check_and_refresh_token: {e!s}")

@@ -23,34 +23,31 @@ frappe.ui.form.on("Performance Feedback Form", {
 		`;
 
 		// Method 1: Set property
-		frm.set_df_property('custom_instructions_keep_this_same_everywhere', 'options', instructions_html);
+		frm.set_df_property(
+			"custom_instructions_keep_this_same_everywhere",
+			"options",
+			instructions_html
+		);
 
 		// Method 2: Direct injection to wrapper
 		if (frm.fields_dict.custom_instructions_keep_this_same_everywhere) {
-			$(frm.fields_dict.custom_instructions_keep_this_same_everywhere.wrapper).html(instructions_html);
+			$(frm.fields_dict.custom_instructions_keep_this_same_everywhere.wrapper).html(
+				instructions_html
+			);
 		}
 	},
 	custom_executive_name(frm) {
-
 		if (frm.doc.custom_executive_name) {
+			frappe.db.get_doc("Employee", frm.doc.custom_executive_name).then((doc) => {
+				// Employee Name
+				frm.set_df_property("custom_executive_name", "description");
 
-			frappe.db.get_doc("Employee", frm.doc.custom_executive_name)
-				.then((doc) => {
+				// Employee Code
+				frm.set_value("custom_employee_code", doc.name);
 
-					// Employee Name
-					frm.set_df_property(
-						"custom_executive_name",
-						"description",
-
-					);
-
-					// Employee Code
-					frm.set_value("custom_employee_code", doc.name);
-
-					// Department
-					frm.set_value("custom_departmentterritory", doc.department);
-				});
-
+				// Department
+				frm.set_value("custom_departmentterritory", doc.department);
+			});
 		}
-	}
+	},
 });

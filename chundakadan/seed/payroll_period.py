@@ -12,8 +12,7 @@
 # Income Tax Slab manually in the desk.
 
 import frappe
-from frappe.utils import getdate, get_first_day, add_months
-
+from frappe.utils import add_months, get_first_day, getdate
 
 COMPANY = "Chundakadan Agencies"
 

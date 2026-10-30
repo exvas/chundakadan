@@ -34,10 +34,14 @@ frappe.ui.form.on("Customer", {
 
 function approve(frm) {
 	frappe.confirm(
-		__("Approve {0}? It will be enabled and orders can then be raised against it.", [frm.doc.name]),
+		__("Approve {0}? It will be enabled and orders can then be raised against it.", [
+			frm.doc.name,
+		]),
 		() => {
 			frappe
-				.xcall("chundakadan.chundakadan.api.customer_approval.approve", { customers: [frm.doc.name] })
+				.xcall("chundakadan.chundakadan.api.customer_approval.approve", {
+					customers: [frm.doc.name],
+				})
 				.then(() => {
 					frappe.show_alert({ message: __("Customer approved"), indicator: "green" });
 					frm.reload_doc();

@@ -12,7 +12,8 @@ from chundakadan.chundakadan.doctype.dispatch_log.test_dispatch_log import (
 	fresh_log,
 	in_scope_invoices,
 )
-from chundakadan.dispatch import api, constants as C
+from chundakadan.dispatch import api
+from chundakadan.dispatch import constants as C
 from chundakadan.dispatch.events import (
 	backfill_dispatch_logs,
 	create_dispatch_log,

@@ -26,7 +26,6 @@ from frappe.utils import flt, now
 
 from chundakadan.chundakadan.api import approval_email
 
-
 # --- Per-doctype config -------------------------------------------------
 # `amount_field` is the field on the parent doc we compare to the
 # threshold. Each entry tells us how to find the money number.

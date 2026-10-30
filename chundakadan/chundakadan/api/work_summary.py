@@ -19,10 +19,10 @@ it in Returned so the employee can fix it and send it again.
 from __future__ import annotations
 
 import frappe
-
-from chundakadan.utils.fields import field_changed
 from frappe import _
 from frappe.utils import now
+
+from chundakadan.utils.fields import field_changed
 
 ROLE_GM = "GM Leave Approver"
 ADMIN_ROLES = ("Administrator", "System Manager")

@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Self Assessment Form", {
 	refresh(frm) {
-		frm.trigger('render_instructions');
+		frm.trigger("render_instructions");
 	},
 	render_instructions(frm) {
 		const instructions_html = `
@@ -22,15 +22,20 @@ frappe.ui.form.on("Self Assessment Form", {
 	},
 	executive_name(frm) {
 		if (frm.doc.executive_name) {
-			frappe.db.get_value("Employee", frm.doc.executive_name, ["name", "department", "employee_name"], (r) => {
-				if (r) {
-					frm.set_value("employee_code", r.name);
-					frm.set_value("department_territory", r.department);
+			frappe.db.get_value(
+				"Employee",
+				frm.doc.executive_name,
+				["name", "department", "employee_name"],
+				(r) => {
+					if (r) {
+						frm.set_value("employee_code", r.name);
+						frm.set_value("department_territory", r.department);
+					}
 				}
-			});
+			);
 		} else {
 			frm.set_value("employee_code", "");
 			frm.set_value("department_territory", "");
 		}
-	}
+	},
 });

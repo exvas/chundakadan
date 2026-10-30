@@ -21,7 +21,7 @@ items as a yellow banner with clickable fix links.
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, nowdate, get_fullname
+from frappe.utils import get_fullname, getdate, nowdate
 
 
 @frappe.whitelist()

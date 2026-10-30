@@ -5,7 +5,6 @@
 import subprocess
 import sys
 
-
 # Pinned to match chundakadan/pyproject.toml so a manual install AND
 # the auto-installer pull the exact same version.
 _FIREBASE_ADMIN_PIN = "firebase-admin>=6.5.0,<8.0.0"
@@ -27,7 +26,7 @@ def ensure_firebase_admin_installed(*args, **kwargs):
 	    step; this hook is a safety net.
 	"""
 	try:
-		import firebase_admin  # noqa: F401
+		import firebase_admin
 
 		return
 	except ImportError:
@@ -67,7 +66,7 @@ def ensure_holidays_library_installed(*args, **kwargs):
 	hardcoded _HOLIDAYS_BY_YEAR map (good through 2030).
 	"""
 	try:
-		import holidays  # noqa: F401
+		import holidays
 
 		return
 	except ImportError:

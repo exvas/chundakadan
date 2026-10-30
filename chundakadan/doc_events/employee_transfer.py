@@ -23,7 +23,6 @@ import frappe
 from frappe import _
 from frappe.utils import escape_html, today
 
-
 # Department → (Salary Structure, Role Profile) mapping.
 # Substring-matched (case insensitive) against Employee.department which
 # usually carries the company abbreviation suffix (e.g. "Dispatch - CA").

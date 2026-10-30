@@ -19,7 +19,6 @@ Idempotent — safe to re-run. Run via:
 
 import frappe
 
-
 # -- 11 group accounts -------------------------------------------------
 # Codes 5230-5290 + 5350-5380 (skip 5300-5309 which Payroll Expenses owns).
 EXPENSE_GROUPS = [

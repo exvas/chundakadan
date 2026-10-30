@@ -48,7 +48,7 @@ def get_so_details(filters=None):
 		if so_item_names:
 			invoice_rows = frappe.db.sql(
 				"""
-                SELECT soi.name AS so_item, 
+                SELECT soi.name AS so_item,
                     IFNULL(SUM(sii.qty), 0) AS billed_qty
                 FROM `tabSales Invoice Item` sii
                 JOIN `tabSales Order Item` soi ON sii.so_detail = soi.name

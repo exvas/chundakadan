@@ -110,9 +110,22 @@ class DispatchBoard {
 				render_input: true,
 			});
 		this.controls = {
-			from_date: make({ fieldtype: "Date", fieldname: "from_date", placeholder: __("Invoice From") }),
-			to_date: make({ fieldtype: "Date", fieldname: "to_date", placeholder: __("Invoice To") }),
-			customer: make({ fieldtype: "Link", fieldname: "customer", options: "Customer", placeholder: __("Customer") }),
+			from_date: make({
+				fieldtype: "Date",
+				fieldname: "from_date",
+				placeholder: __("Invoice From"),
+			}),
+			to_date: make({
+				fieldtype: "Date",
+				fieldname: "to_date",
+				placeholder: __("Invoice To"),
+			}),
+			customer: make({
+				fieldtype: "Link",
+				fieldname: "customer",
+				options: "Customer",
+				placeholder: __("Customer"),
+			}),
 			transporter: make({
 				fieldtype: "Link",
 				fieldname: "transporter",
@@ -120,7 +133,11 @@ class DispatchBoard {
 				placeholder: __("Transporter"),
 				get_query: () => ({ filters: { is_transporter: 1 } }),
 			}),
-			search: make({ fieldtype: "Data", fieldname: "search", placeholder: __("Invoice No / Customer Name") }),
+			search: make({
+				fieldtype: "Data",
+				fieldname: "search",
+				placeholder: __("Invoice No / Customer Name"),
+			}),
 		};
 		Object.values(this.controls).forEach((c) => c.refresh());
 	}
@@ -144,12 +161,16 @@ class DispatchBoard {
 	}
 
 	load_counts() {
-		frappe.call({ method: `${DISPATCH_API}.get_counts`, args: { filters: this.filters } }).then((r) => {
-			const counts = r.message || {};
-			DISPATCH_CARDS.forEach((card) => {
-				this.$cards.find(`[data-key="${card.key}"] .dsp-count`).text(counts[card.key] || 0);
+		frappe
+			.call({ method: `${DISPATCH_API}.get_counts`, args: { filters: this.filters } })
+			.then((r) => {
+				const counts = r.message || {};
+				DISPATCH_CARDS.forEach((card) => {
+					this.$cards
+						.find(`[data-key="${card.key}"] .dsp-count`)
+						.text(counts[card.key] || 0);
+				});
 			});
-		});
 	}
 
 	load_rows(append = false) {
@@ -159,7 +180,12 @@ class DispatchBoard {
 		frappe
 			.call({
 				method: `${DISPATCH_API}.get_logs`,
-				args: { tab: this.tab, filters: this.filters, start, page_length: DISPATCH_PAGE_LENGTH },
+				args: {
+					tab: this.tab,
+					filters: this.filters,
+					start,
+					page_length: DISPATCH_PAGE_LENGTH,
+				},
 			})
 			.then((r) => {
 				const rows = r.message || [];
@@ -176,12 +202,24 @@ class DispatchBoard {
 	columns() {
 		const invoice = {
 			label: __("Invoice"),
-			html: (r) => `<a href="/app/sales-invoice/${encodeURIComponent(r.sales_invoice)}">${dsp_esc(r.sales_invoice)}</a>`,
+			html: (r) =>
+				`<a href="/app/sales-invoice/${encodeURIComponent(r.sales_invoice)}">${dsp_esc(
+					r.sales_invoice
+				)}</a>`,
 		};
-		const customer = { label: __("Customer"), html: (r) => dsp_esc(r.customer_name || r.customer) };
+		const customer = {
+			label: __("Customer"),
+			html: (r) => dsp_esc(r.customer_name || r.customer),
+		};
 		const mobile = { label: __("Mobile"), html: (r) => dsp_esc(r.contact_mobile) };
-		const transporter = { label: __("Transporter"), html: (r) => dsp_esc(r.transporter_name || r.transporter) };
-		const expected = { label: __("Expected"), html: (r) => dsp_date(r.expected_delivery_date) };
+		const transporter = {
+			label: __("Transporter"),
+			html: (r) => dsp_esc(r.transporter_name || r.transporter),
+		};
+		const expected = {
+			label: __("Expected"),
+			html: (r) => dsp_date(r.expected_delivery_date),
+		};
 		const remarks = { label: __("Remarks"), html: (r) => dsp_esc(r.delivery_remarks) };
 		switch (this.tab) {
 			case "pending":
@@ -189,12 +227,28 @@ class DispatchBoard {
 					invoice,
 					{ label: __("Date"), html: (r) => dsp_date(r.posting_date) },
 					customer,
-					{ label: __("Amount"), html: (r) => frappe.format(r.grand_total, { fieldtype: "Currency" }) },
+					{
+						label: __("Amount"),
+						html: (r) => frappe.format(r.grand_total, { fieldtype: "Currency" }),
+					},
 					{ label: __("Days"), html: (r) => dsp_esc(r.days_pending) },
-					{ label: __("Reason"), html: (r) => dsp_esc([r.pending_reason, r.pending_remarks].filter(Boolean).join(" — ")) },
+					{
+						label: __("Reason"),
+						html: (r) =>
+							dsp_esc(
+								[r.pending_reason, r.pending_remarks].filter(Boolean).join(" — ")
+							),
+					},
 				];
 			case "followup":
-				return [invoice, customer, mobile, transporter, expected, { label: __("Status"), html: (r) => dsp_esc(r.dispatch_status) }];
+				return [
+					invoice,
+					customer,
+					mobile,
+					transporter,
+					expected,
+					{ label: __("Status"), html: (r) => dsp_esc(r.dispatch_status) },
+				];
 			case "dispatched":
 				return [
 					invoice,
@@ -202,13 +256,21 @@ class DispatchBoard {
 					transporter,
 					{ label: __("Vehicle"), html: (r) => dsp_esc(r.vehicle_no) },
 					{ label: __("LR No"), html: (r) => dsp_esc(r.lr_no) },
-					{ label: __("Dispatched On"), html: (r) => dsp_esc(r.dispatched_on ? frappe.datetime.str_to_user(r.dispatched_on) : "") },
+					{
+						label: __("Dispatched On"),
+						html: (r) =>
+							dsp_esc(
+								r.dispatched_on ? frappe.datetime.str_to_user(r.dispatched_on) : ""
+							),
+					},
 					expected,
 					{
 						label: __("e-Waybill"),
 						html: (r) =>
 							r.ewaybill_sync_status === "Failed"
-								? `<span class="text-danger" title="${dsp_esc(r.ewaybill_sync_error)}">${__("Failed")}</span>`
+								? `<span class="text-danger" title="${dsp_esc(
+										r.ewaybill_sync_error
+								  )}">${__("Failed")}</span>`
 								: dsp_esc(r.ewaybill_sync_status),
 					},
 				];
@@ -222,7 +284,15 @@ class DispatchBoard {
 					customer,
 					transporter,
 					{ label: __("Status"), html: (r) => dsp_esc(r.dispatch_status) },
-					{ label: __("Confirmed On"), html: (r) => dsp_esc(r.delivery_confirmed_on ? frappe.datetime.str_to_user(r.delivery_confirmed_on) : "") },
+					{
+						label: __("Confirmed On"),
+						html: (r) =>
+							dsp_esc(
+								r.delivery_confirmed_on
+									? frappe.datetime.str_to_user(r.delivery_confirmed_on)
+									: ""
+							),
+					},
 					{ label: __("Confirmed By"), html: (r) => dsp_esc(r.delivery_confirmed_by) },
 					remarks,
 				];
@@ -248,7 +318,8 @@ class DispatchBoard {
 					["confirm", __("Confirm Delivery"), "btn-primary"],
 					["edit_transport", __("Edit Transport"), "btn-default"],
 				];
-				if (row.ewaybill_sync_status === "Failed") list.push(["retry", __("Retry Sync"), "btn-danger"]);
+				if (row.ewaybill_sync_status === "Failed")
+					list.push(["retry", __("Retry Sync"), "btn-danger"]);
 				return list;
 			}
 			case "not_delivered":
@@ -268,30 +339,46 @@ class DispatchBoard {
 		}
 		const columns = this.columns();
 		const with_actions = this.can_write && this.tab !== "delivered";
-		const head = columns.map((c) => `<th>${c.label}</th>`).join("") + (with_actions ? `<th>${__("Actions")}</th>` : "");
+		const head =
+			columns.map((c) => `<th>${c.label}</th>`).join("") +
+			(with_actions ? `<th>${__("Actions")}</th>` : "");
 		const body = this.rows
 			.map((row) => {
-				const overdue = this.tab === "pending" && row.days_pending > 2 ? "dsp-overdue" : "";
+				const overdue =
+					this.tab === "pending" && row.days_pending > 2 ? "dsp-overdue" : "";
 				const cells = columns.map((c) => `<td>${c.html(row)}</td>`).join("");
 				const buttons = this.actions(row)
-					.map(([action, label, cls]) => `<button class="btn btn-xs ${cls}" data-action="${action}" data-name="${dsp_esc(row.name)}">${label}</button>`)
+					.map(
+						([action, label, cls]) =>
+							`<button class="btn btn-xs ${cls}" data-action="${action}" data-name="${dsp_esc(
+								row.name
+							)}">${label}</button>`
+					)
 					.join("");
-				return `<tr class="${overdue}">${cells}${with_actions ? `<td class="dsp-actions">${buttons}</td>` : ""}</tr>`;
+				return `<tr class="${overdue}">${cells}${
+					with_actions ? `<td class="dsp-actions">${buttons}</td>` : ""
+				}</tr>`;
 			})
 			.join("");
 		this.$table.html(`<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`);
 	}
 
 	call(method, args, message) {
-		return frappe.call({ method: `${DISPATCH_API}.${method}`, args, freeze: true }).then((r) => {
-			const result = r.message || {};
-			if (result.ewaybill_sync_status === "Failed") {
-				frappe.msgprint({ title: __("e-Waybill not updated"), indicator: "orange", message: __("Saved, but the e-Waybill update failed. Use Retry Sync.") });
-			} else {
-				frappe.show_alert({ message, indicator: "green" });
-			}
-			this.refresh();
-		});
+		return frappe
+			.call({ method: `${DISPATCH_API}.${method}`, args, freeze: true })
+			.then((r) => {
+				const result = r.message || {};
+				if (result.ewaybill_sync_status === "Failed") {
+					frappe.msgprint({
+						title: __("e-Waybill not updated"),
+						indicator: "orange",
+						message: __("Saved, but the e-Waybill update failed. Use Retry Sync."),
+					});
+				} else {
+					frappe.show_alert({ message, indicator: "green" });
+				}
+				this.refresh();
+			});
 	}
 
 	run_action(action, row) {
@@ -310,23 +397,79 @@ class DispatchBoard {
 
 	transport_dialog(row, method) {
 		const dialog = new frappe.ui.Dialog({
-			title: `${method === "mark_dispatched" ? __("Dispatch") : __("Edit Transport")} — ${row.sales_invoice}`,
+			title: `${method === "mark_dispatched" ? __("Dispatch") : __("Edit Transport")} — ${
+				row.sales_invoice
+			}`,
 			fields: [
-				{ fieldtype: "Link", fieldname: "transporter", label: __("Transporter"), options: "Supplier", reqd: 1, default: row.transporter, get_query: () => ({ filters: { is_transporter: 1 } }) },
-				{ fieldtype: "Button", fieldname: "new_transporter", label: __("+ New Transporter"), click: () => this.new_transporter_dialog((name) => dialog.set_value("transporter", name)) },
-				{ fieldtype: "Data", fieldname: "vehicle_no", label: __("Vehicle No"), default: row.vehicle_no },
+				{
+					fieldtype: "Link",
+					fieldname: "transporter",
+					label: __("Transporter"),
+					options: "Supplier",
+					reqd: 1,
+					default: row.transporter,
+					get_query: () => ({ filters: { is_transporter: 1 } }),
+				},
+				{
+					fieldtype: "Button",
+					fieldname: "new_transporter",
+					label: __("+ New Transporter"),
+					click: () =>
+						this.new_transporter_dialog((name) =>
+							dialog.set_value("transporter", name)
+						),
+				},
+				{
+					fieldtype: "Data",
+					fieldname: "vehicle_no",
+					label: __("Vehicle No"),
+					default: row.vehicle_no,
+				},
 				{ fieldtype: "Data", fieldname: "lr_no", label: __("LR No"), default: row.lr_no },
-				{ fieldtype: "Date", fieldname: "lr_date", label: __("LR Date"), default: row.lr_date },
+				{
+					fieldtype: "Date",
+					fieldname: "lr_date",
+					label: __("LR Date"),
+					default: row.lr_date,
+				},
 				{ fieldtype: "Column Break" },
-				{ fieldtype: "Data", fieldname: "driver_name", label: __("Driver Name"), default: row.driver_name },
-				{ fieldtype: "Select", fieldname: "mode_of_transport", label: __("Mode of Transport"), options: "Road\nAir\nRail\nShip", default: row.mode_of_transport || "Road" },
-				{ fieldtype: "Select", fieldname: "expected_delivery", label: __("Expected Delivery"), options: EXPECTED_OPTIONS.join("\n"), reqd: 1, default: row.expected_delivery || "Next Day" },
-				{ fieldtype: "Date", fieldname: "expected_delivery_date", label: __("Expected Delivery Date"), default: row.expected_delivery_date, description: __("Leave blank to calculate from the option") },
+				{
+					fieldtype: "Data",
+					fieldname: "driver_name",
+					label: __("Driver Name"),
+					default: row.driver_name,
+				},
+				{
+					fieldtype: "Select",
+					fieldname: "mode_of_transport",
+					label: __("Mode of Transport"),
+					options: "Road\nAir\nRail\nShip",
+					default: row.mode_of_transport || "Road",
+				},
+				{
+					fieldtype: "Select",
+					fieldname: "expected_delivery",
+					label: __("Expected Delivery"),
+					options: EXPECTED_OPTIONS.join("\n"),
+					reqd: 1,
+					default: row.expected_delivery || "Next Day",
+				},
+				{
+					fieldtype: "Date",
+					fieldname: "expected_delivery_date",
+					label: __("Expected Delivery Date"),
+					default: row.expected_delivery_date,
+					description: __("Leave blank to calculate from the option"),
+				},
 			],
 			primary_action_label: __("Save"),
 			primary_action: (values) => {
 				dialog.hide();
-				this.call(method, Object.assign({ log: row.name }, values), __("Dispatch updated"));
+				this.call(
+					method,
+					Object.assign({ log: row.name }, values),
+					__("Dispatch updated")
+				);
 			},
 		});
 		dialog.show();
@@ -336,16 +479,35 @@ class DispatchBoard {
 		const dialog = new frappe.ui.Dialog({
 			title: __("New Transporter"),
 			fields: [
-				{ fieldtype: "Data", fieldname: "transporter_name", label: __("Transporter Name"), reqd: 1 },
-				{ fieldtype: "Data", fieldname: "gst_transporter_id", label: __("GST Transporter ID"), description: __("Optional. 15 characters, needed to update the e-Waybill transporter") },
+				{
+					fieldtype: "Data",
+					fieldname: "transporter_name",
+					label: __("Transporter Name"),
+					reqd: 1,
+				},
+				{
+					fieldtype: "Data",
+					fieldname: "gst_transporter_id",
+					label: __("GST Transporter ID"),
+					description: __(
+						"Optional. 15 characters, needed to update the e-Waybill transporter"
+					),
+				},
 			],
 			primary_action_label: __("Create"),
 			primary_action: (values) => {
 				frappe
-					.call({ method: `${DISPATCH_API}.create_transporter`, args: values, freeze: true })
+					.call({
+						method: `${DISPATCH_API}.create_transporter`,
+						args: values,
+						freeze: true,
+					})
 					.then((r) => {
 						dialog.hide();
-						frappe.show_alert({ message: __("Transporter {0} saved", [r.message.supplier_name]), indicator: "green" });
+						frappe.show_alert({
+							message: __("Transporter {0} saved", [r.message.supplier_name]),
+							indicator: "green",
+						});
 						on_created(r.message.name);
 					});
 			},
@@ -357,13 +519,29 @@ class DispatchBoard {
 		const dialog = new frappe.ui.Dialog({
 			title: `${__("Pending Reason")} — ${row.sales_invoice}`,
 			fields: [
-				{ fieldtype: "Select", fieldname: "reason", label: __("Reason"), options: PENDING_REASONS.join("\n"), reqd: 1, default: row.pending_reason },
-				{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks"), default: row.pending_remarks },
+				{
+					fieldtype: "Select",
+					fieldname: "reason",
+					label: __("Reason"),
+					options: PENDING_REASONS.join("\n"),
+					reqd: 1,
+					default: row.pending_reason,
+				},
+				{
+					fieldtype: "Small Text",
+					fieldname: "remarks",
+					label: __("Remarks"),
+					default: row.pending_remarks,
+				},
 			],
 			primary_action_label: __("Save"),
 			primary_action: (values) => {
 				dialog.hide();
-				this.call("set_pending_reason", Object.assign({ log: row.name }, values), __("Reason saved"));
+				this.call(
+					"set_pending_reason",
+					Object.assign({ log: row.name }, values),
+					__("Reason saved")
+				);
 			},
 		});
 		dialog.show();
@@ -376,7 +554,11 @@ class DispatchBoard {
 			primary_action_label: __("Mark Picked Up"),
 			primary_action: (values) => {
 				dialog.hide();
-				this.call("mark_customer_pickup", { log: row.name, remarks: values.remarks }, __("Marked as customer pickup"));
+				this.call(
+					"mark_customer_pickup",
+					{ log: row.name, remarks: values.remarks },
+					__("Marked as customer pickup")
+				);
 			},
 		});
 		dialog.show();
@@ -389,7 +571,11 @@ class DispatchBoard {
 			primary_action_label: __("Confirm Delivered"),
 			primary_action: (values) => {
 				dialog.hide();
-				this.call("confirm_delivery", { log: row.name, delivered: 1, remarks: values.remarks }, __("Delivery confirmed"));
+				this.call(
+					"confirm_delivery",
+					{ log: row.name, delivered: 1, remarks: values.remarks },
+					__("Delivery confirmed")
+				);
 			},
 		});
 		dialog.show();
@@ -399,13 +585,22 @@ class DispatchBoard {
 		const dialog = new frappe.ui.Dialog({
 			title: `${__("Not Delivered")} — ${row.sales_invoice}`,
 			fields: [
-				{ fieldtype: "Date", fieldname: "new_expected_date", label: __("New Expected Delivery Date"), reqd: 1 },
+				{
+					fieldtype: "Date",
+					fieldname: "new_expected_date",
+					label: __("New Expected Delivery Date"),
+					reqd: 1,
+				},
 				{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks"), reqd: 1 },
 			],
 			primary_action_label: __("Save"),
 			primary_action: (values) => {
 				dialog.hide();
-				this.call("confirm_delivery", Object.assign({ log: row.name, delivered: 0 }, values), __("Rescheduled"));
+				this.call(
+					"confirm_delivery",
+					Object.assign({ log: row.name, delivered: 0 }, values),
+					__("Rescheduled")
+				);
 			},
 		});
 		dialog.show();
@@ -415,8 +610,21 @@ class DispatchBoard {
 		const dialog = new frappe.ui.Dialog({
 			title: `${__("Confirm Delivery")} — ${row.sales_invoice}`,
 			fields: [
-				{ fieldtype: "Select", fieldname: "result", label: __("Result"), options: "Delivered\nNot Delivered", reqd: 1, default: "Delivered" },
-				{ fieldtype: "Date", fieldname: "new_expected_date", label: __("New Expected Delivery Date"), depends_on: "eval:doc.result=='Not Delivered'", mandatory_depends_on: "eval:doc.result=='Not Delivered'" },
+				{
+					fieldtype: "Select",
+					fieldname: "result",
+					label: __("Result"),
+					options: "Delivered\nNot Delivered",
+					reqd: 1,
+					default: "Delivered",
+				},
+				{
+					fieldtype: "Date",
+					fieldname: "new_expected_date",
+					label: __("New Expected Delivery Date"),
+					depends_on: "eval:doc.result=='Not Delivered'",
+					mandatory_depends_on: "eval:doc.result=='Not Delivered'",
+				},
 				{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks") },
 			],
 			primary_action_label: __("Save"),
@@ -424,7 +632,12 @@ class DispatchBoard {
 				dialog.hide();
 				this.call(
 					"confirm_delivery",
-					{ log: row.name, delivered: values.result === "Delivered" ? 1 : 0, remarks: values.remarks, new_expected_date: values.new_expected_date },
+					{
+						log: row.name,
+						delivered: values.result === "Delivered" ? 1 : 0,
+						remarks: values.remarks,
+						new_expected_date: values.new_expected_date,
+					},
 					__("Delivery updated")
 				);
 			},

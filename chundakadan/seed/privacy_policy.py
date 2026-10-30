@@ -10,7 +10,6 @@
 
 import frappe
 
-
 ROUTE = "privacy-policy"
 TITLE = "Privacy Policy"
 

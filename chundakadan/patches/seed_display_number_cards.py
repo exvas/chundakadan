@@ -1,4 +1,5 @@
 import json
+
 import frappe
 
 # (label, filters, dynamic_filters) — number cards for the Display View workspace.
