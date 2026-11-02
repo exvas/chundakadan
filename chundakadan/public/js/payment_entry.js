@@ -1,4 +1,27 @@
+
+// The customer already names a sales person; fill it in rather than asking
+// for it again. Only when the box is empty — whoever is already on the
+// document was put there on purpose, or came in from the mobile app.
+function cdn_fill_sales_person_from_customer(frm, customer) {
+	if (!customer || frm.doc.custom_sales_person) return;
+	frappe.call({
+		method: "chundakadan.doc_events.sales_person_default.get_sales_person_for_customer",
+		args: { customer: customer },
+		callback: function (r) {
+			if (r.message && !frm.doc.custom_sales_person) {
+				frm.set_value("custom_sales_person", r.message);
+			}
+		},
+	});
+}
+
 frappe.ui.form.on("Payment Entry", {
+	party(frm) {
+		if (frm.doc.party_type === "Customer") {
+			cdn_fill_sales_person_from_customer(frm, frm.doc.party);
+		}
+	},
+
 	setup(frm) {
 		keep_cheque_out_of_cancel_all(frm);
 	},
@@ -17,7 +40,9 @@ frappe.ui.form.on("Payment Entry", {
 });
 
 function set_sales_person(frm) {
-	if (frm.doc.custom_sales_persons) return;
+	// custom_sales_person is the field every report reads; the older
+	// custom_sales_persons is kept in step on the server for Cheque Bounce
+	if (frm.doc.custom_sales_person) return;
 
 	if (!frm.doc.references?.length) return;
 
@@ -31,7 +56,7 @@ function set_sales_person(frm) {
 		.get_value("Sales Invoice", sales_invoice.reference_name, "custom_sales_person")
 		.then((r) => {
 			if (r.message?.custom_sales_person) {
-				frm.set_value("custom_sales_persons", r.message.custom_sales_person);
+				frm.set_value("custom_sales_person", r.message.custom_sales_person);
 			}
 		});
 }

@@ -1,3 +1,20 @@
+
+// The customer already names a sales person; fill it in rather than asking
+// for it again. Only when the box is empty — whoever is already on the
+// document was put there on purpose, or came in from the mobile app.
+function cdn_fill_sales_person_from_customer(frm, customer) {
+	if (!customer || frm.doc.custom_sales_person) return;
+	frappe.call({
+		method: "chundakadan.doc_events.sales_person_default.get_sales_person_for_customer",
+		args: { customer: customer },
+		callback: function (r) {
+			if (r.message && !frm.doc.custom_sales_person) {
+				frm.set_value("custom_sales_person", r.message);
+			}
+		},
+	});
+}
+
 if (!window.chundakadan_sales_invoice_loaded) {
 	window.chundakadan_sales_invoice_loaded = true;
 
@@ -183,6 +200,7 @@ if (!window.chundakadan_sales_invoice_loaded) {
 		customer: function (frm) {
 			if (frm.doc.customer) {
 				check_overdue_restriction(frm);
+				cdn_fill_sales_person_from_customer(frm, frm.doc.customer);
 			}
 		},
 

@@ -144,6 +144,8 @@ doc_events = {
 		"validate": [
 			"chundakadan.doc_events.sales_invoice.validate_sales_invoice",
 			"chundakadan.doc_events.sales_invoice.enforce_b2b_billing",
+			# the field is mandatory and the customer already names one
+			"chundakadan.doc_events.sales_person_default.set_sales_person_from_customer",
 		],
 		"on_trash": "chundakadan.doc_events.sales_invoice.on_trash",
 		"on_submit": [
@@ -365,6 +367,7 @@ after_migrate = [
 	"chundakadan.seed.po_workflow.ensure_po_workflow",
 	"chundakadan.seed.approvals.ensure_approvals_workspace",
 	"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.ensure_payment_entry_field",
+	"chundakadan.doc_events.sales_person_default.hide_the_duplicate_sales_person_field",
 ]
 
 # Uninstallation
