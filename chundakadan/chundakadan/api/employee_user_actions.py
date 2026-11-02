@@ -843,7 +843,7 @@ def dashboard_update(employee, action, value=None):
 	return {"log": log}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def get_employee_dashboard(employee):
 	"""Single-pane snapshot of everything assigned/linked to this employee
 	— used by the 'Setup Dashboard' HR Action button to give HR a
