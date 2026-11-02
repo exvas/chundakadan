@@ -665,7 +665,7 @@ def apply_geofence_for_employee(employee, shift_location=None):
 	return {"shift_location": target, "log": log}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def send_mobile_relogin_reminder(employee, reason=""):
 	"""Notify an employee to log out + log back in on their mobile app.
 
