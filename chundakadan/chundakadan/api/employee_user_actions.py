@@ -721,7 +721,7 @@ def send_mobile_relogin_reminder(employee, reason=""):
 	return {"sent_to": user_id, "notification": nl.name}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def dashboard_update(employee, action, value=None):
 	"""Generic inline-update entry point used by the Setup Dashboard
 	dialog. Each `action` maps to a specific change so HR can edit
