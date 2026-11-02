@@ -2,8 +2,12 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, today
 
+from unittest.mock import patch
+
+from chundakadan.chundakadan.report.sales_and_collection_summary import sales_and_collection_summary as report
 from chundakadan.chundakadan.report.sales_and_collection_summary.sales_and_collection_summary import (
 	GROUPS,
+	NOT_AN_OPENING,
 	SALES_ONLY,
 	execute,
 	get_columns,
@@ -93,10 +97,43 @@ class TestTheNumbers(SummaryCase):
 		_columns, data = self._run()
 		expected = frappe.db.sql(
 			"""select sum(base_grand_total) from `tabSales Invoice`
-			where docstatus = 1 and company = %s and posting_date between %s and %s""",
+			where docstatus = 1 and company = %s and posting_date between %s and %s
+			  and ifnull(is_opening, '') <> 'Yes'""",
 			(self.company, add_days(today(), -365), today()),
 		)[0][0]
 		self.assertAlmostEqual(sum(flt(r["sales"]) for r in data), flt(expected), places=2)
+
+	def test_an_opening_balance_is_not_somebody_sales(self):
+		"""The invoices raised to carry the old software's balances over are
+		dated the day the books were opened. Counted as sales they would hand
+		each salesman his whole inherited ledger as one month's selling."""
+		opening = frappe.db.sql(
+			"""select sum(base_grand_total) from `tabSales Invoice`
+			where docstatus = 1 and company = %s and posting_date between %s and %s
+			  and is_opening = 'Yes'""",
+			(self.company, add_days(today(), -365), today()),
+		)[0][0]
+		if not opening:
+			self.skipTest("no opening invoices in the window on this site")
+
+		_columns, data = self._run()
+		everything = frappe.db.sql(
+			"""select sum(base_grand_total) from `tabSales Invoice`
+			where docstatus = 1 and company = %s and posting_date between %s and %s""",
+			(self.company, add_days(today(), -365), today()),
+		)[0][0]
+		reported = sum(flt(r["sales"]) for r in data)
+		self.assertAlmostEqual(reported, flt(everything) - flt(opening), places=2)
+		self.assertLess(reported, flt(everything), "the opening is still being counted as sales")
+
+	def test_the_opening_is_left_out_whichever_way_it_is_grouped(self):
+		"""Sales Person reads the invoice total, Brand sums the lines — two
+		different queries, and the opening has to be absent from both."""
+		totals = {}
+		for group in ("Sales Person", "Customer", "Month"):
+			_columns, data = self._run(group_by=group)
+			totals[group] = round(sum(flt(r["sales"]) for r in data), 2)
+		self.assertEqual(len(set(totals.values())), 1, f"groupings disagree: {totals}")
 
 	def test_the_label_says_the_tax_is_in_it(self):
 		"""The Brand Wise Sales Report shows a brand WITHOUT the tax; if the
@@ -199,3 +236,56 @@ class TestTheNumbers(SummaryCase):
 			self.skipTest("no invoice carries a sales person")
 		_columns, data = self._run(sales_person=person)
 		self.assertTrue(all(r["group_value"] == person for r in data))
+
+
+class TestTheOpeningIsExcluded(SummaryCase):
+	"""Provable without any invoices on the site: the condition has to be in
+	the SQL of both sales queries. They are built separately, so one can be
+	changed without the other, and a salesman's inherited ledger would quietly
+	come back as his selling."""
+
+	def _sql_of(self, group_by):
+		seen = []
+
+		def capture(query, *args, **kwargs):
+			seen.append(query)
+			return []
+
+		filters = frappe._dict({
+			"company": self.company, "from_date": add_days(today(), -365),
+			"to_date": today(), "group_by": group_by,
+		})
+		with patch.object(frappe.db, "sql", side_effect=capture):
+			report._sales(filters)
+			if group_by not in SALES_ONLY:  # the invoice total has no brand to group by
+				report._invoice_totals(filters)
+		return seen
+
+	def test_both_sales_queries_leave_the_opening_out(self):
+		queries = self._sql_of("Sales Person")
+		self.assertEqual(len(queries), 2, "expected the line query and the invoice query")
+		for query in queries:
+			self.assertIn(NOT_AN_OPENING, query)
+
+	def test_the_brand_grouping_leaves_it_out_too(self):
+		queries = self._sql_of("Brand")
+		self.assertEqual(len(queries), 1, "brand has only the line query")
+		self.assertIn(NOT_AN_OPENING, queries[0])
+
+	def test_collection_is_not_touched_by_it(self):
+		"""Money received is a Payment Entry; it has no opening flag to read."""
+		seen = []
+
+		def capture(query, *args, **kwargs):
+			seen.append(query)
+			return []
+
+		filters = frappe._dict({
+			"company": self.company, "from_date": add_days(today(), -365),
+			"to_date": today(), "group_by": "Sales Person",
+		})
+		with patch.object(frappe.db, "sql", side_effect=capture):
+			report._collection(filters)
+		self.assertTrue(seen)
+		for query in seen:
+			self.assertNotIn("is_opening", query)

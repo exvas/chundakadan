@@ -26,6 +26,12 @@ GROUPS = {
 #: collection cannot be split by brand — a payment is not against a line
 SALES_ONLY = ("Brand",)
 
+#: An opening invoice is a balance carried over from the old software on the
+#: day the ERP went live, not something anyone sold. Counting it as sales puts
+#: a salesman's whole inherited ledger into the month the books were opened —
+#: for most of them more than everything they have actually sold since.
+NOT_AN_OPENING = "ifnull(si.is_opening, '') <> 'Yes'"
+
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
@@ -85,6 +91,7 @@ def _sales(filters):
 	"""
 	conditions = [
 		"si.docstatus = 1",
+		NOT_AN_OPENING,
 		"si.company = %(company)s",
 		"si.posting_date between %(from_date)s and %(to_date)s",
 	]
@@ -140,6 +147,7 @@ def _invoice_totals(filters):
 	"""
 	conditions = [
 		"si.docstatus = 1",
+		NOT_AN_OPENING,
 		"si.company = %(company)s",
 		"si.posting_date between %(from_date)s and %(to_date)s",
 	]
