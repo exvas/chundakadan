@@ -373,6 +373,7 @@ after_migrate = [
 	"chundakadan.seed.approvals.ensure_approvals_workspace",
 	"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.ensure_payment_entry_field",
 	"chundakadan.doc_events.sales_person_default.hide_the_duplicate_sales_person_field",
+	"chundakadan.seed.customer_groups.ensure_customer_groups",
 ]
 
 # Uninstallation
@@ -593,7 +594,6 @@ fixtures = [
 	# the shared number_card.json fixture.
 	{"doctype": "Dashboard Chart", "filters": [["module", "=", "Display Tracking"]]},
 	{"doctype": "Role", "filters": [["name", "in", ["Display Manager", "Display User"]]]},
-	{"doctype": "Customer Group", "filters": [["name", "in", ["Dealer", "Retail Outlet"]]]},
 	{"doctype": "Report", "filters": [["module", "=", "Chundakadan"]]},
 	{"doctype": "Custom Field", "filters": [["module", "in", "Chundakadan"]]},
 	{"doctype": "Property Setter", "filters": [["module", "in", "Chundakadan"]]},
