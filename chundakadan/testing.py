@@ -17,7 +17,10 @@ def a_company() -> str | None:
 	"""The live company where the bench has it, otherwise any company."""
 	if frappe.db.exists("Company", LIVE_COMPANY):
 		return LIVE_COMPANY
-	return frappe.db.get_value("Company", {}, "name")
+	# order_by: an unordered get_value sorts by `modified`, so two calls in
+	# one test could land on two different companies -- which is how a test
+	# employee ended up in a company other than the one the test was using.
+	return frappe.db.get_value("Company", {}, "name", order_by="name asc")
 
 
 def a_warehouse(company: str) -> str | None:
