@@ -1624,13 +1624,14 @@ def ensure_employee_transfer_custom_fields(*args, **kwargs):
 def before_tests(*args, **kwargs):
 	"""Idempotent test-only bootstrap helper.
 
-	Frappe's run-tests auto-creates `_T-Employee-00001` from a built-in
-	test_records.json that DOES NOT include the fields this bench has
-	promoted to mandatory (employee_number, designation, holiday_list).
-	Bootstrap explodes BEFORE the record exists, so a post-create seeder
-	can't help. Instead, drop the `reqd` flag on those fields for the
+	Frappe's run-tests auto-creates the stock test records of Frappe,
+	ERPNext and HRMS — `_T-Employee-00001`, `_Test Item`, `_Test Customer`
+	— from built-in test_records.json files that fill only the fields their
+	own app knows about, never the ones this bench has promoted to
+	mandatory. Bootstrap explodes BEFORE the record exists, so a
+	post-create seeder can't help. Instead, drop the `reqd` flag for the
 	duration of the test bench so the auto-create succeeds — the stub
-	records are FK targets only and don't represent real people.
+	records are FK targets only and don't represent real people or stock.
 
 	Safe to re-run. Guarded by frappe.flags.in_test so it's a no-op in
 	any other context (migrate, real user request, scheduler).
@@ -1642,45 +1643,36 @@ def before_tests(*args, **kwargs):
 
 	relaxed = []
 
-	# 1. Fields promoted to reqd=1 on this bench, which the built-in
-	#    test_records.json of those doctypes does not fill:
-	#      Employee   — HRMS promotes designation + holiday_list on a fresh install
-	#      Item.brand — ours (chundakadan.doc_events.item_brand); without this
-	#                   `_Test Item` cannot be created and EVERY test module dies
-	#                   at bootstrap, long before a single test runs
-	promoted_to_mandatory = (
-		("Employee", "employee_number"),
-		("Employee", "designation"),
-		("Employee", "holiday_list"),
-		("Item", "brand"),
-	)
+	# 1. Every field this bench promoted to mandatory.
+	#
+	#    Before a single test runs, Frappe builds the stock test records of
+	#    Frappe, ERPNext and HRMS, and each of those records fills only the
+	#    fields its own app knows about. One promoted field they have never
+	#    heard of — Item.brand, Employee.department, Sales Order's
+	#    custom_sales_person — and the whole suite dies at bootstrap: not one
+	#    test fails, none of them get to run.
+	#
+	#    Mandatory is a data-entry rule, so standing it down for the test bench
+	#    costs nothing, and a test that needs the rule applies it itself first
+	#    (see doc_events/test_item_brand.py). This is swept rather than listed
+	#    by name because a hard-coded list goes stale the next time someone
+	#    ticks "Mandatory" in Customize Form.
+	for ps_name in frappe.get_all(
+		"Property Setter",
+		filters={"property": "reqd", "value": "1"},
+		pluck="name",
+	):
+		frappe.db.set_value("Property Setter", ps_name, "value", "0", update_modified=False)
+		relaxed.append(f"Property Setter/{ps_name}")
 
-	for doctype, fieldname in promoted_to_mandatory:
-		# a Custom Field that carries reqd=1 itself
-		cf_name = frappe.db.get_value(
-			"Custom Field",
-			{"dt": doctype, "fieldname": fieldname, "reqd": 1},
-			"name",
-		)
-		if cf_name:
-			frappe.db.set_value("Custom Field", cf_name, "reqd", 0, update_modified=False)
-			relaxed.append(f"Custom Field/{cf_name}")
-
-		# or a Property Setter promoting a standard field
-		ps_name = frappe.db.get_value(
-			"Property Setter",
-			{"doc_type": doctype, "field_name": fieldname, "property": "reqd"},
-			"name",
-		)
-		if ps_name:
-			frappe.db.set_value("Property Setter", ps_name, "value", "0", update_modified=False)
-			relaxed.append(f"Property Setter/{ps_name}")
+	for cf_name in frappe.get_all("Custom Field", filters={"reqd": 1}, pluck="name"):
+		frappe.db.set_value("Custom Field", cf_name, "reqd", 0, update_modified=False)
+		relaxed.append(f"Custom Field/{cf_name}")
 
 	if relaxed:
 		frappe.db.commit()
-		for doctype in dict.fromkeys(dt for dt, _fieldname in promoted_to_mandatory):
-			frappe.clear_cache(doctype=doctype)
-		print(f"chundakadan.install.before_tests: relaxed reqd on {len(relaxed)} setter(s) — {relaxed}")
+		frappe.clear_cache()
+		print(f"chundakadan.install.before_tests: stood down {len(relaxed)} mandatory field(s)")
 
 	# 3. Monkey-patch india_compliance validators that reject auto-
 	#    created _Test Item Tax Template stubs (GST rate=0 + Taxable
