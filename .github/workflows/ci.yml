@@ -84,12 +84,14 @@ jobs:
           bench set-config -g redis_socketio "redis://127.0.0.1:$REDIS_QUEUE_PORT"
           bench get-app --branch version-15 erpnext
           bench get-app --branch version-15 hrms
+          bench get-app --branch version-15 payments https://github.com/frappe/payments
           bench get-app --branch main field_sales https://github.com/exvas/field_sales
           bench get-app chundakadan "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench new-site --db-host 127.0.0.1 --db-port "$DB_PORT" --db-root-password root --admin-password admin test_site
           bench --site test_site install-app erpnext
           bench --site test_site install-app hrms
+          bench --site test_site install-app payments
           bench --site test_site install-app field_sales
           bench --site test_site install-app chundakadan
           bench --site test_site set-config allow_tests true
