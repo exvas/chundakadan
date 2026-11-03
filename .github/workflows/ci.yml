@@ -22,3 +22,6 @@ jobs:
       draft_frappe_versions: '["version-15"]'
       hrms: true
       runs_on: '"ubuntu-latest"'
+      # TEMPORARY probe: does the two-second crash come from before_tests
+      # or from Frappe's own test-record bootstrap? Reverted before merge.
+      run_tests_args: '--skip-before-tests'
