@@ -22,3 +22,8 @@ jobs:
       draft_frappe_versions: '["version-15"]'
       hrms: true
       runs_on: '"ubuntu-latest"'
+      # field_sales owns the Cheque Bounce doctype this app links to and
+      # hooks into, so without it Frappe's test bootstrap cannot resolve
+      # Post Dated Cheque's link field and no test runs at all.
+      extra_apps: |
+        field_sales https://github.com/exvas/field_sales main
