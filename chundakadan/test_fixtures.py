@@ -57,3 +57,55 @@ class TestCustomFieldFixture(FrappeTestCase):
 			"these fixture fields link to a DocType this bench may not have, "
 			"which kills the test bootstrap on a site without that app: " + "; ".join(strangers),
 		)
+
+	def test_no_field_fetches_a_column_another_app_owns(self):
+		"""`fetch_from` is a SELECT at save time. Ours used to read
+		item_code.gst_hsn_code, a column india_compliance adds — so on a bench
+		without it every insert died with `Unknown column 'gst_hsn_code'`.
+		"""
+		ours = {(cf.get("dt"), cf.get("fieldname")) for cf in self.fields}
+
+		def is_standard(doctype, fieldname):
+			return bool(
+				frappe.get_all(
+					"DocField",
+					filters={"parent": doctype, "fieldname": fieldname},
+					limit=1,
+				)
+			)
+
+		strangers = []
+		for cf in self.fields:
+			fetch_from = (cf.get("fetch_from") or "").strip()
+			if not fetch_from or "." not in fetch_from:
+				continue
+			dt = cf.get("dt")
+			link_fieldname, _, source_fieldname = fetch_from.partition(".")
+
+			link_options = None
+			if is_standard(dt, link_fieldname):
+				link_options = frappe.db.get_value(
+					"DocField", {"parent": dt, "fieldname": link_fieldname}, "options"
+				)
+			elif (dt, link_fieldname) in ours:
+				link_options = next(
+					c.get("options")
+					for c in self.fields
+					if (c.get("dt"), c.get("fieldname")) == (dt, link_fieldname)
+				)
+			else:
+				strangers.append(
+					f"{dt}.{cf.get('fieldname')} fetches through {link_fieldname}, which is nobody's"
+				)
+				continue
+
+			if (
+				not is_standard(link_options, source_fieldname)
+				and (link_options, source_fieldname) not in ours
+			):
+				strangers.append(
+					f"{dt}.{cf.get('fieldname')} reads {link_options}.{source_fieldname}, "
+					"a column this bench may not have"
+				)
+
+		self.assertEqual(strangers, [], "; ".join(strangers))
