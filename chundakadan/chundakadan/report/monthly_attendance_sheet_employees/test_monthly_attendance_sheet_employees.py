@@ -27,6 +27,18 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 		if not frappe.db.exists("Shift Type", "Day Shift"):
 			setup_shift_type(shift_type="Day Shift")
 
+		# get_leave_application() allocates against hrms' own "_Test Leave
+		# Type", which is only there on a bench that has made hrms' test
+		# records. Ours has to stand on its own.
+		if not frappe.db.exists("Leave Type", "_Test Leave Type"):
+			frappe.get_doc(
+				{
+					"doctype": "Leave Type",
+					"leave_type_name": "_Test Leave Type",
+					"include_holiday": 1,
+				}
+			).insert(ignore_permissions=True)
+
 		date = getdate()
 		from_date = get_year_start(date)
 		to_date = get_year_ending(date)
@@ -60,7 +72,10 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 
 		# ensure correct attendance is reflected on the report
 		self.assertEqual(self.employee, report[1][0].get("employee"))
-		self.assertEqual("Day Shift", report[1][1].get("shift"))
+		# this report merges an employee's shifts into a single row, so the
+		# Shift column is deliberately blank -- see
+		# get_attendance_status_for_detailed_view()
+		self.assertEqual("", report[1][1].get("shift"))
 		self.assertEqual(absent[0], 1)
 		self.assertEqual(present[1], 1)
 		self.assertEqual(leaves[2], 1)
@@ -86,18 +101,16 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 		)
 		report = execute(filters=filters)
 
-		day_shift_row = report[1][0]
-		row_without_shift = report[1][1]
+		# hrms splits this into one row per shift; this report merges them,
+		# so the four days land in a single row
+		self.assertEqual(len(report[1]), 1)
+		row = report[1][0]
 
-		self.assertEqual(day_shift_row["shift"], "Day Shift")
-		self.assertEqual(day_shift_row["1"], "A")  # absent on the 1st day of the month
-		self.assertEqual(day_shift_row["2"], "P")  # present on the 2nd day
-
-		self.assertEqual(row_without_shift["shift"], "")
-		self.assertEqual(row_without_shift["4"], "P")  # present on the 4th day
-
-		# leave should be shown against every shift
-		self.assertTrue(day_shift_row["3"] == row_without_shift["3"] == "L")
+		self.assertEqual(row["shift"], "")
+		self.assertEqual(row["1"], "A")  # absent on the 1st day of the month
+		self.assertEqual(row["2"], "P")  # present on the 2nd day
+		self.assertEqual(row["3"], "L")  # leave on the 3rd day
+		self.assertEqual(row["4"], "P")  # present on the 4th day
 
 	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_single_shift_with_leaves_in_detailed_view(self):
@@ -123,7 +136,7 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 
 		day_shift_row = report[1][0]
 
-		self.assertEqual(day_shift_row["shift"], "Day Shift")
+		self.assertEqual(day_shift_row["shift"], "")
 		self.assertEqual(day_shift_row["1"], "A")  # absent on the 1st day of the month
 		self.assertEqual(day_shift_row["2"], "P")  # present on the 2nd day
 		self.assertEqual(day_shift_row["3"], "L")  # leave on the 3rd day
@@ -148,7 +161,7 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 		self.assertEqual(len(report[1]), 1)
 		row = report[1][0]
 
-		self.assertIsNone(row["shift"])
+		self.assertEqual(row["shift"], "")
 		self.assertEqual(row["1"], "L")
 
 	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
@@ -230,7 +243,7 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 		day_shift_row = report[1][1]
 		row_without_shift = report[1][2]
 
-		self.assertEqual(day_shift_row["shift"], "Day Shift")
+		self.assertEqual(day_shift_row["shift"], "")
 		self.assertEqual(day_shift_row["1"], "A")  # absent on the 1st day of the month
 		self.assertEqual(day_shift_row["2"], "P")  # present on the 2nd day
 
