@@ -22,12 +22,16 @@ jobs:
       draft_frappe_versions: '["version-15"]'
       hrms: true
       runs_on: '"ubuntu-latest"'
-      # Both are needed before a single test can run, because Frappe walks
-      # every link field while building test records:
-      #   field_sales — owns Cheque Bounce, which Post Dated Cheque links to
-      #                 and hooks.py hooks into
-      #   payments    — owns Payment Gateway, which erpnext's own Payment
-      #                 Gateway Account links to
+      # What production runs, because that is what this app is written
+      # against. Frappe walks every link field while building test
+      # records, so a missing app is not a missing feature here — it is
+      # no tests at all:
+      #   payments          — owns Payment Gateway, which erpnext's own
+      #                       Payment Gateway Account links to
+      #   india_compliance  — doc_events/address_gst.py imports it, and
+      #                       the GST fields on every invoice are its own
+      #   field_sales       — owns Cheque Bounce and Chundakadan Settings
       extra_apps: |
         payments https://github.com/frappe/payments
+        india_compliance https://github.com/resilient-tech/india-compliance
         field_sales https://github.com/exvas/field_sales main
