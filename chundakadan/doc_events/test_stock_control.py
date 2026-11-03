@@ -37,11 +37,18 @@ class TestUpdateStockControl(FrappeTestCase):
 		doc.append("items", {"item_code": self.item})
 		return doc
 
-	def test_settings_fields_exist_with_defaults(self):
+	def test_settings_fields_exist(self):
 		meta = frappe.get_meta(sc.SETTINGS)
-		for doctype, (fieldname, _label, default) in sc.UPDATE_STOCK_SETTINGS.items():
+		for _doctype, (fieldname, _label, _default) in sc.UPDATE_STOCK_SETTINGS.items():
 			self.assertTrue(meta.get_field(fieldname), f"{fieldname} missing")
-			self.assertEqual(sc.get_update_stock(doctype), default)
+
+	def test_a_setting_nobody_saved_reads_as_its_default(self):
+		"""Not what this site happens to have: a site where somebody turned the
+		toggle on is a site where asserting the shipped default would fail."""
+		for doctype, (fieldname, _label, default) in sc.UPDATE_STOCK_SETTINGS.items():
+			frappe.db.delete("Singles", {"doctype": sc.SETTINGS, "field": fieldname})
+			frappe.clear_document_cache(sc.SETTINGS, sc.SETTINGS)
+			self.assertEqual(sc.get_update_stock(doctype), default, f"{fieldname} ignored its default")
 
 	def test_update_stock_is_read_only_on_both_doctypes(self):
 		for doctype in sc.UPDATE_STOCK_SETTINGS:
@@ -63,11 +70,6 @@ class TestUpdateStockControl(FrappeTestCase):
 			doc = self._invoice("Purchase Invoice", update_stock=1 - value)
 			pi_defaults(doc)
 			self.assertEqual(doc.update_stock, value)
-
-	def test_unsaved_setting_falls_back_to_default(self):
-		frappe.db.delete("Singles", {"doctype": sc.SETTINGS, "field": "si_update_stock"})
-		frappe.clear_document_cache(sc.SETTINGS, sc.SETTINGS)
-		self.assertEqual(sc.get_update_stock("Sales Invoice"), 0)
 
 	def test_no_delivery_note_when_invoice_updates_stock(self):
 		invoice = frappe.db.get_value(

@@ -6,6 +6,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, today
 
 from chundakadan.chundakadan.api import work_summary as ws
+from chundakadan.testing import a_company
 
 HOD_ROLE = "Sales HOD Leave Approver"
 GM_ROLE = "GM Leave Approver"
@@ -13,6 +14,16 @@ EMP_USER = "dws.employee@example.com"
 HOD_USER = "dws.hod@example.com"
 GM_USER = "dws.gm@example.com"
 OTHER_USER = "dws.other@example.com"
+OUTSIDE_USER = "dws.outside@example.com"
+
+# hod_role_for_department() reads the department NAME: anything with "sales"
+# or "marketing" in it belongs to the sales HOD, everything else that is not
+# accounts/purchase falls to HR. The tests own both ends of that mapping
+# instead of borrowing whichever department the bench happens to have -- a
+# borrowed one put the employee under a role nobody in the test holds.
+SALES_DEPT = "DWS Sales"
+OUTSIDE_DEPT = "DWS Despatch"
+HOLIDAY_LIST = "DWS Test Holiday List"
 
 
 def _import(*parts):
@@ -33,8 +44,12 @@ class WorkSummaryCase(FrappeTestCase):
 
 	def setUp(self):
 		frappe.set_user("Administrator")
-		self.company = frappe.db.get_value("Company", {}, "name")
-		self.employee = self._employee(EMP_USER, "Sales& Marketing - CA")
+		self.company = a_company()
+		self.holiday_list = self._holiday_list()
+		self.employee = self._employee(EMP_USER, self._department(SALES_DEPT))
+		# somebody the sales HOD does not head, for the tests about who is
+		# shut out
+		self.outsider = self._employee(OUTSIDE_USER, self._department(OUTSIDE_DEPT))
 		self._user(HOD_USER, [HOD_ROLE])
 		self._user(GM_USER, [GM_ROLE])
 		# user_for_role prefers a role holder with an active Employee, so on
@@ -47,7 +62,8 @@ class WorkSummaryCase(FrappeTestCase):
 	def _clear_previous(self):
 		"""Sending a summary fires a push, which commits, so documents
 		survive the per-test rollback. Start each test with a clean slate."""
-		for name in frappe.get_all("Daily Work Summary", filters={"employee": self.employee}, pluck="name"):
+		mine = ["in", [self.employee, self.outsider]]
+		for name in frappe.get_all("Daily Work Summary", filters={"employee": mine}, pluck="name"):
 			frappe.db.delete("Daily Work Summary Task", {"parent": name})
 			frappe.db.delete("Chundakadan Approval Detail", {"parent": name})
 			frappe.db.delete("Daily Work Summary", {"name": name})
@@ -72,37 +88,78 @@ class WorkSummaryCase(FrappeTestCase):
 		frappe.get_doc("User", email).add_roles("Employee", *roles)
 		return email
 
+	def _holiday_list(self):
+		"""A list of our own, hung on the test employee.
+
+		_is_holiday() falls back to the company's default list, and a bench
+		whose company has none made "a holiday is not a missing summary"
+		unprovable.
+		"""
+		if not frappe.db.exists("Holiday List", HOLIDAY_LIST):
+			frappe.get_doc(
+				{
+					"doctype": "Holiday List",
+					"holiday_list_name": HOLIDAY_LIST,
+					"from_date": "2020-01-01",
+					"to_date": "2030-12-31",
+				}
+			).insert(ignore_permissions=True)
+		return HOLIDAY_LIST
+
+	def _department(self, department_name):
+		existing = frappe.db.get_value(
+			"Department", {"department_name": department_name, "company": self.company}, "name"
+		)
+		if existing:
+			return existing
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": department_name,
+					"company": self.company,
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
+
 	def _employee(self, email, department):
 		self._user(email, [])
 		existing = frappe.db.get_value("Employee", {"user_id": email}, "name")
 		if existing:
+			frappe.db.set_value(
+				"Employee",
+				existing,
+				{"department": department, "company": self.company, "holiday_list": self.holiday_list},
+				update_modified=False,
+			)
 			return existing
-		dept = (
-			department
-			if frappe.db.exists("Department", department)
-			else frappe.db.get_value("Department", {}, "name")
-		)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Employee",
 				"first_name": "DWS Tester",
 				"user_id": email,
-				"company": frappe.db.get_value("Company", {}, "name"),
+				"company": self.company,
 				"date_of_birth": "1995-01-01",
 				"date_of_joining": "2026-01-01",
 				"gender": frappe.db.get_value("Gender", {}, "name"),
 				"status": "Active",
-				"department": dept,
+				"department": department,
+				"holiday_list": self.holiday_list,
+				# both carry a reqd Property Setter on the live site
+				"employee_number": email.split("@")[0],
+				"designation": frappe.db.get_value("Designation", {}, "name", order_by="name asc"),
 			}
 		).insert(ignore_permissions=True)
 		return doc.name
 
-	def _summary(self, work_date=None, as_user=EMP_USER, tasks=None):
+	def _summary(self, work_date=None, as_user=EMP_USER, tasks=None, employee=None):
 		frappe.set_user(as_user)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Daily Work Summary",
-				"employee": self.employee,
+				"employee": employee or self.employee,
 				"company": self.company,
 				"work_date": work_date or today(),
 				"tasks": tasks
@@ -115,7 +172,7 @@ class WorkSummaryCase(FrappeTestCase):
 		frappe.set_user("Administrator")
 		return doc
 
-	def _draft(self, work_date=None, as_user=EMP_USER):
+	def _draft(self, work_date=None, as_user=EMP_USER, employee=None):
 		"""A summary sitting in Draft -- what every one of them looked like
 		before saving started sending them.
 
@@ -123,7 +180,7 @@ class WorkSummaryCase(FrappeTestCase):
 		a draft is made by putting a real one back into that state, which
 		is exactly what the summaries already in the system look like.
 		"""
-		doc = self._summary(work_date=work_date, as_user=as_user)
+		doc = self._summary(work_date=work_date, as_user=as_user, employee=employee)
 		doc.db_set("custom_approval_status", ws.STATUS_DRAFT, update_modified=False)
 		doc.db_set("current_approver", None, update_modified=False)
 		frappe.db.delete("Chundakadan Approval Detail", {"parent": doc.name})
@@ -469,8 +526,10 @@ class TestWhoSeesEverything(WorkSummaryCase):
 		self.assertIn(draft.name, self._visible_to(self.gm))
 		self.assertTrue(ws.has_permission(draft, user=self.gm))
 
-	def test_the_hod_does_not_see_a_draft_that_was_never_sent(self):
-		draft = self._draft()
+	def test_the_hod_does_not_see_a_draft_from_outside_their_departments(self):
+		"""The sales HOD follows the sales team's drafts -- and only those."""
+		draft = self._draft(employee=self.outsider, as_user=OUTSIDE_USER)
+		self.assertNotIn(draft.department, ws.oversees_departments(self.hod))
 		self.assertNotIn(draft.name, self._visible_to(self.hod))
 
 	def test_the_hod_sees_it_once_it_is_sent(self):
@@ -688,7 +747,7 @@ class TestRemindersAndStatus(WorkSummaryCase):
 
 	def test_a_returned_summary_counts_as_not_submitted_again(self):
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		ws.return_for_correction(doc.name, "redo it")
 		frappe.set_user("Administrator")
 		self.assertIn(self.employee, [e.name for e in ws.not_submitted(today())])
@@ -795,7 +854,7 @@ class TestStatusReport(WorkSummaryCase):
 		self.assertEqual(data[0]["summary"], doc.name)
 		self.assertEqual(data[0]["status"], ws.STATUS_PENDING)
 		self.assertEqual(data[0]["task_count"], 2)
-		self.assertEqual(data[0]["current_approver"], self.hod)
+		self.assertEqual(data[0]["current_approver"], self.gm)
 
 	def test_only_missing_hides_the_ones_that_went_out(self):
 		self._send(self._summary())
@@ -915,7 +974,7 @@ class TestMobileEndpoints(WorkSummaryCase):
 		from field_sales.Api.auth import get_team_work_summaries
 
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		res = self._call(get_team_work_summaries)
 		frappe.set_user("Administrator")
 		names = [s["name"] for s in res["data"]["summaries"]]
@@ -935,17 +994,18 @@ class TestMobileEndpoints(WorkSummaryCase):
 		from field_sales.Api.auth import work_summary_add_remarks
 
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		res = self._call(work_summary_add_remarks, docname=doc.name, remarks="Seen")
 		frappe.set_user("Administrator")
-		self.assertEqual(res["data"]["status"], ws.STATUS_PARTIAL)
-		self.assertEqual(frappe.db.get_value("Daily Work Summary", doc.name, "hod_remarks"), "Seen")
+		# one step, so the remark closes it
+		self.assertEqual(res["data"]["status"], ws.STATUS_APPROVED)
+		self.assertEqual(frappe.db.get_value("Daily Work Summary", doc.name, "gm_remarks"), "Seen")
 
 	def test_returning_from_the_app(self):
 		from field_sales.Api.auth import work_summary_return
 
 		doc = self._send(self._summary())
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		res = self._call(work_summary_return, docname=doc.name, reason="Add Kannur")
 		frappe.set_user("Administrator")
 		self.assertEqual(res["data"]["status"], ws.STATUS_RETURNED)
@@ -969,7 +1029,7 @@ class TestMobileEndpoints(WorkSummaryCase):
 		self._send(self._summary())
 		frappe.set_user(EMP_USER)
 		mine = self._call(work_summary_access)["data"]
-		frappe.set_user(self.hod)
+		frappe.set_user(self.gm)
 		theirs = self._call(work_summary_access)["data"]
 		frappe.set_user("Administrator")
 		self.assertTrue(mine["can_submit"])

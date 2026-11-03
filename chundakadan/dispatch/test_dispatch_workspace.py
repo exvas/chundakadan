@@ -18,13 +18,12 @@ WORKSPACE_FILE = frappe.get_app_path(
 class TestDispatchWorkspace(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		self.invoices = frappe.get_all(
-			"Sales Invoice",
-			filters={"docstatus": 1, "is_return": 0},
-			pluck="name",
-			limit=4,
-			order_by="creation desc",
-		)
+		# The cards count Dispatch Log rows by their own fields, and _log()
+		# inserts straight into the table with links ignored — so this needs
+		# four invoice NAMES, not four invoices. Reading them off the site made
+		# the test depend on a site with four submitted invoices, which no fresh
+		# bench has: it died on self.invoices[0] before asserting anything.
+		self.invoices = [f"_Test Dispatch SI {i}" for i in range(4)]
 		frappe.db.delete("Dispatch Log", {"sales_invoice": ["in", self.invoices]})
 
 	def tearDown(self):

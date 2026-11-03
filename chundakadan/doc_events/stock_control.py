@@ -19,9 +19,18 @@ UPDATE_STOCK_SETTINGS = {
 
 
 def get_update_stock(doctype: str) -> int:
+	"""The setting, or the default where nobody has ever saved one.
+
+	Read the Singles row rather than frappe.db.get_single_value: that casts
+	through the fieldtype, and cast_fieldtype("Check", None) is 0, so a
+	setting that was never saved was indistinguishable from one deliberately
+	turned off and the default could never apply — Purchase Invoice's
+	documented default of 1 silently read as 0.
+	"""
 	fieldname, _label, default = UPDATE_STOCK_SETTINGS[doctype]
-	value = frappe.db.get_single_value(SETTINGS, fieldname)
-	return default if value is None else cint(value)
+	# order_by=None: the Singles table has no `modified` column to sort by
+	saved = frappe.db.get_value("Singles", {"doctype": SETTINGS, "field": fieldname}, "value", order_by=None)
+	return default if saved is None else cint(saved)
 
 
 def ensure_update_stock_settings(*args, **kwargs):

@@ -3,8 +3,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate, nowdate
 
 from chundakadan.doc_events.purchase_invoice import refresh_payment_schedule
-
-COMPANY = "Chundakadan Agencies"
+from chundakadan.testing import a_company, a_stock_item, a_supplier, a_warehouse
 
 
 class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
@@ -14,6 +13,9 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 		from chundakadan.doc_events.stock_control import ensure_update_stock_settings
 
 		ensure_update_stock_settings()
+		self.company = a_company()
+		if not self.company:
+			self.skipTest("this bench has no company")
 		self.template = frappe.db.get_value(
 			"Payment Terms Template", {"name": "45 Days"}, "name"
 		) or frappe.db.get_value("Payment Terms Template", {}, "name")
@@ -26,13 +28,13 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 		frappe.db.rollback()
 
 	def _invoice(self, bill_date=None):
-		supplier = frappe.db.get_value("Supplier", {"disabled": 0}, "name")
-		item = frappe.db.get_value("Item", {"is_stock_item": 1, "disabled": 0, "has_variants": 0}, "name")
+		supplier = a_supplier()
+		item = a_stock_item()
 		doc = frappe.get_doc(
 			{
 				"doctype": "Purchase Invoice",
 				"supplier": supplier,
-				"company": COMPANY,
+				"company": self.company,
 				"posting_date": nowdate(),
 				"set_posting_time": 1,
 				"bill_no": frappe.generate_hash(length=6),
@@ -43,9 +45,7 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 						"item_code": item,
 						"qty": 1,
 						"rate": 1000,
-						"warehouse": frappe.db.get_value(
-							"Warehouse", {"company": COMPANY, "is_group": 0}, "name"
-						),
+						"warehouse": a_warehouse(self.company),
 					}
 				],
 			}

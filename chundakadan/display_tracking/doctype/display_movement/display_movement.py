@@ -6,10 +6,21 @@ from chundakadan.display_tracking.transitions import LOCATION_DOCTYPE, resolve_t
 
 
 class DisplayMovement(Document):
+	def _validate_links(self):
+		# Frappe checks Dynamic Links in insert() BEFORE it runs before_insert
+		# (model/document.py: _validate_links, then before_insert), so deriving
+		# the state in before_insert was already too late: a movement that named
+		# a To Location was refused with "None must be set first", because its
+		# companion to_location_doctype was still empty. Derive here instead —
+		# it is idempotent, and before_submit re-derives anyway.
+		# only while inserting: a cancel runs the link check too, and re-deriving
+		# there would read the unit's state AFTER this movement applied it and
+		# refuse the move as illegal
+		if self.is_new() and self.display_unit:
+			self._derive_state()
+		return super()._validate_links()
+
 	def before_insert(self):
-		# Derive from/to state here (NOT validate): Frappe runs _validate_links
-		# before run_before_save_methods, so the Dynamic Link companion
-		# doctype fields must be populated before that link check.
 		self._derive_state()
 
 	def before_submit(self):
