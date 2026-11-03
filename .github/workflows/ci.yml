@@ -22,8 +22,12 @@ jobs:
       draft_frappe_versions: '["version-15"]'
       hrms: true
       runs_on: '"ubuntu-latest"'
-      # field_sales owns the Cheque Bounce doctype this app links to and
-      # hooks into, so without it Frappe's test bootstrap cannot resolve
-      # Post Dated Cheque's link field and no test runs at all.
+      # Both are needed before a single test can run, because Frappe walks
+      # every link field while building test records:
+      #   field_sales — owns Cheque Bounce, which Post Dated Cheque links to
+      #                 and hooks.py hooks into
+      #   payments    — owns Payment Gateway, which erpnext's own Payment
+      #                 Gateway Account links to
       extra_apps: |
+        payments https://github.com/frappe/payments
         field_sales https://github.com/exvas/field_sales main
