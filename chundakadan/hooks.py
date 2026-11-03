@@ -357,6 +357,8 @@ after_migrate = [
 	"chundakadan.install.ensure_sick_leave_deduction_component",
 	"chundakadan.dispatch.setup.ensure_dispatch_setup",
 	"chundakadan.dispatch.workspace.ensure_dispatch_number_cards",
+	# before the stock toggles: they are anchored after the B2B one
+	"chundakadan.doc_events.sales_invoice.ensure_b2b_toggle",
 	"chundakadan.doc_events.stock_control.ensure_update_stock_settings",
 	"chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
 	"chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
