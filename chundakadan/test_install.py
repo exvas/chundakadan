@@ -97,3 +97,19 @@ class TestBeforeTestsRelaxesMandatoryFields(FrappeTestCase):
 			[],
 			"a Custom Field is still mandatory",
 		)
+
+	def test_hsn_validation_is_turned_off_for_the_bench(self):
+		"""india_compliance refuses an Item with no HSN, and ERPNext's own
+		`_Test Item` has none, so the suite cannot even start."""
+		if not frappe.db.exists("DocType", "GST Settings"):
+			self.skipTest("india_compliance is not installed on this bench")
+
+		frappe.db.set_single_value("GST Settings", "validate_hsn_code", 1)
+		frappe.clear_document_cache("GST Settings", "GST Settings")
+
+		before_tests()
+
+		self.assertFalse(
+			frappe.db.get_single_value("GST Settings", "validate_hsn_code"),
+			"HSN validation left on: `_Test Item` cannot be created",
+		)

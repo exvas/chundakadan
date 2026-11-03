@@ -1674,6 +1674,17 @@ def before_tests(*args, **kwargs):
 		frappe.clear_cache()
 		print(f"chundakadan.install.before_tests: stood down {len(relaxed)} mandatory field(s)")
 
+	# 2. india_compliance refuses an Item with no HSN code, and ERPNext's own
+	#    `_Test Item` has none — so the bootstrap dies before any test runs.
+	#    GST Settings has a switch for exactly this, so use it rather than
+	#    reaching into india_compliance: a test bench is not filing returns.
+	if frappe.db.exists("DocType", "GST Settings"):
+		if frappe.db.get_single_value("GST Settings", "validate_hsn_code"):
+			frappe.db.set_single_value("GST Settings", "validate_hsn_code", 0)
+			frappe.clear_document_cache("GST Settings", "GST Settings")
+			frappe.db.commit()
+			print("chundakadan.install.before_tests: turned off GST Settings.validate_hsn_code")
+
 	# 3. Monkey-patch india_compliance validators that reject auto-
 	#    created _Test Item Tax Template stubs (GST rate=0 + Taxable
 	#    treatment is the rejection). Replace with a no-op for the
