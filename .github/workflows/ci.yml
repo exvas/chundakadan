@@ -104,6 +104,8 @@ jobs:
           code=$?
           tail -c 4000 "$RUNNER_TEMP/out.log"
           [ $code -eq 0 ] && exit 0
-          msg=$(tail -c 3000 "$RUNNER_TEMP/out.log" | python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))")
-          echo "::error title=run-tests crashed::$msg"
+          enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
+          names=$(grep -E '^(FAIL|ERROR): ' "$RUNNER_TEMP/out.log" | sort | uniq -c | sort -rn | head -80 | enc)
+          echo "::error title=failing tests::$names"
+          echo "::error title=tail::$(tail -c 2500 "$RUNNER_TEMP/out.log" | enc)"
           exit 1
