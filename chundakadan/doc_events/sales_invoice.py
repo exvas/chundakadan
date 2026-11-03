@@ -1,6 +1,9 @@
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-from chundakadan.doc_events.stock_control import get_update_stock
+from chundakadan.doc_events.stock_control import SETTINGS, get_update_stock
+
+B2B_TOGGLE = "enforce_b2b_gstin_billing"
 
 
 def validate_sales_invoice(doc, method):
@@ -86,7 +89,7 @@ def enforce_b2b_billing(doc, method):
 	"""B2B-only billing for company Chundakadan Agencies: require Customer GSTIN + Address.
 	Migrated from a Server Script so it also works on Frappe Cloud (where server
 	scripts may be disabled). Toggle: Chundakadan Settings > enforce_b2b_gstin_billing."""
-	if not frappe.db.get_single_value("Chundakadan Settings", "enforce_b2b_gstin_billing"):
+	if not b2b_billing_enforced():
 		return
 	if doc.company != "Chundakadan Agencies":
 		return
@@ -244,3 +247,50 @@ def _linked_delivery_note(invoice):
 	return frappe.db.get_value(
 		"Delivery Note Item", {"against_sales_invoice": invoice, "docstatus": ["<", 2]}, "parent"
 	)
+
+
+def b2b_billing_enforced() -> bool:
+	"""Reading a setting must never be what stops an invoice being saved.
+
+	The toggle used to exist only on the live site, typed in by hand, and
+	`get_single_value` throws on a field that is not there — so on any other
+	bench every Sales Invoice insert died with "Field
+	enforce_b2b_gstin_billing does not exist". ensure_b2b_toggle() below now
+	ships the field, and this stays as the belt to its braces.
+	"""
+	if not frappe.db.exists("DocType", SETTINGS):
+		return False
+	try:
+		return bool(frappe.db.get_single_value(SETTINGS, B2B_TOGGLE))
+	except Exception:
+		return False
+
+
+def ensure_b2b_toggle(*args, **kwargs):
+	"""after_migrate: the B2B billing toggle, as a field we ship.
+
+	It has to run before stock_control.ensure_update_stock_settings, which
+	anchors its own toggles after this one.
+	"""
+	if not frappe.db.exists("DocType", SETTINGS):
+		return
+
+	create_custom_fields(
+		{
+			SETTINGS: [
+				{
+					"fieldname": B2B_TOGGLE,
+					"label": "Enforce B2B GSTIN Billing",
+					"fieldtype": "Check",
+					"default": "0",
+					"description": (
+						"Chundakadan Agencies only: refuse an invoice whose customer "
+						"has no GSTIN and no billing address."
+					),
+					"module": "Chundakadan",
+				}
+			]
+		},
+		update=True,
+	)
+	frappe.db.commit()
