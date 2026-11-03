@@ -75,8 +75,25 @@ class TestBeforeTestsRelaxesMandatoryFields(FrappeTestCase):
 	def test_the_employee_fields_are_stood_down_too(self):
 		before_tests()
 
-		for fieldname in ("designation", "holiday_list"):
+		for fieldname in ("designation", "holiday_list", "department", "user_id"):
 			self.assertFalse(
 				frappe.get_meta("Employee", cached=False).get_field(fieldname).reqd,
-				f"Employee.{fieldname} left mandatory: HRMS's `_T-Employee-00001` " "cannot be created",
+				f"Employee.{fieldname} left mandatory: HRMS's `_T-Employee-00001` cannot be created",
 			)
+
+	def test_nothing_is_left_mandatory_by_a_custom_field_or_setter(self):
+		"""The sweep, not a list of names: the next field someone ticks
+		"Mandatory" in Customize Form must not take the suite down with it.
+		"""
+		before_tests()
+
+		self.assertEqual(
+			frappe.get_all("Property Setter", filters={"property": "reqd", "value": "1"}, pluck="name"),
+			[],
+			"a Property Setter still promotes a field to mandatory",
+		)
+		self.assertEqual(
+			frappe.get_all("Custom Field", filters={"reqd": 1}, pluck="name"),
+			[],
+			"a Custom Field is still mandatory",
+		)
