@@ -89,6 +89,7 @@ jobs:
           bench get-app --branch version-15 erpnext
           bench get-app --branch version-15 hrms
           bench get-app --branch version-15 payments https://github.com/frappe/payments
+          bench get-app --branch version-15 india_compliance https://github.com/resilient-tech/india-compliance
           bench get-app --branch main field_sales https://github.com/exvas/field_sales
           bench get-app chundakadan "$GITHUB_WORKSPACE"
           bench setup requirements --dev
@@ -96,6 +97,7 @@ jobs:
           bench --site test_site install-app erpnext
           bench --site test_site install-app hrms
           bench --site test_site install-app payments
+          bench --site test_site install-app india_compliance
           bench --site test_site install-app field_sales
           bench --site test_site install-app chundakadan
           bench --site test_site set-config allow_tests true
@@ -109,7 +111,14 @@ jobs:
           tail -c 4000 "$RUNNER_TEMP/out.log"
           [ $code -eq 0 ] && exit 0
           enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
-          names=$(grep -E '^(FAIL|ERROR): ' "$RUNNER_TEMP/out.log" | sort | uniq -c | sort -rn | head -80 | enc)
-          echo "::error title=failing tests::$names"
+          grep -E '^(FAIL|ERROR): ' "$RUNNER_TEMP/out.log" | sed 's/.*(\(.*\))$/\1/' | sort | uniq -c | sort -rn > "$RUNNER_TEMP/classes.txt"
+          echo "::error title=failing classes::$(enc < "$RUNNER_TEMP/classes.txt")"
+          grep -E '^(FAIL|ERROR): ' "$RUNNER_TEMP/out.log" | sed 's/ (.*//' > "$RUNNER_TEMP/names.txt"
+          split -l 25 "$RUNNER_TEMP/names.txt" "$RUNNER_TEMP/chunk."
+          i=0
+          for f in "$RUNNER_TEMP"/chunk.*; do
+            i=$((i+1))
+            echo "::error title=failing tests $i::$(enc < "$f")"
+          done
           echo "::error title=tail::$(tail -c 2500 "$RUNNER_TEMP/out.log" | enc)"
           exit 1
