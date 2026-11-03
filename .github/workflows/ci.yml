@@ -110,15 +110,27 @@ jobs:
           code=$?
           tail -c 4000 "$RUNNER_TEMP/out.log"
           [ $code -eq 0 ] && exit 0
+          python3 - "$RUNNER_TEMP/out.log" > "$RUNNER_TEMP/causes.txt" <<'EOF'
+          import re, sys
+          text = open(sys.argv[1], errors="replace").read()
+          blocks = re.split(r"={70}\n", text)
+          out = []
+          for b in blocks:
+              m = re.match(r"(FAIL|ERROR): (\S+) \(([^)]+)\)", b)
+              if not m:
+                  continue
+              lines = [l for l in b.strip().split("\n") if l.strip()]
+              cause = lines[-1][:200] if lines else "?"
+              cls = m.group(3).split(".")[-1]
+              out.append(f"{m.group(1)} {cls}.{m.group(2)}\n    {cause}")
+          print("\n".join(out))
+          EOF
           enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
-          grep -E '^(FAIL|ERROR): ' "$RUNNER_TEMP/out.log" | sed 's/.*(\(.*\))$/\1/' | sort | uniq -c | sort -rn > "$RUNNER_TEMP/classes.txt"
-          echo "::error title=failing classes::$(enc < "$RUNNER_TEMP/classes.txt")"
-          grep -E '^(FAIL|ERROR): ' "$RUNNER_TEMP/out.log" | sed 's/ (.*//' > "$RUNNER_TEMP/names.txt"
-          split -l 25 "$RUNNER_TEMP/names.txt" "$RUNNER_TEMP/chunk."
+          split -b 3000 "$RUNNER_TEMP/causes.txt" "$RUNNER_TEMP/cause."
           i=0
-          for f in "$RUNNER_TEMP"/chunk.*; do
+          for f in "$RUNNER_TEMP"/cause.*; do
             i=$((i+1))
-            echo "::error title=failing tests $i::$(enc < "$f")"
+            echo "::error title=causes $i::$(enc < "$f")"
           done
-          echo "::error title=tail::$(tail -c 2500 "$RUNNER_TEMP/out.log" | enc)"
+          echo "::error title=totals::$(grep -E 'Ran [0-9]+ tests|FAILED \(' "$RUNNER_TEMP/out.log" | enc)"
           exit 1
