@@ -1642,23 +1642,34 @@ def before_tests(*args, **kwargs):
 
 	relaxed = []
 
-	# 1. Custom Fields on Employee that this bench promoted to reqd=1
-	for fieldname in ("employee_number", "designation", "holiday_list"):
+	# 1. Fields promoted to reqd=1 on this bench, which the built-in
+	#    test_records.json of those doctypes does not fill:
+	#      Employee   — HRMS promotes designation + holiday_list on a fresh install
+	#      Item.brand — ours (chundakadan.doc_events.item_brand); without this
+	#                   `_Test Item` cannot be created and EVERY test module dies
+	#                   at bootstrap, long before a single test runs
+	promoted_to_mandatory = (
+		("Employee", "employee_number"),
+		("Employee", "designation"),
+		("Employee", "holiday_list"),
+		("Item", "brand"),
+	)
+
+	for doctype, fieldname in promoted_to_mandatory:
+		# a Custom Field that carries reqd=1 itself
 		cf_name = frappe.db.get_value(
 			"Custom Field",
-			{"dt": "Employee", "fieldname": fieldname, "reqd": 1},
+			{"dt": doctype, "fieldname": fieldname, "reqd": 1},
 			"name",
 		)
 		if cf_name:
 			frappe.db.set_value("Custom Field", cf_name, "reqd", 0, update_modified=False)
 			relaxed.append(f"Custom Field/{cf_name}")
 
-	# 2. Property Setters that promote standard fields to reqd=1
-	#    (HRMS does this to designation + holiday_list on a fresh install)
-	for fieldname in ("employee_number", "designation", "holiday_list"):
+		# or a Property Setter promoting a standard field
 		ps_name = frappe.db.get_value(
 			"Property Setter",
-			{"doc_type": "Employee", "field_name": fieldname, "property": "reqd"},
+			{"doc_type": doctype, "field_name": fieldname, "property": "reqd"},
 			"name",
 		)
 		if ps_name:
@@ -1667,7 +1678,8 @@ def before_tests(*args, **kwargs):
 
 	if relaxed:
 		frappe.db.commit()
-		frappe.clear_cache(doctype="Employee")
+		for doctype in dict.fromkeys(dt for dt, _fieldname in promoted_to_mandatory):
+			frappe.clear_cache(doctype=doctype)
 		print(f"chundakadan.install.before_tests: relaxed reqd on {len(relaxed)} setter(s) — {relaxed}")
 
 	# 3. Monkey-patch india_compliance validators that reject auto-
