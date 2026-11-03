@@ -137,7 +137,12 @@ doc_events = {
 			"chundakadan.chundakadan.doctype.post_dated_cheque.post_dated_cheque.on_payment_entry_cancel",
 		],
 	},
-	"Sales Order": {"validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock"},
+	"Sales Order": {
+		"validate": "chundakadan.doc_events.sales_order.validate_item_qty_in_stock",
+		# ERPNext only stops this while the invoice is a draft, which leaves
+		# a billed order cancellable and its invoice then stuck
+		"before_cancel": "chundakadan.doc_events.sales_order.refuse_cancel_when_billed_or_delivered",
+	},
 	"Sales Invoice": {
 		"autoname": "chundakadan.doc_events.sales_invoice.autoname",
 		"before_validate": "chundakadan.doc_events.sales_invoice.apply_stock_defaults",
