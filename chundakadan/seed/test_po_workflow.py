@@ -22,6 +22,7 @@ from chundakadan.seed.po_workflow import (
 	WORKFLOW,
 	ensure_po_workflow,
 )
+from chundakadan.testing import a_company, a_stock_item, a_supplier, a_warehouse
 
 
 class TestPOWorkflow(FrappeTestCase):
@@ -93,12 +94,12 @@ class TestPOWorkflow(FrappeTestCase):
 
 	def _draft_po(self):
 		# the chain users are restricted to this company by User Permission
-		company = "Chundakadan Agencies"
-		supplier = frappe.db.get_value("Supplier", {"disabled": 0}, "name")
-		item = frappe.db.get_value("Item", {"is_stock_item": 1, "disabled": 0, "has_variants": 0}, "name")
-		warehouse = frappe.db.get_value(
-			"Warehouse", {"company": company, "is_group": 0, "disabled": 0}, "name"
-		)
+		company = a_company()
+		if not company:
+			self.skipTest("this bench has no company")
+		supplier = a_supplier()
+		item = a_stock_item()
+		warehouse = a_warehouse(company)
 		po = frappe.get_doc(
 			{
 				"doctype": DOCTYPE,
