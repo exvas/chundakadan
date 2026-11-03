@@ -464,7 +464,7 @@ def create_user_for_employee(employee, email=None, send_welcome_email=1, is_mana
 		+ "<br>".join("• " + ln for ln in log)
 		+ f"<br><br><i>By {frappe.session.user}</i>",
 	)
-	frappe.db.commit_after_request()
+	frappe.db.commit()
 
 	return {
 		"user": new_user.name,
