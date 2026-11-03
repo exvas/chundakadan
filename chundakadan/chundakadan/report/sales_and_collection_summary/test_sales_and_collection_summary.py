@@ -1,8 +1,8 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, today
-
-from unittest.mock import patch
 
 from chundakadan.chundakadan.report.sales_and_collection_summary import sales_and_collection_summary as report
 from chundakadan.chundakadan.report.sales_and_collection_summary.sales_and_collection_summary import (
@@ -251,10 +251,14 @@ class TestTheOpeningIsExcluded(SummaryCase):
 			seen.append(query)
 			return []
 
-		filters = frappe._dict({
-			"company": self.company, "from_date": add_days(today(), -365),
-			"to_date": today(), "group_by": group_by,
-		})
+		filters = frappe._dict(
+			{
+				"company": self.company,
+				"from_date": add_days(today(), -365),
+				"to_date": today(),
+				"group_by": group_by,
+			}
+		)
 		with patch.object(frappe.db, "sql", side_effect=capture):
 			report._sales(filters)
 			if group_by not in SALES_ONLY:  # the invoice total has no brand to group by
@@ -280,10 +284,14 @@ class TestTheOpeningIsExcluded(SummaryCase):
 			seen.append(query)
 			return []
 
-		filters = frappe._dict({
-			"company": self.company, "from_date": add_days(today(), -365),
-			"to_date": today(), "group_by": "Sales Person",
-		})
+		filters = frappe._dict(
+			{
+				"company": self.company,
+				"from_date": add_days(today(), -365),
+				"to_date": today(),
+				"group_by": "Sales Person",
+			}
+		)
 		with patch.object(frappe.db, "sql", side_effect=capture):
 			report._collection(filters)
 		self.assertTrue(seen)

@@ -1,4 +1,3 @@
-
 // The customer already names a sales person; fill it in rather than asking
 // for it again. Only when the box is empty — whoever is already on the
 // document was put there on purpose, or came in from the mobile app.
