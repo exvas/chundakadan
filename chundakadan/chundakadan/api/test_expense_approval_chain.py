@@ -185,6 +185,17 @@ class TestOnePersonSignsOnce(FrappeTestCase):
 	Purchase Order and leave chains.
 	"""
 
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		# The approval fields are added by an after_migrate hook, which a
+		# fresh bench has never run: without them doc.append("approval_flow")
+		# died on the field it could not find, not on anything these tests
+		# are about.
+		from chundakadan.install import ensure_expense_approval_fields
+
+		ensure_expense_approval_fields()
+
 	def setUp(self):
 		frappe.set_user("Administrator")
 		self._real = ea._get_approver_by_role

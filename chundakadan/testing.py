@@ -24,12 +24,33 @@ def a_company() -> str | None:
 
 
 def a_warehouse(company: str) -> str | None:
-	return frappe.db.get_value("Warehouse", {"company": company, "is_group": 0, "disabled": 0}, "name")
+	return frappe.db.get_value(
+		"Warehouse", {"company": company, "is_group": 0, "disabled": 0}, "name", order_by="name asc"
+	)
 
 
-def a_supplier() -> str | None:
-	return frappe.db.get_value("Supplier", {"disabled": 0}, "name")
+def a_supplier(company: str | None = None) -> str | None:
+	"""A supplier that can be billed in the company's own currency.
+
+	A bench carrying erpnext's test records has suppliers in USD on it, and
+	an unordered pick landed on one: every invoice then died on "Party
+	Account Creditors - _TC currency (INR) and document currency (USD)
+	should be same", which says nothing about the behaviour under test.
+	"""
+	currency = frappe.get_cached_value("Company", company, "default_currency") if company else None
+	if currency:
+		for condition in (
+			{"default_currency": currency},
+			# a supplier that never set one bills in the company's currency
+			{"default_currency": ["in", ["", None]]},
+		):
+			name = frappe.db.get_value("Supplier", {"disabled": 0, **condition}, "name", order_by="name asc")
+			if name:
+				return name
+	return frappe.db.get_value("Supplier", {"disabled": 0}, "name", order_by="name asc")
 
 
 def a_stock_item() -> str | None:
-	return frappe.db.get_value("Item", {"is_stock_item": 1, "disabled": 0, "has_variants": 0}, "name")
+	return frappe.db.get_value(
+		"Item", {"is_stock_item": 1, "disabled": 0, "has_variants": 0}, "name", order_by="name asc"
+	)

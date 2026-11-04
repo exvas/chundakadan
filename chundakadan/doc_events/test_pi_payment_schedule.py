@@ -28,7 +28,7 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 		frappe.db.rollback()
 
 	def _invoice(self, bill_date=None):
-		supplier = a_supplier()
+		supplier = a_supplier(self.company)
 		item = a_stock_item()
 		doc = frappe.get_doc(
 			{
