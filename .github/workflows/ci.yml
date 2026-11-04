@@ -108,18 +108,34 @@ jobs:
           set +e
           cat > /tmp/diag.py <<'PY'
           import frappe
+          from frappe.utils import getdate
+
           frappe.flags.in_test = True
-          f = frappe.get_meta("Leave Application").get_field("status")
-          print("DIAG options", repr(f.options), "default", repr(f.default), "permlevel", f.permlevel)
-          print("DIAG property setters", frappe.get_all("Property Setter",
-              filters={"doc_type": "Leave Application", "field_name": "status"},
-              fields=["property", "value"]))
-          print("DIAG hooks", frappe.get_hooks("doc_events").get("Leave Application"))
-          print("DIAG session user", frappe.session.user)
-          doc = frappe.get_doc(dict(doctype="Leave Application", employee=None, status="Approved"))
-          print("DIAG after get_doc", repr(doc.status))
-          doc._set_defaults()
-          print("DIAG after _set_defaults", repr(doc.status))
+          if not frappe.db.exists("Leave Type", "_Test Leave Type"):
+              frappe.get_doc({"doctype": "Leave Type", "leave_type_name": "_Test Leave Type",
+                              "include_holiday": 1}).insert(ignore_permissions=True)
+          emp = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+          print("DIAG employee", emp)
+          alloc = frappe.get_doc({"doctype": "Leave Allocation", "employee": emp,
+              "leave_type": "_Test Leave Type", "from_date": "2026-01-01",
+              "to_date": "2026-12-31", "new_leaves_allocated": 30})
+          alloc.insert(ignore_permissions=True)
+          alloc.submit()
+          doc = frappe.get_doc(dict(doctype="Leave Application", employee=emp,
+              leave_type="_Test Leave Type", from_date="2026-06-10", to_date="2026-06-11",
+              company=frappe.defaults.get_user_default("Company"),
+              status="Approved", leave_approver="Administrator"))
+          print("DIAG before insert", repr(doc.status))
+          try:
+              doc.insert()
+              print("DIAG inserted", repr(doc.status))
+          except Exception as e:
+              print("DIAG raised", type(e).__name__, str(e)[:160])
+          print("DIAG status now", repr(doc.status))
+          for df in frappe.get_meta("Leave Application").get_select_fields():
+              print("DIAG select", df.fieldname, "=", repr(doc.get(df.fieldname)),
+                    "| options", repr(df.options)[:60])
+          frappe.db.rollback()
           PY
           bench --site test_site console < /tmp/diag.py 2>&1 | grep DIAG | head -20 > /tmp/diag.txt
           enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
@@ -144,7 +160,7 @@ jobs:
                   continue
               lines = [l for l in b.strip().split("\n") if l.strip()]
               cls = m.group(3).split(".")[-1]
-              body = "\n".join(lines[1:])[:2500]
+              body = "\n".join(lines[-14:])
               out.append(f"{m.group(1)} {cls}.{m.group(2)}\n{body}")
           print("\n\n".join(out))
           EOF
