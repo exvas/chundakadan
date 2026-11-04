@@ -98,6 +98,8 @@ class TestPOWorkflow(FrappeTestCase):
 		if not company:
 			self.skipTest("this bench has no company")
 		supplier = a_supplier(company)
+		if not supplier:
+			self.skipTest("no supplier on this bench bills in the company's currency")
 		item = a_stock_item()
 		warehouse = a_warehouse(company)
 		po = frappe.get_doc(
