@@ -108,34 +108,35 @@ jobs:
           set +e
           cat > /tmp/diag.py <<'PY'
           import frappe
-          from frappe.utils import getdate
+          import frappe.model.document as fd
 
           frappe.flags.in_test = True
-          if not frappe.db.exists("Leave Type", "_Test Leave Type"):
-              frappe.get_doc({"doctype": "Leave Type", "leave_type_name": "_Test Leave Type",
-                              "include_holiday": 1}).insert(ignore_permissions=True)
-          emp = frappe.db.get_value("Employee", {"status": "Active"}, "name")
-          print("DIAG employee", emp)
-          alloc = frappe.get_doc({"doctype": "Leave Allocation", "employee": emp,
-              "leave_type": "_Test Leave Type", "from_date": "2026-01-01",
-              "to_date": "2026-12-31", "new_leaves_allocated": 30})
-          alloc.insert(ignore_permissions=True)
-          alloc.submit()
-          doc = frappe.get_doc(dict(doctype="Leave Application", employee=emp,
-              leave_type="_Test Leave Type", from_date="2026-06-10", to_date="2026-06-11",
-              company=frappe.defaults.get_user_default("Company"),
-              status="Approved", leave_approver="Administrator"))
-          print("DIAG before insert", repr(doc.status))
-          try:
-              doc.insert()
-              print("DIAG inserted", repr(doc.status))
-          except Exception as e:
-              print("DIAG raised", type(e).__name__, str(e)[:160])
-          print("DIAG status now", repr(doc.status))
-          for df in frappe.get_meta("Leave Application").get_select_fields():
-              print("DIAG select", df.fieldname, "=", repr(doc.get(df.fieldname)),
-                    "| options", repr(df.options)[:60])
-          frappe.db.rollback()
+          original = fd.Document._validate_selects
+
+          def dumping(self):
+              try:
+                  return original(self)
+              except Exception:
+                  if self.doctype == "Leave Application":
+                      for df in self.meta.get_select_fields():
+                          print("DIAG field", df.fieldname, "=", repr(self.get(df.fieldname)),
+                                "| options", repr(df.options)[:70], "| permlevel", df.permlevel)
+                      print("DIAG parentfield", repr(self.get("parentfield")), "user", frappe.session.user)
+                  raise
+
+          fd.Document._validate_selects = dumping
+
+          import unittest
+
+          from chundakadan.chundakadan.report.monthly_attendance_sheet_employees import (
+              test_monthly_attendance_sheet_employees as m,
+          )
+
+          suite = unittest.TestLoader().loadTestsFromNames(["test_summarized_view"], m.TestMonthlyAttendanceSheet)
+          result = unittest.TextTestRunner(verbosity=0).run(suite)
+          for _case, trace in result.errors + result.failures:
+              print("DIAG trace", trace.strip().split(chr(10))[-1][:200])
+          print("DIAG ran", result.testsRun, "errors", len(result.errors), "failures", len(result.failures))
           PY
           bench --site test_site console < /tmp/diag.py 2>&1 | grep DIAG | head -20 > /tmp/diag.txt
           enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
