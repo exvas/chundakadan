@@ -120,9 +120,22 @@ jobs:
               if not m:
                   continue
               lines = [l for l in b.strip().split("\n") if l.strip()]
+              # the traceback ends at the first unindented line after
+              # "Traceback ...", which is the exception; anything after that is
+              # the suite's own stdout and swallowed the cause when we took a
+              # fixed number of trailing lines
+              body, seen_traceback = [], False
+              for line in lines[1:]:
+                  if line.startswith("Traceback"):
+                      seen_traceback = True
+                      body.append(line)
+                      continue
+                  if seen_traceback and not line.startswith((" ", "\t")):
+                      body.append(line)
+                      break
+                  body.append(line)
               cls = m.group(3).split(".")[-1]
-              body = "\n".join(lines[-14:])
-              out.append(f"{m.group(1)} {cls}.{m.group(2)}\n{body}")
+              out.append(f"{m.group(1)} {cls}.{m.group(2)}\n" + "\n".join(body[-16:]))
           print("\n\n".join(out))
           EOF
           enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
