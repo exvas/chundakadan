@@ -409,7 +409,17 @@ def get_leave_application(employee):
 	from_date = previous_month_first.replace(day=7)
 	to_date = previous_month_first.replace(day=8)
 
-	return make_leave_application(employee, from_date, to_date, "_Test Leave Type")
+	# In this app the approval chain owns `status`: CustomLeaveApplication
+	# mirrors custom_approval_status into it, so a leave the chain has not
+	# approved is submitted as "Pending" -- and HRMS marks no attendance and
+	# writes no ledger entry unless the status is "Approved". The chain only
+	# ever submits an approved leave, so that is what the report must be
+	# given here, or it counts the leave days as zero.
+	leave = make_leave_application(employee, from_date, to_date, "_Test Leave Type", submit=False)
+	leave.custom_approval_status = "Approved"
+	leave.save()
+	leave.submit()
+	return leave
 
 
 def execute_report_with_invalid_filters():
