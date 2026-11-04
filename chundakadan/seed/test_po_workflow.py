@@ -97,7 +97,7 @@ class TestPOWorkflow(FrappeTestCase):
 		company = a_company()
 		if not company:
 			self.skipTest("this bench has no company")
-		supplier = a_supplier()
+		supplier = a_supplier(company)
 		item = a_stock_item()
 		warehouse = a_warehouse(company)
 		po = frappe.get_doc(

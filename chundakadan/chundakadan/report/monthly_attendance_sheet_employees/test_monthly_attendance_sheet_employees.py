@@ -240,16 +240,15 @@ class TestMonthlyAttendanceSheet(FrappeTestCase):
 		department_row = report[1][0]
 		self.assertIn(department, department_row["department"])
 
-		day_shift_row = report[1][1]
-		row_without_shift = report[1][2]
+		# the department row is followed by one merged row per employee, not
+		# one per shift
+		row = report[1][1]
 
-		self.assertEqual(day_shift_row["shift"], "")
-		self.assertEqual(day_shift_row["1"], "A")  # absent on the 1st day of the month
-		self.assertEqual(day_shift_row["2"], "P")  # present on the 2nd day
-
-		self.assertEqual(row_without_shift["shift"], "")
-		self.assertEqual(row_without_shift["3"], "L")  # on leave on the 3rd day
-		self.assertEqual(row_without_shift["4"], "P")  # present on the 4th day
+		self.assertEqual(row["shift"], "")
+		self.assertEqual(row["1"], "A")  # absent on the 1st day of the month
+		self.assertEqual(row["2"], "P")  # present on the 2nd day
+		self.assertEqual(row["3"], "L")  # on leave on the 3rd day
+		self.assertEqual(row["4"], "P")  # present on the 4th day
 
 	def test_attendance_with_employee_filter(self):
 		previous_month_first = get_first_day_for_prev_month()

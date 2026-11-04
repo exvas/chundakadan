@@ -1,15 +1,17 @@
 """Update Stock is controlled from Chundakadan Settings, not by the user."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from chundakadan.doc_events import stock_control as sc
 from chundakadan.doc_events.purchase_invoice import apply_stock_defaults as pi_defaults
+from chundakadan.doc_events.sales_invoice import COMPANY_STORE_WAREHOUSE, auto_create_delivery_note
 from chundakadan.doc_events.sales_invoice import apply_stock_defaults as si_defaults
-from chundakadan.doc_events.sales_invoice import auto_create_delivery_note
+from chundakadan.testing import a_company, a_warehouse
 
 test_ignore = ["Sales Invoice", "Purchase Invoice", "Customer", "Supplier", "Company", "User"]
-COMPANY = "Chundakadan Agencies"
 
 
 class TestUpdateStockControl(FrappeTestCase):
@@ -20,19 +22,31 @@ class TestUpdateStockControl(FrappeTestCase):
 		cls._commit = frappe.db.commit
 		frappe.db.commit = lambda *a, **k: None  # keep the setup inside this transaction
 		sc.ensure_update_stock_settings()
-		cls.item = frappe.db.get_value("Item", {"is_stock_item": 1}, "name")
+		cls.item = frappe.db.get_value("Item", {"is_stock_item": 1}, "name", order_by="name asc")
+		cls.company = a_company()
+		cls.warehouse = a_warehouse(cls.company) if cls.company else None
 
 	@classmethod
 	def tearDownClass(cls):
 		frappe.db.commit = cls._commit
 		super().tearDownClass()
 
+	def setUp(self):
+		if not self.company or not self.warehouse:
+			self.skipTest("this bench has no company with a warehouse")
+		# Both hooks bail out unless the company is in this map, so on any
+		# bench but the live one they never ran and the tests passed on the
+		# value the "user" had set. Point the map at this bench's company.
+		patcher = patch.dict(COMPANY_STORE_WAREHOUSE, {self.company: self.warehouse})
+		patcher.start()
+		self.addCleanup(patcher.stop)
+
 	def _set(self, doctype, value):
 		frappe.db.set_single_value(sc.SETTINGS, sc.UPDATE_STOCK_SETTINGS[doctype][0], value)
 
 	def _invoice(self, doctype, **kw):
 		doc = frappe.new_doc(doctype)
-		doc.company = COMPANY
+		doc.company = self.company
 		doc.update(kw)
 		doc.append("items", {"item_code": self.item})
 		return doc
@@ -74,7 +88,7 @@ class TestUpdateStockControl(FrappeTestCase):
 	def test_no_delivery_note_when_invoice_updates_stock(self):
 		invoice = frappe.db.get_value(
 			"Sales Invoice",
-			{"company": COMPANY, "docstatus": 1, "update_stock": 1, "is_return": 0},
+			{"company": self.company, "docstatus": 1, "update_stock": 1, "is_return": 0},
 			"name",
 		)
 		if not invoice:
