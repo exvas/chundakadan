@@ -20,6 +20,12 @@ from chundakadan.chundakadan.report.monthly_attendance_sheet_employees.monthly_a
 
 class TestMonthlyAttendanceSheet(FrappeTestCase):
 	def setUp(self):
+		# HRMS mails the approver when a leave is submitted (HR Settings ->
+		# send_leave_notification), and a fresh bench has no outgoing Email
+		# Account, so the send threw and took the leave with it. These tests
+		# are about the attendance sheet.
+		frappe.flags.mute_emails = True
+		self.addCleanup(lambda: frappe.flags.update({"mute_emails": False}))
 		self.company = "_Test Company"
 		self.employee = make_employee("test_employee@example.com", company=self.company)
 		frappe.db.delete("Attendance")
