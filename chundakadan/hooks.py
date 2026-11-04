@@ -363,6 +363,7 @@ after_migrate = [
 	"chundakadan.doc_events.prepared_reports.ensure_prepared_reports_disabled",
 	"chundakadan.doc_events.item_brand.ensure_item_brand_mandatory",
 	"chundakadan.doc_events.interview_status.ensure_interview_on_hold_status",
+	"chundakadan.doc_events.leave_status.ensure_leave_application_statuses",
 	"chundakadan.chundakadan.api.grievance.ensure_grievance_permissions",
 	"chundakadan.seed.stock_reports.ensure_stock_count_link",
 	"chundakadan.doc_events.item_approval.ensure_item_approval_fields",

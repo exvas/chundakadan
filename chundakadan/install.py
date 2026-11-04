@@ -1641,6 +1641,14 @@ def before_tests(*args, **kwargs):
 	if not frappe.flags.in_test:
 		return  # belt-and-braces — should never fire outside tests
 
+	# install-app marks the patches complete without running them, so a test
+	# bench never got the widened Leave Application status options and every
+	# leave the approval chain touched was refused. after_migrate does not
+	# run here either, so call it.
+	from chundakadan.doc_events.leave_status import ensure_leave_application_statuses
+
+	ensure_leave_application_statuses()
+
 	relaxed = []
 
 	# 1. Every field this bench promoted to mandatory.
