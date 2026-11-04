@@ -102,6 +102,29 @@ jobs:
           bench --site test_site install-app chundakadan
           bench --site test_site set-config allow_tests true
           bench --site test_site execute erpnext.setup.utils.before_tests
+      - name: Why Leave Application status reads Pending
+        working-directory: ${{ env.BENCH }}
+        run: |
+          set +e
+          cat > /tmp/diag.py <<'PY'
+          import frappe
+          frappe.flags.in_test = True
+          f = frappe.get_meta("Leave Application").get_field("status")
+          print("DIAG options", repr(f.options), "default", repr(f.default), "permlevel", f.permlevel)
+          print("DIAG property setters", frappe.get_all("Property Setter",
+              filters={"doc_type": "Leave Application", "field_name": "status"},
+              fields=["property", "value"]))
+          print("DIAG hooks", frappe.get_hooks("doc_events").get("Leave Application"))
+          print("DIAG session user", frappe.session.user)
+          doc = frappe.get_doc(dict(doctype="Leave Application", employee=None, status="Approved"))
+          print("DIAG after get_doc", repr(doc.status))
+          doc._set_defaults()
+          print("DIAG after _set_defaults", repr(doc.status))
+          PY
+          bench --site test_site console < /tmp/diag.py 2>&1 | grep DIAG | head -20 > /tmp/diag.txt
+          enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
+          echo "::error title=diag::$(enc < /tmp/diag.txt)"
+          exit 0
       - name: Tests, with the failure annotated
         working-directory: ${{ env.BENCH }}
         run: |
