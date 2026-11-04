@@ -25,13 +25,13 @@ class TestLeaveApplicationStatuses(FrappeTestCase):
 		for status in ls.HRMS_STATUSES:
 			self.assertIn(status, options)
 
-	def test_the_override_cannot_write_a_status_the_field_refuses(self):
-		"""The mapping and the options come from the same module so they
-		cannot drift apart again."""
-		from chundakadan.overrides.leave_application import CustomLeaveApplication  # noqa: F401
+	def test_the_override_maps_from_the_same_table_as_the_options(self):
+		"""Two places disagreeing about what a status can be was the bug, so
+		the override must read the mapping that ships the options."""
+		from chundakadan.overrides import leave_application as override
 
-		options = set(ls.status_options().split("\n"))
-		self.assertTrue(set(ls.CHAIN_STATUSES.values()) <= options)
+		self.assertIs(override.CHAIN_STATUSES, ls.CHAIN_STATUSES)
+		self.assertTrue(set(ls.CHAIN_STATUSES.values()) <= set(ls.status_options().split("\n")))
 
 	def test_a_site_whose_field_was_never_widened_is_repaired(self):
 		"""The actual failure: a fresh site has no such Property Setter, so
