@@ -29,6 +29,8 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 
 	def _invoice(self, bill_date=None):
 		supplier = a_supplier(self.company)
+		if not supplier:
+			self.skipTest("no supplier on this bench bills in the company's currency")
 		item = a_stock_item()
 		doc = frappe.get_doc(
 			{

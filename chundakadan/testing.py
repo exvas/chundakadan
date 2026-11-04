@@ -36,18 +36,21 @@ def a_supplier(company: str | None = None) -> str | None:
 	an unordered pick landed on one: every invoice then died on "Party
 	Account Creditors - _TC currency (INR) and document currency (USD)
 	should be same", which says nothing about the behaviour under test.
+
+	The currency test is done here rather than in the query because SQL's
+	IN never matches NULL, and the supplier that bills in the company's
+	currency is usually the one that never set a currency at all.
 	"""
+	rows = frappe.get_all(
+		"Supplier", filters={"disabled": 0}, fields=["name", "default_currency"], order_by="name asc"
+	)
 	currency = frappe.get_cached_value("Company", company, "default_currency") if company else None
-	if currency:
-		for condition in (
-			{"default_currency": currency},
-			# a supplier that never set one bills in the company's currency
-			{"default_currency": ["in", ["", None]]},
-		):
-			name = frappe.db.get_value("Supplier", {"disabled": 0, **condition}, "name", order_by="name asc")
-			if name:
-				return name
-	return frappe.db.get_value("Supplier", {"disabled": 0}, "name", order_by="name asc")
+	if not currency:
+		return rows[0].name if rows else None
+	for row in rows:
+		if not row.default_currency or row.default_currency == currency:
+			return row.name
+	return None
 
 
 def a_stock_item() -> str | None:
