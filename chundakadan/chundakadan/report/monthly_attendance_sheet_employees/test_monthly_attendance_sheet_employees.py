@@ -18,6 +18,40 @@ from chundakadan.chundakadan.report.monthly_attendance_sheet_employees.monthly_a
 )
 
 
+# TEMPORARY probe -- remove with the probe CI job. Something in the full suite
+# leaves a Leave Application with an invalid Status; this says which field and
+# what the bench thinks its options are at that moment.
+import sys as _sys
+
+import frappe.model.document as _fd
+
+_orig_validate_selects = _fd.Document._validate_selects
+
+
+def _validate_selects_dumping(self, _original=_orig_validate_selects):
+	try:
+		return _original(self)
+	except Exception:
+		if self.doctype == "Leave Application":
+			print("DIAGSEL user", frappe.session.user, "parentfield", repr(self.get("parentfield")), file=_sys.stderr)
+			for df in self.meta.get_select_fields():
+				print(
+					"DIAGSEL",
+					df.fieldname,
+					"=",
+					repr(self.get(df.fieldname)),
+					"| opts",
+					repr(df.options)[:70],
+					"| permlevel",
+					df.permlevel,
+					file=_sys.stderr,
+				)
+		raise
+
+
+_fd.Document._validate_selects = _validate_selects_dumping
+
+
 class TestMonthlyAttendanceSheet(FrappeTestCase):
 	def setUp(self):
 		self.company = "_Test Company"

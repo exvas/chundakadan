@@ -172,5 +172,6 @@ jobs:
             i=$((i+1))
             echo "::error title=causes $i::$(enc < "$f")"
           done
+          echo "::error title=diagsel::$(grep DIAGSEL "$RUNNER_TEMP/out.log" | head -20 | enc)"
           echo "::error title=totals::$(grep -E 'Ran [0-9]+ tests|FAILED \(' "$RUNNER_TEMP/out.log" | enc)"
           exit 1
