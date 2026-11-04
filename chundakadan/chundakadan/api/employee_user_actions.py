@@ -665,7 +665,7 @@ def apply_geofence_for_employee(employee, shift_location=None):
 	return {"shift_location": target, "log": log}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def send_mobile_relogin_reminder(employee, reason=""):
 	"""Notify an employee to log out + log back in on their mobile app.
 
@@ -721,7 +721,7 @@ def send_mobile_relogin_reminder(employee, reason=""):
 	return {"sent_to": user_id, "notification": nl.name}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def dashboard_update(employee, action, value=None):
 	"""Generic inline-update entry point used by the Setup Dashboard
 	dialog. Each `action` maps to a specific change so HR can edit
@@ -843,7 +843,7 @@ def dashboard_update(employee, action, value=None):
 	return {"log": log}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def get_employee_dashboard(employee):
 	"""Single-pane snapshot of everything assigned/linked to this employee
 	— used by the 'Setup Dashboard' HR Action button to give HR a
