@@ -30,13 +30,19 @@ class TestPurchaseInvoicePaymentSchedule(FrappeTestCase):
 	def _invoice(self, bill_date=None):
 		supplier = a_supplier(self.company)
 		if not supplier:
-			self.skipTest("no supplier on this bench bills in the company's currency")
+			self.skipTest("this bench has no supplier group to make a supplier in")
 		item = a_stock_item()
 		doc = frappe.get_doc(
 			{
 				"doctype": "Purchase Invoice",
 				"supplier": supplier,
 				"company": self.company,
+				# spelt out, or the default buying price list decides it: on a
+				# bench holding erpnext's test records that list is in USD,
+				# and the invoice died against the company's INR Creditors
+				# account instead of testing the payment schedule
+				"currency": frappe.get_cached_value("Company", self.company, "default_currency"),
+				"conversion_rate": 1,
 				"posting_date": nowdate(),
 				"set_posting_time": 1,
 				"bill_no": frappe.generate_hash(length=6),
