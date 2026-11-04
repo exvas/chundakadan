@@ -18,43 +18,6 @@ from chundakadan.chundakadan.report.monthly_attendance_sheet_employees.monthly_a
 )
 
 
-# TEMPORARY probe -- remove with the probe CI job. Something in the full suite
-# writes "Pending" into Leave Application.status, whose options have never
-# included it. This prints the stack at the moment of the write. Both the
-# attribute path (doc.status = x) and the dict path (doc.set/doc.update) are
-# covered: BaseDocument.set writes straight into __dict__, so __setattr__
-# alone would miss it.
-import sys as _sys
-import traceback as _tb
-
-import frappe.model.base_document as _fbd
-from hrms.hr.doctype.leave_application.leave_application import LeaveApplication as _LA
-
-_orig_set = _fbd.BaseDocument.set
-
-
-def _report(where):
-	print("DIAGSET via", where, file=_sys.stderr)
-	for line in _tb.format_stack()[-9:-1]:
-		print("DIAGSET  ", line.strip().replace("\n", " | "), file=_sys.stderr)
-
-
-def _set_traced(self, key, value, *args, **kwargs):
-	if key == "status" and value == "Pending" and self.doctype == "Leave Application":
-		_report("BaseDocument.set")
-	return _orig_set(self, key, value, *args, **kwargs)
-
-
-def _setattr_traced(self, key, value):
-	if key == "status" and value == "Pending":
-		_report("__setattr__")
-	object.__setattr__(self, key, value)
-
-
-_fbd.BaseDocument.set = _set_traced
-_LA.__setattr__ = _setattr_traced
-
-
 class TestMonthlyAttendanceSheet(FrappeTestCase):
 	def setUp(self):
 		self.company = "_Test Company"
