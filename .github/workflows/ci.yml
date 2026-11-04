@@ -120,10 +120,10 @@ jobs:
               if not m:
                   continue
               lines = [l for l in b.strip().split("\n") if l.strip()]
-              cause = lines[-1][:200] if lines else "?"
               cls = m.group(3).split(".")[-1]
-              out.append(f"{m.group(1)} {cls}.{m.group(2)}\n    {cause}")
-          print("\n".join(out))
+              body = "\n".join(lines[1:])[:2500]
+              out.append(f"{m.group(1)} {cls}.{m.group(2)}\n{body}")
+          print("\n\n".join(out))
           EOF
           enc() { python3 -c "import sys; t = sys.stdin.read(); print(t.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))"; }
           split -b 3000 "$RUNNER_TEMP/causes.txt" "$RUNNER_TEMP/cause."
