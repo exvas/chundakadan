@@ -113,9 +113,9 @@ jobs:
           frappe.flags.in_test = True
           original = fd.Document._validate_selects
 
-          def dumping(self):
+          def dumping(self, _original=original):
               try:
-                  return original(self)
+                  return _original(self)
               except Exception:
                   if self.doctype == "Leave Application":
                       for df in self.meta.get_select_fields():
