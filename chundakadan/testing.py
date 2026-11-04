@@ -11,6 +11,7 @@ Not named test_* on purpose: Frappe's runner collects those as test modules.
 import frappe
 
 LIVE_COMPANY = "Chundakadan Agencies"
+TEST_SUPPLIER = "_Test CDN Supplier"
 
 
 def a_company() -> str | None:
@@ -30,27 +31,27 @@ def a_warehouse(company: str) -> str | None:
 
 
 def a_supplier(company: str | None = None) -> str | None:
-	"""A supplier that can be billed in the company's own currency.
+	"""A supplier of our own, billed in the company's currency.
 
-	A bench carrying erpnext's test records has suppliers in USD on it, and
-	an unordered pick landed on one: every invoice then died on "Party
-	Account Creditors - _TC currency (INR) and document currency (USD)
-	should be same", which says nothing about the behaviour under test.
-
-	The currency test is done here rather than in the query because SQL's
-	IN never matches NULL, and the supplier that bills in the company's
-	currency is usually the one that never set a currency at all.
+	Reading one off the bench kept landing on erpnext's USD test supplier,
+	and every invoice then died on "Party Account Creditors - _TC currency
+	(INR) and document currency (USD) should be same" -- a currency
+	mismatch that says nothing about the behaviour under test. Two rounds
+	of filtering only moved which wrong supplier came back, so the tests
+	bring their own.
 	"""
-	rows = frappe.get_all(
-		"Supplier", filters={"disabled": 0}, fields=["name", "default_currency"], order_by="name asc"
-	)
-	currency = frappe.get_cached_value("Company", company, "default_currency") if company else None
-	if not currency:
-		return rows[0].name if rows else None
-	for row in rows:
-		if not row.default_currency or row.default_currency == currency:
-			return row.name
-	return None
+	existing = frappe.db.get_value("Supplier", {"supplier_name": TEST_SUPPLIER}, "name")
+	if existing:
+		return existing
+	group = frappe.db.get_value("Supplier Group", {"is_group": 0}, "name", order_by="name asc")
+	if not group:
+		return None
+	doc = frappe.get_doc({"doctype": "Supplier", "supplier_name": TEST_SUPPLIER, "supplier_group": group})
+	if company:
+		doc.default_currency = frappe.get_cached_value("Company", company, "default_currency")
+	doc.flags.ignore_mandatory = True
+	doc.insert(ignore_permissions=True)
+	return doc.name
 
 
 def a_stock_item() -> str | None:
