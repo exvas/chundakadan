@@ -72,6 +72,13 @@ def get_columns(filters):
 			"options": group.get("options"),
 			"width": 200,
 		},
+	]
+	if filters.group_by == "Customer":
+		# the codes are numbers here, so the column on its own says nothing
+		columns.append(
+			{"label": _("Customer Name"), "fieldname": "customer_name", "fieldtype": "Data", "width": 220}
+		)
+	columns += [
 		# say it on the label: this one carries the tax, and the Brand Wise
 		# Sales Report does not, so the same brand reads differently there
 		{"label": _("Sales (incl. GST)"), "fieldname": "sales", "fieldtype": "Currency", "width": 160},
@@ -344,6 +351,18 @@ def get_data(filters):
 		)
 		entry["collection"] = row.collection or 0
 		entry["receipts"] = row.receipts or 0
+
+	if filters.group_by == "Customer":
+		names = dict(
+			frappe.get_all(
+				"Customer",
+				filters={"name": ["in", [k for k in rows if k]]},
+				fields=["name", "customer_name"],
+				as_list=True,
+			)
+		)
+		for key, entry in rows.items():
+			entry["customer_name"] = names.get(key)
 
 	data = []
 	for entry in rows.values():

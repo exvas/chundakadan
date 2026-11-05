@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import frappe
+from frappe import _
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, getdate, today
 
@@ -494,3 +495,29 @@ class TestCollectionDetail(SummaryCase):
 		for condition in report._collection_conditions(filters):
 			for query in seen:
 				self.assertIn(condition, query)
+
+
+class TestCustomerNames(SummaryCase):
+	"""Grouped by customer the first column is a code, and at Chundakadan
+	those are numbers -- 2511 tells nobody which shop it is."""
+
+	def test_the_name_column_is_there_only_for_the_customer_grouping(self):
+		for group in GROUPS:
+			names = [c["fieldname"] for c in get_columns(frappe._dict({"group_by": group}))]
+			if group == "Customer":
+				self.assertIn("customer_name", names)
+			else:
+				self.assertNotIn("customer_name", names, group)
+
+	def test_every_row_carries_its_name(self):
+		_columns, rows = self._run(group_by="Customer")
+		if not rows:
+			self.skipTest("no sales in the window on this site")
+		for row in rows:
+			if row["group_value"] == _("(not set)"):
+				continue
+			self.assertEqual(
+				row["customer_name"],
+				frappe.db.get_value("Customer", row["group_value"], "customer_name"),
+				row["group_value"],
+			)
