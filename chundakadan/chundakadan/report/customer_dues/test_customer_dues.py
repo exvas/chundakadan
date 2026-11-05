@@ -231,3 +231,122 @@ class TestFilters(DuesCase):
 		_columns, rows = self._run(customer=self.customer, territory=territory)
 		self.assertTrue(rows)
 		self.assertEqual({r["territory"] for r in rows}, {territory})
+
+
+class TestAnUnallocatedReceipt(DuesCase):
+	"""The A K Trade Links case, 2026-11-05.
+
+	Their ledger read 42,800 and the app read 52,800. The 10,000 gap was a
+	receipt submitted without being put against any invoice -- no invoice's
+	outstanding had moved, so a list that only adds up invoices could not
+	see it. Across the live site that gap was 197 customers and 49 lakh,
+	every rupee of it an executive sent to collect money already paid.
+	"""
+
+	def _receipt(self, amount, sales_person=None, allocate_to=None):
+		receivable = frappe.get_cached_value("Company", self.company, "default_receivable_account")
+		bank = frappe.db.get_value(
+			"Account",
+			{"company": self.company, "is_group": 0, "account_type": ["in", ["Bank", "Cash"]]},
+			"name",
+			order_by="name asc",
+		)
+		if not (receivable and bank):
+			self.skipTest("this bench cannot build a Payment Entry")
+		doc = frappe.get_doc(
+			{
+				"doctype": "Payment Entry",
+				"payment_type": "Receive",
+				"company": self.company,
+				"posting_date": today(),
+				"party_type": "Customer",
+				"party": self.customer,
+				"paid_from": receivable,
+				"paid_to": bank,
+				"paid_amount": amount,
+				"received_amount": amount,
+				"source_exchange_rate": 1,
+				"target_exchange_rate": 1,
+				"reference_no": frappe.generate_hash(length=6),
+				"reference_date": today(),
+				"custom_sales_person": sales_person,
+			}
+		)
+		if allocate_to:
+			doc.append(
+				"references",
+				{
+					"reference_doctype": "Sales Invoice",
+					"reference_name": allocate_to,
+					"allocated_amount": amount,
+				},
+			)
+		doc.flags.ignore_mandatory = True
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		return doc
+
+	def _clear_previous(self):
+		super()._clear_previous()
+		names = frappe.get_all("Payment Entry", filters={"party": self.customer}, pluck="name")
+		if not names:
+			return
+		frappe.db.delete("GL Entry", {"voucher_type": "Payment Entry", "voucher_no": ["in", names]})
+		frappe.db.delete("Payment Entry Reference", {"parent": ["in", names]})
+		frappe.db.delete("Payment Entry", {"name": ["in", names]})
+
+	def test_an_allocated_receipt_moves_the_invoice(self):
+		invoice = self._invoice(10000, sales_person=self.person)
+		self._receipt(4000, sales_person=self.person, allocate_to=invoice.name)
+		_columns, rows = self._run(customer=self.customer, sales_person=self.person)
+		self.assertEqual(flt(rows[0]["outstanding"], 2), 6000)
+		self.assertEqual(flt(rows[0]["advance"], 2), 0)
+		self.assertEqual(flt(rows[0]["due"], 2), 6000)
+
+	def test_an_unallocated_receipt_does_not_move_it_but_is_still_owed_back(self):
+		self._invoice(10000, sales_person=self.person)
+		self._receipt(4000, sales_person=self.person)
+		_columns, rows = self._run(customer=self.customer, sales_person=self.person)
+		self.assertEqual(flt(rows[0]["outstanding"], 2), 10000, "no invoice moved, and that is correct")
+		self.assertEqual(flt(rows[0]["advance"], 2), 4000)
+		self.assertEqual(flt(rows[0]["due"], 2), 6000, "the Due is what the ledger says")
+
+	def test_the_due_matches_the_ledger(self):
+		self._invoice(10000, sales_person=self.person)
+		self._receipt(4000, sales_person=self.person)
+		_columns, rows = self._run(customer=self.customer, sales_person=self.person)
+		ledger = frappe.db.sql(
+			"""select sum(debit) - sum(credit) from `tabGL Entry`
+			   where party_type = 'Customer' and party = %s and company = %s
+			     and is_cancelled = 0""",
+			(self.customer, self.company),
+		)[0][0]
+		self.assertEqual(flt(rows[0]["due"], 2), flt(ledger, 2))
+
+	def test_a_customer_who_has_only_paid_still_shows(self):
+		"""Nothing open to put it against, so they are in credit -- leaving
+		them out would stop the total tying to the ledger."""
+		self._receipt(4000, sales_person=self.person)
+		_columns, rows = self._run(customer=self.customer, sales_person=self.person)
+		self.assertEqual(len(rows), 1)
+		self.assertEqual(rows[0]["invoices"], 0)
+		self.assertEqual(flt(rows[0]["due"], 2), -4000)
+
+	def test_the_detail_adds_up_to_the_due(self):
+		self._invoice(10000, sales_person=self.person)
+		self._receipt(4000, sales_person=self.person)
+		summary = self._run(customer=self.customer, sales_person=self.person)[1]
+		detail = self._run(customer=self.customer, sales_person=self.person, detail=1)[1]
+		self.assertEqual(
+			flt(sum(r["outstanding"] for r in detail), 2),
+			flt(sum(r["due"] for r in summary), 2),
+		)
+
+	def test_the_detail_names_the_receipt_for_what_it_is(self):
+		self._invoice(10000, sales_person=self.person)
+		receipt = self._receipt(4000, sales_person=self.person)
+		detail = self._run(customer=self.customer, sales_person=self.person, detail=1)[1]
+		credit = [r for r in detail if r["voucher_type"] == "Payment Entry"]
+		self.assertEqual(len(credit), 1)
+		self.assertEqual(credit[0]["invoice"], receipt.name)
+		self.assertEqual(flt(credit[0]["outstanding"], 2), -4000)
