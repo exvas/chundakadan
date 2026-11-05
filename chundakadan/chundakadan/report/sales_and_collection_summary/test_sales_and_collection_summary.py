@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_days, flt, today
+from frappe.utils import add_days, flt, getdate, today
 
 from chundakadan.chundakadan.report.sales_and_collection_summary import sales_and_collection_summary as report
 from chundakadan.chundakadan.report.sales_and_collection_summary.sales_and_collection_summary import (
@@ -12,6 +12,7 @@ from chundakadan.chundakadan.report.sales_and_collection_summary.sales_and_colle
 	execute,
 	get_columns,
 )
+from chundakadan.testing import a_customer
 
 COMPANY = "Chundakadan Agencies"
 
@@ -297,3 +298,199 @@ class TestTheOpeningIsExcluded(SummaryCase):
 		self.assertTrue(seen)
 		for query in seen:
 			self.assertNotIn("is_opening", query)
+
+
+class TestCollectionDetail(SummaryCase):
+	"""The list behind the Collection figure.
+
+	The office checks an executive's collection by reading the receipts that
+	make it up, so the two have to agree to the rupee -- a list that does not
+	add up to the figure it sits under is worse than no list. The case builds
+	its own receipts: a bench with no Payment Entry on it would otherwise skip
+	every assertion here and prove nothing.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self.customer = a_customer(self.company)
+		self.receivable = frappe.get_cached_value("Company", self.company, "default_receivable_account")
+		self.bank = frappe.db.get_value(
+			"Account",
+			{"company": self.company, "is_group": 0, "account_type": ["in", ["Bank", "Cash"]]},
+			"name",
+			order_by="name asc",
+		)
+		if not (self.customer and self.receivable and self.bank):
+			self.skipTest("this bench cannot build a Payment Entry")
+		self._clear_previous()
+		self.people = self._two_sales_people()
+		self.paid = {
+			self.people[0]: 1500,
+			self.people[1]: 2500,
+		}
+		self.day = add_days(today(), -2)
+		self._receipt(self.people[0], 1000)
+		self._receipt(self.people[0], 500)
+		self._receipt(self.people[1], 2500)
+
+	def _clear_previous(self):
+		"""A submitted receipt outlives the per-test rollback, so by the
+		tenth test the same two people had ten times the money. Every test
+		starts with only the receipts it made itself."""
+		names = frappe.get_all("Payment Entry", filters={"party": self.customer}, pluck="name")
+		if not names:
+			return
+		frappe.db.delete("GL Entry", {"voucher_type": "Payment Entry", "voucher_no": ["in", names]})
+		frappe.db.delete("Payment Entry", {"name": ["in", names]})
+
+	def _two_sales_people(self):
+		names = frappe.get_all("Sales Person", filters={"enabled": 1}, pluck="name", order_by="name asc")
+		names = [n for n in names if n][:2]
+		while len(names) < 2:
+			doc = frappe.get_doc(
+				{
+					"doctype": "Sales Person",
+					"sales_person_name": f"_Test Collection Person {len(names)}",
+					"is_group": 0,
+				}
+			)
+			doc.flags.ignore_mandatory = True
+			doc.insert(ignore_permissions=True)
+			names.append(doc.name)
+		return names
+
+	def _receipt(self, sales_person, amount):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Payment Entry",
+				"payment_type": "Receive",
+				"company": self.company,
+				"posting_date": add_days(today(), -2),
+				"party_type": "Customer",
+				"party": self.customer,
+				"paid_from": self.receivable,
+				"paid_to": self.bank,
+				"paid_amount": amount,
+				"received_amount": amount,
+				"source_exchange_rate": 1,
+				"target_exchange_rate": 1,
+				"reference_no": frappe.generate_hash(length=6),
+				"reference_date": add_days(today(), -2),
+				"custom_sales_person": sales_person,
+			}
+		)
+		doc.flags.ignore_mandatory = True
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		# the sales person default fills this from the customer when it is
+		# blank; it must not overwrite one that was given
+		self.assertEqual(doc.custom_sales_person, sales_person)
+		return doc
+
+	def _detail(self, **extra):
+		return self._run(group_by="Sales Person", collection_detail=1, **extra)[1]
+
+	def _mine(self, rows):
+		return [r for r in rows if r["sales_person"] in self.paid]
+
+	def test_one_row_per_receipt(self):
+		self.assertEqual(len(self._mine(self._detail())), 3)
+
+	def test_the_rows_add_up_to_the_summary_figure(self):
+		summary = {r["group_value"]: r["collection"] for r in self._run(group_by="Sales Person")[1]}
+		per_person = {}
+		for row in self._mine(self._detail()):
+			per_person[row["sales_person"]] = per_person.get(row["sales_person"], 0) + row["amount"]
+		self.assertEqual({k: flt(v, 2) for k, v in per_person.items()}, self.paid)
+		for person, amount in self.paid.items():
+			self.assertEqual(flt(summary[person], 2), amount, person)
+
+	def test_it_carries_what_somebody_verifying_needs(self):
+		row = self._mine(self._detail())[0]
+		for field in ("posting_date", "sales_person", "customer", "customer_name", "amount"):
+			self.assertIsNotNone(row.get(field), field)
+		self.assertEqual(row["customer"], self.customer)
+		self.assertEqual(getdate(row["posting_date"]), getdate(self.day))
+
+	def test_the_sales_person_filter_narrows_it(self):
+		person = self.people[0]
+		rows = self._detail(sales_person=person)
+		self.assertEqual({r["sales_person"] for r in rows}, {person})
+		self.assertEqual(flt(sum(r["amount"] for r in rows), 2), self.paid[person])
+
+	def test_the_customer_filter_narrows_it(self):
+		rows = self._detail(customer=self.customer)
+		self.assertTrue(rows)
+		self.assertEqual({r["customer"] for r in rows}, {self.customer})
+
+	def test_a_draft_receipt_is_not_listed(self):
+		draft = frappe.get_doc(
+			{
+				"doctype": "Payment Entry",
+				"payment_type": "Receive",
+				"company": self.company,
+				"posting_date": add_days(today(), -2),
+				"party_type": "Customer",
+				"party": self.customer,
+				"paid_from": self.receivable,
+				"paid_to": self.bank,
+				"paid_amount": 9999,
+				"received_amount": 9999,
+				"source_exchange_rate": 1,
+				"target_exchange_rate": 1,
+				"custom_sales_person": self.people[0],
+			}
+		)
+		draft.flags.ignore_mandatory = True
+		draft.insert(ignore_permissions=True)
+		self.assertNotIn(draft.name, [r["payment_entry"] for r in self._detail()])
+
+	def test_a_receipt_outside_the_period_is_not_listed(self):
+		rows = self._run(
+			group_by="Sales Person",
+			collection_detail=1,
+			from_date=today(),
+			to_date=today(),
+		)[1]
+		self.assertEqual(self._mine(rows), [])
+
+	def test_the_columns_change_with_the_tick(self):
+		detail_columns = [c["fieldname"] for c in self._run(group_by="Sales Person", collection_detail=1)[0]]
+		self.assertIn("payment_entry", detail_columns)
+		self.assertNotIn("sales", detail_columns)
+		summary_columns = [c["fieldname"] for c in self._run(group_by="Sales Person")[0]]
+		self.assertIn("sales", summary_columns)
+		self.assertNotIn("payment_entry", summary_columns)
+
+	def test_brand_says_why_there_is_no_detail(self):
+		"""A payment is not against a line, so it has no brand. Handing back
+		the summary without a word would look like the tick did nothing."""
+		result = self._run(group_by="Brand", collection_detail=1)
+		self.assertEqual(len(result), 3, "expected columns, data and a message")
+		self.assertIn("brand", result[2].lower())
+		self.assertNotIn("payment_entry", [c["fieldname"] for c in result[0]])
+
+	def test_the_detail_and_the_summary_read_the_same_receipts(self):
+		"""Both go through _collection_conditions, so neither can quietly
+		start counting a different set."""
+		seen = []
+
+		def capture(query, *args, **kwargs):
+			seen.append(query)
+			return []
+
+		filters = frappe._dict(
+			{
+				"company": self.company,
+				"from_date": add_days(today(), -365),
+				"to_date": today(),
+				"group_by": "Sales Person",
+			}
+		)
+		with patch.object(frappe.db, "sql", side_effect=capture):
+			report._collection(filters)
+			report._collection_detail(filters)
+		self.assertEqual(len(seen), 2)
+		for condition in report._collection_conditions(filters):
+			for query in seen:
+				self.assertIn(condition, query)

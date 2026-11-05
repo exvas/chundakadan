@@ -39,6 +39,13 @@ frappe.query_reports["Sales and Collection Summary"] = {
 		},
 		{ fieldname: "brand", label: __("Brand"), fieldtype: "Link", options: "Brand" },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
+		{
+			fieldname: "collection_detail",
+			label: __("Collection Detail"),
+			fieldtype: "Check",
+			// lists every receipt behind the Collection figure instead of the
+			// summary: date, sales person, customer, amount
+		},
 	],
 	formatter(value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);

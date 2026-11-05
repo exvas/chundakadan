@@ -43,6 +43,22 @@ def execute(filters=None):
 	if group_by not in GROUPS:
 		frappe.throw(_("Group By must be one of: {0}").format(", ".join(GROUPS)))
 	filters.group_by = group_by
+
+	if filters.get("collection_detail"):
+		if group_by in SALES_ONLY:
+			# don't silently hand back the summary as though the tick did
+			# nothing -- say why there is no detail to show
+			return (
+				get_columns(filters),
+				get_data(filters),
+				_(
+					"A payment is not received against an invoice line, so a collection "
+					"cannot be attributed to a brand and there is no detail to list. "
+					"Group by Sales Person, Customer, Day or Month to see one."
+				),
+			)
+		return get_detail_columns(), _collection_detail(filters)
+
 	return get_columns(filters), get_data(filters)
 
 
@@ -170,10 +186,9 @@ def _invoice_totals(filters):
 	return {r.group_value: r.sales for r in rows}
 
 
-def _collection(filters):
-	"""Grouped collection: money received from customers in the period."""
-	if filters.group_by in SALES_ONLY:
-		return []
+def _collection_conditions(filters):
+	"""Which receipts count. Shared, so the detail list cannot drift away
+	from the figure it is there to prove."""
 	conditions = [
 		"pe.docstatus = 1",
 		"pe.company = %(company)s",
@@ -185,6 +200,14 @@ def _collection(filters):
 		conditions.append("pe.custom_sales_person = %(sales_person)s")
 	if filters.get("customer"):
 		conditions.append("pe.party = %(customer)s")
+	return conditions
+
+
+def _collection(filters):
+	"""Grouped collection: money received from customers in the period."""
+	if filters.group_by in SALES_ONLY:
+		return []
+	conditions = _collection_conditions(filters)
 
 	group_sql = {
 		"Sales Person": "pe.custom_sales_person",
@@ -203,6 +226,82 @@ def _collection(filters):
 		from `tabPayment Entry` pe
 		where {" and ".join(conditions)}
 		group by group_value
+		""",
+		filters,
+		as_dict=True,
+	)
+
+
+def get_detail_columns():
+	"""One row per receipt. Sales Person and Customer are both named on
+	every row whatever the grouping, because those are the two things
+	somebody checking a collection is checking it against."""
+	return [
+		{"label": _("Date"), "fieldname": "posting_date", "fieldtype": "Date", "width": 100},
+		{
+			"label": _("Sales Person"),
+			"fieldname": "sales_person",
+			"fieldtype": "Link",
+			"options": "Sales Person",
+			"width": 160,
+		},
+		{
+			"label": _("Customer"),
+			"fieldname": "customer",
+			"fieldtype": "Link",
+			"options": "Customer",
+			"width": 120,
+		},
+		{"label": _("Customer Name"), "fieldname": "customer_name", "fieldtype": "Data", "width": 220},
+		{
+			"label": _("Payment Entry"),
+			"fieldname": "payment_entry",
+			"fieldtype": "Link",
+			"options": "Payment Entry",
+			"width": 150,
+		},
+		{
+			"label": _("Mode of Payment"),
+			"fieldname": "mode_of_payment",
+			"fieldtype": "Link",
+			"options": "Mode of Payment",
+			"width": 130,
+		},
+		{"label": _("Reference No"), "fieldname": "reference_no", "fieldtype": "Data", "width": 130},
+		{"label": _("Amount"), "fieldname": "amount", "fieldtype": "Currency", "width": 130},
+	]
+
+
+def _collection_detail(filters):
+	"""Every receipt behind the Collection figure, one row each.
+
+	Same table, same conditions and the same amount column as _collection(),
+	so the rows add up to the summary figure for the same filters -- which is
+	the whole point of the list: it is what the summary is checked against.
+	"""
+	conditions = _collection_conditions(filters)
+
+	order_by = {
+		"Sales Person": "pe.custom_sales_person, pe.posting_date",
+		"Customer": "pe.party, pe.posting_date",
+		"Day": "pe.posting_date",
+		"Month": "pe.posting_date",
+	}[filters.group_by]
+
+	return frappe.db.sql(
+		f"""
+		select
+			pe.posting_date,
+			pe.custom_sales_person as sales_person,
+			pe.party as customer,
+			pe.party_name as customer_name,
+			pe.name as payment_entry,
+			pe.mode_of_payment,
+			pe.reference_no,
+			pe.base_paid_amount as amount
+		from `tabPayment Entry` pe
+		where {" and ".join(conditions)}
+		order by {order_by}, pe.name
 		""",
 		filters,
 		as_dict=True,
