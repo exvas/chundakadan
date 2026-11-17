@@ -25,6 +25,7 @@ from frappe import _
 from frappe.utils import flt, now
 
 from chundakadan.chundakadan.api import approval_email
+from chundakadan.utils.errors import log_failure
 
 # --- Per-doctype config -------------------------------------------------
 # `amount_field` is the field on the parent doc we compare to the
@@ -463,7 +464,7 @@ def approve(doctype: str, docname: str):
 		elif next_approver_email:
 			approval_email.notify_advanced(doc, next_approver_email)
 	except Exception as e:
-		frappe.log_error(f"approval_email after approve failed: {e}", "approval_email")
+		log_failure("Approval email not sent", f"after approve of {doc.doctype} {doc.name}: {e}")
 
 	return {"success": True, "status": doc.custom_approval_status, "current_approver": doc.current_approver}
 
@@ -509,7 +510,7 @@ def reject(doctype: str, docname: str, remarks: str | None = None):
 	try:
 		approval_email.notify_rejected(doc, remarks=remarks)
 	except Exception as e:
-		frappe.log_error(f"approval_email after reject failed: {e}", "approval_email")
+		log_failure("Approval email not sent", f"after reject of {doc.doctype} {doc.name}: {e}")
 
 	return {"success": True, "status": "Rejected"}
 

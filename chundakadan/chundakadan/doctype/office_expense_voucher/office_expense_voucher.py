@@ -31,6 +31,7 @@ from frappe import _
 from frappe.utils import flt
 
 from chundakadan.install import get_oev_defaults_for_company
+from chundakadan.utils.errors import log_failure
 
 
 class OfficeExpenseVoucher(AccountsController):
@@ -623,7 +624,4 @@ def update_voucher_status_on_payment(payment_doc, method=None):
 			# the voucher's outstanding amount).
 			voucher.set_status(update=True)
 		except Exception as e:
-			frappe.log_error(
-				f"OEV status sync failed for {name}: {e}",
-				"office_expense_voucher",
-			)
+			log_failure("Office Expense Voucher: status sync failed", f"{name}: {e}")

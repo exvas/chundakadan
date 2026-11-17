@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 
+from chundakadan.utils.errors import log_failure
+
 
 def _caller_can_act_on(doc):
 	"""Return True if the calling user is authorised to approve / reject
@@ -591,7 +593,7 @@ def approve_leave(docname):
 		elif next_approver_email_for_email:
 			approval_email.notify_advanced(doc, next_approver_email_for_email)
 	except Exception as e:
-		frappe.log_error(f"approval_email after approve_leave failed: {e}", "approval_email")
+		log_failure("Approval email not sent", f"after approve_leave: {e}")
 
 	return {"success": True}
 
@@ -668,7 +670,7 @@ def reject_leave(docname, remarks=None):
 
 		approval_email.notify_rejected(doc, remarks=remarks)
 	except Exception as e:
-		frappe.log_error(f"approval_email after reject_leave failed: {e}", "approval_email")
+		log_failure("Approval email not sent", f"after reject_leave: {e}")
 
 	frappe.msgprint(_("Leave Application has been rejected."), indicator="red")
 

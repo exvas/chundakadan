@@ -14,6 +14,8 @@ from __future__ import annotations
 import frappe
 from frappe.utils import flt, fmt_money, format_date
 
+from chundakadan.utils.errors import log_failure
+
 # Map doctype → URL slug for the deep link in the CTA
 _DOCTYPE_SLUG = {
 	"Leave Application": "leave-application",
@@ -178,10 +180,7 @@ def send_approval_email(
 			context,
 		)
 	except Exception as e:
-		frappe.log_error(
-			f"approval_email template render failed for {doc.doctype} {doc.name}: {e}",
-			"approval_email render",
-		)
+		log_failure("Approval email: template failed", f"{doc.doctype} {doc.name}: {e}")
 		return
 
 	try:
@@ -195,11 +194,16 @@ def send_approval_email(
 			expose_recipients="header",
 		)
 	except Exception as e:
-		# Never break the workflow because email failed
-		frappe.log_error(
-			f"sendmail failed for {doc.doctype} {doc.name} ({event}) → {recipient_email}: {e}",
-			"approval_email send",
+		# Never break the workflow because email failed -- and that includes
+		# the logging: see chundakadan.utils.errors for how it once did.
+		log_failure(
+			"Approval email not sent",
+			f"{doc.doctype} {doc.name} ({event}) → {recipient_email}: {e}",
 		)
+		# frappe.throw leaves its message queued for the browser even when
+		# the exception is caught. Somebody saving a leave should not be
+		# told about the office's mail account.
+		frappe.clear_last_message()
 
 
 # --- Public entry points for the workflows ---------------------------

@@ -9,6 +9,8 @@ import requests
 from frappe.model.document import Document
 from frappe.utils import get_datetime, now_datetime
 
+from chundakadan.utils.errors import log_failure
+
 
 class CrosschexSettings(Document):
 	def validate(self):
@@ -600,7 +602,7 @@ def sync_individual_device(api_url, api_key, config_row_name, config_name=None):
 		}
 
 	except Exception as e:
-		frappe.log_error(f"Individual device sync failed: {e!s}", "CrossChex Sync Error")
+		log_failure("CrossChex Sync Error", f"Individual device sync failed: {e!s}")
 		return {"success": False, "error": str(e)}
 
 
@@ -812,7 +814,7 @@ def full_resync_device(api_url, api_key, config_row_name, config_name=None):
 		}
 
 	except Exception as e:
-		frappe.log_error(f"Full resync failed: {e!s}", "CrossChex Full Resync Error")
+		log_failure("CrossChex Full Resync Error", f"Full resync failed: {e!s}")
 		return {"success": False, "error": str(e)}
 
 
